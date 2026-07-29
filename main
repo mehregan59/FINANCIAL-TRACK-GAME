@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Track 100 - 50cm Board</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gold: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04' },
+                        emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669' },
+                        navy: { 800: '#0f172a', 900: '#020617' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+        .text-stroke {
+            paint-order: stroke fill;
+            stroke: #000000;
+            stroke-width: 2.5px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .board-container {
+            position: relative;
+            width: 100%;
+            max-width: 820px;
+            margin: 0 auto;
+            aspect-ratio: 1 / 1;
+        }
+        .ring-interactive {
+            cursor: grab;
+            transition: transform 0.15s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+        .ring-interactive:active {
+            cursor: grabbing;
+        }
+
+        /* Single-Page PDF & Print Calibrated CSS */
+        @media print {
+            @page {
+                size: auto;
+                margin: 0;
+            }
+            html, body { 
+                background: white !important; 
+                color: black !important; 
+                padding: 0 !important; 
+                margin: 0 !important; 
+                width: 100% !important;
+                height: 100% !important;
+                overflow: hidden !important;
+            }
+            .no-print, header, section:not(#boardSection), #editorTab, .pawn-element { 
+                display: none !important; 
+            }
+            #boardSection { 
+                width: 100vw !important; 
+                height: 100vh !important; 
+                max-width: 100vw !important; 
+                margin: 0 auto !important; 
+                padding: 0 !important; 
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .board-container { 
+                max-width: 96vh !important; 
+                max-height: 96vh !important; 
+                width: 96vh !important; 
+                height: 96vh !important; 
+                page-break-inside: avoid !important; 
+                break-inside: avoid !important; 
+                border: none !important; 
+                background: transparent !important; 
+                box-shadow: none !important; 
+            }
+            svg { 
+                width: 100% !important; 
+                height: 100% !important; 
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+
+    <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur sticky top-0 z-40 px-4 py-3 no-print">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center text-slate-950 font-extrabold text-xl shadow-lg">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">
+                        FINANCIAL TRACK 100
+                    </h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-2">
+                        <span><i class="fa-solid fa-circle-dot text-emerald-400 text-[10px]"></i> 50 cm Board Scale</span>
+                        <span>•</span>
+                        <span>2 to 10 Players</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Controls & Mode Switches -->
+            <div class="flex items-center flex-wrap gap-2">
+                <button onclick="randomizeBoardTexts()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-shuffle"></i>
+                    <span>Shuffle 20 Events</span>
+                </button>
+
+                <div class="flex bg-slate-800 rounded-lg p-1 border border-slate-700 text-xs font-semibold">
+                    <button id="btnSingleRing" onclick="setBoardMode('single')" class="px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition">100 Perimeter</button>
+                    <button id="btnDoubleRing" onclick="setBoardMode('double')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition">50/50 Dual</button>
+                </div>
+
+                <div class="flex items-center space-x-1 border-l border-slate-800 pl-2">
+                    <button onclick="switchTab('board')" id="tabBtnBoard" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-1 border border-slate-700">
+                        <i class="fa-solid fa-chess-board"></i> Board
+                    </button>
+                    <button onclick="switchTab('editor')" id="tabBtnEditor" class="px-3 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 text-xs font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-pen-to-square"></i> Events (<span id="eventCountBadge">20</span>)
+                    </button>
+                    <button onclick="openCraftKitModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-md">
+                        <i class="fa-solid fa-scissors"></i> Print 4-Sheet Craft Kit
+                    </button>
+                    <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 transition shadow-md">
+                        <i class="fa-solid fa-print"></i> Print 50cm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Board Visual Container -->
+        <section id="boardSection" class="lg:col-span-8 flex flex-col items-center justify-center">
+            <div class="w-full flex items-center justify-between mb-3 text-xs text-slate-400 px-2 no-print">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-arrows-spin text-amber-400"></i> Drag center rings to dial Market Tracker (0-999)</span>
+                <span class="font-mono text-emerald-400 font-bold">Scale: 50.0 cm x 50.0 cm</span>
+            </div>
+
+            <!-- SVG Board Canvas -->
+            <div class="board-container bg-slate-900/80 rounded-3xl p-2 border border-slate-800 shadow-2xl overflow-hidden flex items-center justify-center">
+                <svg id="boardSvg" viewBox="0 0 1000 1000" class="w-full h-full drop-shadow-2xl select-none">
+                    <!-- SVG Dynamic Content Generated by JavaScript -->
+                </svg>
+            </div>
+        </section>
+
+        <!-- Right Side Control Panels -->
+        <section class="lg:col-span-4 space-y-5 no-print">
+            
+            <!-- Market Tracker 3-Ring Controller Panel -->
+            <div class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-compass text-amber-400 text-lg"></i>
+                        <h2 class="font-bold text-amber-300 font-display text-sm tracking-wide">MARKET TRACKER DIALS</h2>
+                    </div>
+                    <span id="trackerValueBadge" class="font-mono font-black text-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 px-3 py-0.5 rounded-lg">000</span>
+                </div>
+
+                <p class="text-xs text-slate-400">Set the 3 center rings to track portfolio points, market index, or economic multipliers (000 - 999).</p>
+
+                <!-- Direct Number Selector -->
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
+                    <label for="quickNumberInput" class="text-xs font-bold text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
+                        <i class="fa-solid fa-calculator text-amber-400"></i> Set Inside Ring Number:
+                    </label>
+                    <input type="number" id="quickNumberInput" min="0" max="999" value="0" oninput="setDirectMarketTrackerValue(this.value)" placeholder="0-999" class="w-24 bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-1 text-amber-300 font-mono font-black text-center text-base outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+                </div>
+
+                <!-- Ring Controls -->
+                <div class="space-y-2 text-xs">
+                    <!-- Hundreds Ring -->
+                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
+                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-amber-400"></span> Hundreds Ring
+                        </span>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="adjustRing(2, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold flex items-center justify-center text-sm">-</button>
+                            <span id="digitHundreds" class="font-mono text-base font-bold text-amber-300 w-5 text-center">0</span>
+                            <button onclick="adjustRing(2, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold flex items-center justify-center text-sm">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Tens Ring -->
+                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
+                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Tens Ring
+                        </span>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="adjustRing(1, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-cyan-300 font-bold flex items-center justify-center text-sm">-</button>
+                            <span id="digitTens" class="font-mono text-base font-bold text-cyan-300 w-5 text-center">0</span>
+                            <button onclick="adjustRing(1, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-cyan-300 font-bold flex items-center justify-center text-sm">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Units Ring -->
+                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
+                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Units Ring
+                        </span>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="adjustRing(0, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 font-bold flex items-center justify-center text-sm">-</button>
+                            <span id="digitUnits" class="font-mono text-base font-bold text-emerald-300 w-5 text-center">0</span>
+                            <button onclick="adjustRing(0, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 font-bold flex items-center justify-center text-sm">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="resetMarketTracker()" class="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition">
+                    Reset Dials to 000
+                </button>
+            </div>
+
+            <!-- Game Simulator Panel -->
+            <div id="gamePanel" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-gamepad text-emerald-400 text-lg"></i>
+                        <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide">INVESTOR GAME SIMULATOR</h2>
+                    </div>
+                </div>
+
+                <!-- Player Count Selection (2 to 10) -->
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-400 flex justify-between">
+                        <span>Active Investors:</span>
+                        <span id="playerCountVal" class="text-emerald-400 font-bold">4 Players</span>
+                    </label>
+                    <input type="range" id="playerCountSlider" min="2" max="10" value="4" oninput="changePlayerCount(this.value)" class="w-full accent-emerald-500 bg-slate-800 rounded-lg cursor-pointer h-2">
+                </div>
+
+                <!-- Dice Rolling Area -->
+                <div class="bg-slate-950/80 rounded-xl p-4 border border-slate-800 text-center space-y-3">
+                    <div class="text-xs text-slate-400 font-medium">Current Turn: <span id="turnPlayerName" class="font-bold text-amber-300">Investor 1</span></div>
+                    
+                    <div id="diceDisplay" class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-400 to-emerald-500 text-slate-950 text-3xl font-black flex items-center justify-center shadow-lg border-2 border-white/20">
+                        1
+                    </div>
+
+                    <button onclick="rollDice()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm tracking-wider shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-dice-five"></i> ROLL MARKET DICE
+                    </button>
+                </div>
+
+                <!-- Player Tokens Leaderboard -->
+                <div id="playersList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Preset Financial Switcher -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+                <h3 class="font-bold text-xs text-slate-300 font-display tracking-wide uppercase">Financial Presets</h3>
+                <div class="grid grid-cols-1 gap-2 text-xs">
+                    <button onclick="loadFinancialPreset('wallstreet')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-left border border-slate-700 flex items-center justify-between transition">
+                        <div>
+                            <div class="font-bold text-amber-300">Wall Street Equities</div>
+                            <div class="text-[10px] text-slate-400">Bull runs, dividends, IPOs</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-slate-500 text-xs"></i>
+                    </button>
+                    <button onclick="loadFinancialPreset('crypto')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-left border border-slate-700 flex items-center justify-between transition">
+                        <div>
+                            <div class="font-bold text-cyan-300">Crypto & DeFi Ventures</div>
+                            <div class="text-[10px] text-slate-400">Rallies, gas fees, staking</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-slate-500 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <div id="editorTab" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur overflow-y-auto p-4 md:p-8 hidden">
+        <div class="max-w-5xl mx-auto space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-xl font-black text-amber-300 font-display">MARKET EVENT TEMPLATES (<span id="editorPoolCount">20</span>)</h2>
+                    <p class="text-xs text-slate-400">Add, edit, or remove custom event phrases randomly distributed across board tiles 1 to 100.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="addNewEventToPool()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shadow-md">
+                        <i class="fa-solid fa-plus"></i> Quick Add Event
+                    </button>
+                    <button onclick="switchTab('board')" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+                        <i class="fa-solid fa-xmark mr-1"></i> Close Editor
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Event Creator Bar -->
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-wrap md:flex-nowrap gap-3 items-center">
+                <input type="text" id="newEventInput" placeholder="Enter new custom event (e.g. Staking Dividend +4)..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-medium focus:border-amber-400 outline-none" onkeydown="if(event.key === 'Enter') addNewEventFromInput()">
+                <button onclick="addNewEventFromInput()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl whitespace-nowrap transition">
+                    <i class="fa-solid fa-plus mr-1"></i> Add to Pool
+                </button>
+            </div>
+
+            <!-- Events Grid -->
+            <div id="eventsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <!-- Populated dynamically -->
+            </div>
+
+            <div class="flex justify-between items-center border-t border-slate-800 pt-4">
+                <span class="text-xs text-slate-400">Total Events in Pool: <strong id="editorPoolCountBottom" class="text-amber-300">20</strong></span>
+                <button onclick="randomizeBoardTexts(); switchTab('board');" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg transition">
+                    <i class="fa-solid fa-shuffle mr-1.5"></i> Apply & Shuffle Board
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="craftKitModal" class="fixed inset-0 z-50 bg-slate-950/98 backdrop-blur overflow-y-auto p-4 md:p-8 hidden">
+        <div class="max-w-6xl mx-auto space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-2xl font-black text-amber-300 font-display flex items-center gap-2">
+                        <i class="fa-solid fa-scissors text-amber-400"></i> PHYSICAL BOARD CRAFTING KIT (4 SHEETS)
+                    </h2>
+                    <p class="text-xs text-slate-400">Print these 4 separate sheets to cut out and assemble a physical 50cm rotating board game using a brass split pin (paper fastener).</p>
+                </div>
+                <div class="flex items-center gap-2 no-print">
+                    <button onclick="window.print()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg transition">
+                        <i class="fa-solid fa-print"></i> PRINT ALL 4 SHEETS
+                    </button>
+                    <button onclick="closeCraftKitModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+                        <i class="fa-solid fa-xmark mr-1"></i> Close
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sheet Selector Tabs for On-Screen Preview -->
+            <div class="flex bg-slate-900 rounded-xl p-1.5 border border-slate-800 text-xs font-bold no-print justify-around">
+                <button onclick="showCraftSheet(1)" id="craftTab1" class="px-4 py-2 rounded-lg bg-amber-500 text-slate-950">Sheet 1: Main Board</button>
+                <button onclick="showCraftSheet(2)" id="craftTab2" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-100">Sheet 2: Number Dial Rings</button>
+                <button onclick="showCraftSheet(3)" id="craftTab3" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-100">Sheet 3: Cover Shield Plates</button>
+                <button onclick="showCraftSheet(4)" id="craftTab4" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-100">Sheet 4: Assembly & Pawns</button>
+            </div>
+
+            <!-- Printable Sheets Container -->
+            <div id="craftSheetsContainer" class="space-y-12">
+                <!-- Sheet 1: Main Board -->
+                <div id="sheet1View" class="craft-sheet bg-white text-slate-950 rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-300">
+                    <div class="flex justify-between items-center border-b pb-2 text-xs font-bold text-slate-700">
+                        <span>SHEET 1 OF 4: MAIN BOARD TRACK (1 TO 100)</span>
+                        <span>SCALE: 50cm FULL BOARD BASE</span>
+                    </div>
+                    <div class="aspect-square w-full max-w-2xl mx-auto flex items-center justify-center p-2 border-2 border-dashed border-slate-300 rounded-2xl">
+                        <svg id="sheet1Svg" viewBox="0 0 1000 1000" class="w-full h-full"></svg>
+                    </div>
+                </div>
+
+                <!-- Sheet 2: Number Dials -->
+                <div id="sheet2View" class="craft-sheet bg-white text-slate-950 rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-300 hidden">
+                    <div class="flex justify-between items-center border-b pb-2 text-xs font-bold text-slate-700">
+                        <span>SHEET 2 OF 4: ROTATING NUMBER DIAL RINGS (0 - 9)</span>
+                        <span>CUT OUT EACH RING ALONG DASHED LINES</span>
+                    </div>
+                    <div class="aspect-square w-full max-w-2xl mx-auto flex items-center justify-center p-2 border-2 border-dashed border-slate-300 rounded-2xl">
+                        <svg id="sheet2Svg" viewBox="0 0 1000 1000" class="w-full h-full"></svg>
+                    </div>
+                </div>
+
+                <!-- Sheet 3: Cover Shields -->
+                <div id="sheet3View" class="craft-sheet bg-white text-slate-950 rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-300 hidden">
+                    <div class="flex justify-between items-center border-b pb-2 text-xs font-bold text-slate-700">
+                        <span>SHEET 3 OF 4: COVER SHIELD PLATES (WITH WINDOW APERTURE CUTOUTS)</span>
+                        <span>CUT OUT RECTANGULAR WINDOW BOXES AT TOP</span>
+                    </div>
+                    <div class="aspect-square w-full max-w-2xl mx-auto flex items-center justify-center p-2 border-2 border-dashed border-slate-300 rounded-2xl">
+                        <svg id="sheet3Svg" viewBox="0 0 1000 1000" class="w-full h-full"></svg>
+                    </div>
+                </div>
+
+                <!-- Sheet 4: Instructions & Pawns -->
+                <div id="sheet4View" class="craft-sheet bg-white text-slate-950 rounded-2xl p-6 shadow-2xl space-y-6 border border-slate-300 hidden">
+                    <div class="flex justify-between items-center border-b pb-2 text-xs font-bold text-slate-700">
+                        <span>SHEET 4 OF 4: ASSEMBLY DIAGRAM & STANDUP PAWN TOKENS</span>
+                        <span>PHYSICAL GAME ACCESSORIES</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="border rounded-xl p-4 bg-slate-50 space-y-3">
+                            <h3 class="font-extrabold text-sm text-slate-800 border-b pb-1">ASSEMBLY STEPS:</h3>
+                            <ol class="text-xs space-y-2 text-slate-700 list-decimal pl-4 font-medium">
+                                <li>Cut out the main board circle on Sheet 1.</li>
+                                <li>Cut out the 3 number dial rings on Sheet 2.</li>
+                                <li>Cut out the 3 cover shield plates on Sheet 3 and slice open the marked rectangular window aperture boxes at 12 o'clock.</li>
+                                <li>Stack layers from bottom to top: 
+                                    <br><strong>[Main Board] &rarr; [Hundreds Dial] &rarr; [Hundreds Cover] &rarr; [Tens Dial] &rarr; [Tens Cover] &rarr; [Units Dial] &rarr; [Units Cover]</strong>
+                                </li>
+                                <li>Push a single <strong>brass paper fastener pin (split pin)</strong> through the center hole (+) to lock all layers together so dials spin freely!</li>
+                            </ol>
+                        </div>
+
+                        <div class="border rounded-xl p-4 bg-slate-50 space-y-3">
+                            <h3 class="font-extrabold text-sm text-slate-800 border-b pb-1">10 CUTOUT INVESTOR PAWNS:</h3>
+                            <div class="grid grid-cols-5 gap-2 text-center text-xs font-bold">
+                                <script>
+                                    for(let i=1; i<=10; i++) {
+                                        document.write(`<div class="border-2 border-dashed border-slate-400 p-2 rounded-lg bg-white">
+                                            <div class="w-6 h-6 mx-auto rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-[10px] mb-1">P${i}</div>
+                                            <span class="text-[9px] text-slate-600 block">Fold Base</span>
+                                        </div>`);
+                                    }
+                                </script>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#a855f7'];
+
+        const APP_STATE = {
+            boardMode: 'single', // 'single' or 'double'
+            marketTracker: [0, 0, 0], // [Units, Tens, Hundreds]
+            ringRotations: [0, 0, 0], // [Units, Tens, Hundreds]
+            draggedRingIndex: null,
+            dragStartAngle: 0,
+            tiles: [],
+            eventPool: [
+                "Dividend Payout (+3)", "Bear Market (-2)", "Stock Split (+1)", "Tax Audit (-1)",
+                "Bull Run (+2)", "Asset Swap", "Market Crash (-3)", "Interest Earned (+1)",
+                "VC Investment (+4)", "Inflation Leak (-1)", "Portfolio Shield", "Crypto Rally (+5)",
+                "Supply Halt (Skip)", "Dividend Yield", "Recession Dip (-2)", "IPO Launch",
+                "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
+            ],
+            players: [],
+            activePlayersCount: 4,
+            currentPlayerIndex: 0
+        };
+
+        function initTiles() {
+            APP_STATE.tiles = [];
+            for (let i = 1; i <= 100; i++) {
+                const randEvt = APP_STATE.eventPool[(i - 1) % APP_STATE.eventPool.length];
+                APP_STATE.tiles.push({
+                    number: i,
+                    text: randEvt
+                });
+            }
+        }
+
+        function drawBoard() {
+            const svg = document.getElementById('boardSvg');
+            if (!svg) return;
+            svg.innerHTML = '';
+
+            const cx = 500, cy = 500;
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            if (APP_STATE.boardMode === 'single') {
+                drawSinglePerimeterRing(group, cx, cy);
+            } else {
+                drawDoublePerimeterRing(group, cx, cy);
+            }
+
+            drawMarketTrackerRings(group, cx, cy);
+            drawPlayerPawns(group, cx, cy);
+
+            svg.appendChild(group);
+        }
+
+        function drawSinglePerimeterRing(group, cx, cy) {
+            const totalSectors = 100;
+            const R_out = 485;
+            const R_in = 230;
+            const stepAngle = (2 * Math.PI) / totalSectors;
+            const palette = ['#0284c7', '#059669', '#d97706', '#7c3aed', '#dc2626'];
+
+            for (let i = 0; i < totalSectors; i++) {
+                const tile = APP_STATE.tiles[i];
+                const A1 = i * stepAngle - Math.PI / 2;
+                const A2 = (i + 1) * stepAngle - Math.PI / 2;
+
+                const x1_out = cx + R_out * Math.cos(A1);
+                const y1_out = cy + R_out * Math.sin(A1);
+                const x2_out = cx + R_out * Math.cos(A2);
+                const y2_out = cy + R_out * Math.sin(A2);
+
+                const x2_in = cx + R_in * Math.cos(A2);
+                const y2_in = cy + R_in * Math.sin(A2);
+                const x1_in = cx + R_in * Math.cos(A1);
+                const y1_in = cy + R_in * Math.sin(A1);
+
+                const pathData = `M ${x1_out} ${y1_out} A ${R_out} ${R_out} 0 0 1 ${x2_out} ${y2_out} L ${x2_in} ${y2_in} A ${R_in} ${R_in} 0 0 0 ${x1_in} ${y1_in} Z`;
+
+                const sectorPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                sectorPath.setAttribute("d", pathData);
+                sectorPath.setAttribute("fill", palette[i % palette.length]);
+                sectorPath.setAttribute("stroke", "#020617");
+                sectorPath.setAttribute("stroke-width", "1.5");
+                group.appendChild(sectorPath);
+
+                const midA = (A1 + A2) / 2;
+                const textStartX = cx + (R_out - 12) * Math.cos(midA);
+                const textStartY = cy + (R_out - 12) * Math.sin(midA);
+                let textAngle = (midA * 180 / Math.PI) + 180;
+
+                const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                textGroup.setAttribute("transform", `translate(${textStartX}, ${textStartY}) rotate(${textAngle})`);
+
+                const textElem = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textElem.setAttribute("x", "0");
+                textElem.setAttribute("y", "0");
+                textElem.setAttribute("fill", "#ffffff");
+                textElem.setAttribute("font-size", "12.5");
+                textElem.setAttribute("font-weight", "800");
+                textElem.setAttribute("dominant-baseline", "central");
+                textElem.setAttribute("class", "text-stroke");
+
+                const numSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                numSpan.textContent = tile.number + " ";
+                numSpan.setAttribute("fill", "#facc15");
+                numSpan.setAttribute("font-weight", "900");
+                numSpan.setAttribute("font-size", "14");
+
+                const textSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                textSpan.textContent = tile.text;
+                textSpan.setAttribute("fill", "#ffffff");
+
+                textElem.appendChild(numSpan);
+                textElem.appendChild(textSpan);
+                textGroup.appendChild(textElem);
+                group.appendChild(textGroup);
+            }
+        }
+
+        function drawDoublePerimeterRing(group, cx, cy) {
+            const R1_out = 485, R1_in = 360;
+            const R2_out = 355, R2_in = 230;
+            const palette = ['#0284c7', '#059669', '#d97706', '#7c3aed', '#dc2626'];
+
+            for (let i = 0; i < 100; i++) {
+                const isOuter = i < 50;
+                const ringIndex = isOuter ? i : i - 50;
+                const total = 50;
+                const step = (2 * Math.PI) / total;
+                const R_out = isOuter ? R1_out : R2_out;
+                const R_in = isOuter ? R1_in : R2_in;
+
+                const A1 = ringIndex * step - Math.PI / 2;
+                const A2 = (ringIndex + 1) * step - Math.PI / 2;
+
+                const pathData = `M ${cx + R_out * Math.cos(A1)} ${cy + R_out * Math.sin(A1)} ` +
+                                 `A ${R_out} ${R_out} 0 0 1 ${cx + R_out * Math.cos(A2)} ${cy + R_out * Math.sin(A2)} ` +
+                                 `L ${cx + R_in * Math.cos(A2)} ${cy + R_in * Math.sin(A2)} ` +
+                                 `A ${R_in} ${R_in} 0 0 0 ${cx + R_in * Math.cos(A1)} ${cy + R_in * Math.sin(A1)} Z`;
+
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", pathData);
+                path.setAttribute("fill", palette[i % palette.length]);
+                path.setAttribute("stroke", "#020617");
+                path.setAttribute("stroke-width", "1.5");
+                group.appendChild(path);
+
+                const midA = (A1 + A2) / 2;
+                const startX = cx + (R_out - 10) * Math.cos(midA);
+                const startY = cy + (R_out - 10) * Math.sin(midA);
+                const textAngle = (midA * 180 / Math.PI) + 180;
+
+                const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                textGroup.setAttribute("transform", `translate(${startX}, ${startY}) rotate(${textAngle})`);
+
+                const textElem = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textElem.setAttribute("dominant-baseline", "central");
+                textElem.setAttribute("class", "text-stroke");
+
+                const numSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                numSpan.textContent = (i + 1) + " ";
+                numSpan.setAttribute("fill", "#facc15");
+                numSpan.setAttribute("font-weight", "900");
+                numSpan.setAttribute("font-size", "15");
+
+                const labelSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                labelSpan.textContent = APP_STATE.tiles[i].text;
+                labelSpan.setAttribute("fill", "#ffffff");
+                labelSpan.setAttribute("font-size", "13");
+
+                textElem.appendChild(numSpan);
+                textElem.appendChild(labelSpan);
+                textGroup.appendChild(textElem);
+                group.appendChild(textGroup);
+            }
+        }
+
+        function drawMarketTrackerRings(group, cx, cy) {
+            const ringConfigs = [
+                { id: 0, name: "Units", rOut: 100, rIn: 45, color: "#10b981" },
+                { id: 1, name: "Tens", rOut: 160, rIn: 105, color: "#06b6d4" },
+                { id: 2, name: "Hundreds", rOut: 220, rIn: 165, color: "#f59e0b" }
+            ];
+
+            let defs = group.querySelector("defs");
+            if (!defs) {
+                defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+                group.appendChild(defs);
+            }
+
+            ringConfigs.forEach((cfg) => {
+                const rMid = (cfg.rOut + cfg.rIn) / 2;
+                const windowY = cy - rMid;
+
+                // SVG Mask for cover shield
+                const maskId = `ringCoverMask_${cfg.id}`;
+                let mask = defs.querySelector(`#${maskId}`);
+                if (!mask) {
+                    mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
+                    mask.setAttribute("id", maskId);
+                    mask.setAttribute("maskUnits", "userSpaceOnUse");
+                    mask.setAttribute("maskContentUnits", "userSpaceOnUse");
+                    
+                    const whiteRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    whiteRect.setAttribute("x", "0");
+                    whiteRect.setAttribute("y", "0");
+                    whiteRect.setAttribute("width", "1000");
+                    whiteRect.setAttribute("height", "1000");
+                    whiteRect.setAttribute("fill", "#ffffff");
+                    mask.appendChild(whiteRect);
+
+                    const blackHole = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    blackHole.setAttribute("x", cx - 18);
+                    blackHole.setAttribute("y", windowY - 18);
+                    blackHole.setAttribute("width", "36");
+                    blackHole.setAttribute("height", "36");
+                    blackHole.setAttribute("rx", "8");
+                    blackHole.setAttribute("fill", "#000000");
+                    mask.appendChild(blackHole);
+
+                    defs.appendChild(mask);
+                }
+
+                // Rotatable Dial Group
+                const ringGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                ringGroup.setAttribute("class", "ring-interactive");
+                ringGroup.setAttribute("id", `ringGroup_${cfg.id}`);
+                
+                const rotDeg = APP_STATE.ringRotations[cfg.id];
+                ringGroup.setAttribute("transform", `rotate(${rotDeg}, ${cx}, ${cy})`);
+
+                const ringBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                ringBg.setAttribute("cx", cx);
+                ringBg.setAttribute("cy", cy);
+                ringBg.setAttribute("r", rMid);
+                ringBg.setAttribute("stroke", "#090d16");
+                ringBg.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
+                ringBg.setAttribute("fill", "none");
+                ringGroup.appendChild(ringBg);
+
+                // Numbers 0 to 9 with Counter-Rotation to keep upright
+                for (let d = 0; d < 10; d++) {
+                    const ang = (d * 36) * Math.PI / 180 - Math.PI / 2;
+                    const nx = cx + rMid * Math.cos(ang);
+                    const ny = cy + rMid * Math.sin(ang);
+
+                    const numTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    numTxt.setAttribute("x", nx);
+                    numTxt.setAttribute("y", ny);
+                    numTxt.setAttribute("fill", cfg.color);
+                    numTxt.setAttribute("font-size", "22");
+                    numTxt.setAttribute("font-weight", "900");
+                    numTxt.setAttribute("text-anchor", "middle");
+                    numTxt.setAttribute("dominant-baseline", "central");
+                    numTxt.setAttribute("transform", `rotate(${-rotDeg}, ${nx}, ${ny})`);
+                    numTxt.textContent = d;
+                    ringGroup.appendChild(numTxt);
+                }
+
+                group.appendChild(ringGroup);
+
+                // Opaque Cover Plate Ring
+                const coverRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                coverRing.setAttribute("cx", cx);
+                coverRing.setAttribute("cy", cy);
+                coverRing.setAttribute("r", rMid);
+                coverRing.setAttribute("stroke", "#090d16");
+                coverRing.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
+                coverRing.setAttribute("fill", "none");
+                coverRing.setAttribute("mask", `url(#${maskId})`);
+                coverRing.setAttribute("class", "ring-interactive");
+                group.appendChild(coverRing);
+
+                // Trim Lines
+                const outerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                outerBorder.setAttribute("cx", cx); outerBorder.setAttribute("cy", cy);
+                outerBorder.setAttribute("r", cfg.rOut); outerBorder.setAttribute("stroke", "#1e293b");
+                outerBorder.setAttribute("stroke-width", "1.5"); outerBorder.setAttribute("fill", "none");
+                group.appendChild(outerBorder);
+
+                const innerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                innerBorder.setAttribute("cx", cx); innerBorder.setAttribute("cy", cy);
+                innerBorder.setAttribute("r", cfg.rIn); innerBorder.setAttribute("stroke", "#1e293b");
+                innerBorder.setAttribute("stroke-width", "1.5"); innerBorder.setAttribute("fill", "none");
+                group.appendChild(innerBorder);
+
+                // 12 o'clock Aperture Window
+                const aperture = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                aperture.setAttribute("x", cx - 18);
+                aperture.setAttribute("y", windowY - 18);
+                aperture.setAttribute("width", "36");
+                aperture.setAttribute("height", "36");
+                aperture.setAttribute("rx", "8");
+                aperture.setAttribute("fill", "none");
+                aperture.setAttribute("stroke", cfg.color);
+                aperture.setAttribute("stroke-width", "3");
+                aperture.setAttribute("filter", "drop-shadow(0 0 6px " + cfg.color + ")");
+                aperture.setAttribute("class", "ring-interactive");
+                group.appendChild(aperture);
+
+                // Event Drag Listeners
+                [ringGroup, coverRing, aperture].forEach(el => {
+                    el.addEventListener('mousedown', (e) => startRingDrag(e, cfg.id));
+                    el.addEventListener('touchstart', (e) => startRingDrag(e, cfg.id));
+                });
+            });
+
+            // Center Hub Badge
+            const hubBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            hubBg.setAttribute("cx", cx); hubBg.setAttribute("cy", cy); hubBg.setAttribute("r", "42");
+            hubBg.setAttribute("fill", "#020617"); hubBg.setAttribute("stroke", "#eab308");
+            hubBg.setAttribute("stroke-width", "3");
+            group.appendChild(hubBg);
+
+            const hubLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            hubLabel.setAttribute("x", cx); hubLabel.setAttribute("y", cy - 10);
+            hubLabel.setAttribute("fill", "#94a3b8"); hubLabel.setAttribute("font-size", "8");
+            hubLabel.setAttribute("font-weight", "800"); hubLabel.setAttribute("text-anchor", "middle");
+            hubLabel.textContent = "MARKET TRACKER";
+            group.appendChild(hubLabel);
+
+            const trackerValStr = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
+            const hubVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            hubVal.setAttribute("x", cx); hubVal.setAttribute("y", cy + 12);
+            hubVal.setAttribute("fill", "#facc15"); hubVal.setAttribute("font-size", "20");
+            hubVal.setAttribute("font-weight", "900"); hubLabel.setAttribute("text-anchor", "middle");
+            hubVal.setAttribute("text-anchor", "middle");
+            hubVal.textContent = trackerValStr;
+            group.appendChild(hubVal);
+        }
+
+        function drawPlayerPawns(group, cx, cy) {
+            APP_STATE.players.forEach((p, idx) => {
+                if (p.position <= 0) return;
+                
+                const tileIndex = p.position - 1;
+                const totalSectors = 100;
+                const stepAngle = (2 * Math.PI) / totalSectors;
+                const midA = (tileIndex + 0.5) * stepAngle - Math.PI / 2;
+                
+                const rPawn = 380 + (idx % 3) * 15;
+                const px = cx + rPawn * Math.cos(midA);
+                const py = cy + rPawn * Math.sin(midA);
+
+                const pawnGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                pawnGroup.setAttribute("class", "pawn-element");
+
+                const pawnCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                pawnCircle.setAttribute("cx", px); pawnCircle.setAttribute("cy", py);
+                pawnCircle.setAttribute("r", "12");
+                pawnCircle.setAttribute("fill", PLAYER_COLORS[idx % PLAYER_COLORS.length]);
+                pawnCircle.setAttribute("stroke", "#ffffff"); pawnCircle.setAttribute("stroke-width", "2.5");
+                pawnGroup.appendChild(pawnCircle);
+
+                const pawnTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                pawnTxt.setAttribute("x", px); pawnTxt.setAttribute("y", py);
+                pawnTxt.setAttribute("fill", "#ffffff"); pawnTxt.setAttribute("font-size", "10");
+                pawnTxt.setAttribute("font-weight", "900"); pawnTxt.setAttribute("text-anchor", "middle");
+                pawnTxt.setAttribute("dominant-baseline", "central");
+                pawnTxt.textContent = `P${idx + 1}`;
+                pawnGroup.appendChild(pawnTxt);
+
+                group.appendChild(pawnGroup);
+            });
+        }
+
+        function startRingDrag(e, ringIdx) {
+            e.preventDefault();
+            APP_STATE.draggedRingIndex = ringIdx;
+            const pt = getSvgEventCoords(e);
+            const cx = 500, cy = 500;
+            APP_STATE.dragStartAngle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
+
+            window.addEventListener('mousemove', onRingDrag);
+            window.addEventListener('touchmove', onRingDrag);
+            window.addEventListener('mouseup', stopRingDrag);
+            window.addEventListener('touchend', stopRingDrag);
+        }
+
+        function onRingDrag(e) {
+            if (APP_STATE.draggedRingIndex === null) return;
+            const pt = getSvgEventCoords(e);
+            const cx = 500, cy = 500;
+            const currentAngle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
+            const delta = currentAngle - APP_STATE.dragStartAngle;
+
+            const ringIdx = APP_STATE.draggedRingIndex;
+            APP_STATE.ringRotations[ringIdx] = (APP_STATE.ringRotations[ringIdx] + delta) % 360;
+            APP_STATE.dragStartAngle = currentAngle;
+
+            let angleAtTop = (-APP_STATE.ringRotations[ringIdx]) % 360;
+            if (angleAtTop < 0) angleAtTop += 360;
+            const digit = Math.round(angleAtTop / 36) % 10;
+            APP_STATE.marketTracker[ringIdx] = digit;
+
+            updateMarketTrackerUI();
+            drawBoard();
+        }
+
+        function stopRingDrag() {
+            APP_STATE.draggedRingIndex = null;
+            window.removeEventListener('mousemove', onRingDrag);
+            window.removeEventListener('touchmove', onRingDrag);
+            window.removeEventListener('mouseup', stopRingDrag);
+            window.removeEventListener('touchend', stopRingDrag);
+        }
+
+        function getSvgEventCoords(e) {
+            const svg = document.getElementById('boardSvg');
+            const pt = svg.createSVGPoint();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            pt.x = clientX;
+            pt.y = clientY;
+            return pt.matrixTransform(svg.getScreenCTM().inverse());
+        }
+
+        function adjustRing(ringIdx, step) {
+            APP_STATE.marketTracker[ringIdx] = (APP_STATE.marketTracker[ringIdx] + step + 10) % 10;
+            APP_STATE.ringRotations[ringIdx] = -APP_STATE.marketTracker[ringIdx] * 36;
+            updateMarketTrackerUI();
+            drawBoard();
+        }
+
+        function resetMarketTracker() {
+            APP_STATE.marketTracker = [0, 0, 0];
+            APP_STATE.ringRotations = [0, 0, 0];
+            updateMarketTrackerUI();
+            drawBoard();
+        }
+
+        function setDirectMarketTrackerValue(val) {
+            let num = parseInt(val, 10);
+            if (isNaN(num)) num = 0;
+            if (num < 0) num = 0;
+            if (num > 999) num = 999;
+
+            const h = Math.floor(num / 100);
+            const t = Math.floor((num % 100) / 10);
+            const u = num % 10;
+
+            APP_STATE.marketTracker = [u, t, h];
+            APP_STATE.ringRotations = [-u * 36, -t * 36, -h * 36];
+
+            updateMarketTrackerUI();
+            drawBoard();
+        }
+
+        function updateMarketTrackerUI() {
+            document.getElementById('digitUnits').textContent = APP_STATE.marketTracker[0];
+            document.getElementById('digitTens').textContent = APP_STATE.marketTracker[1];
+            document.getElementById('digitHundreds').textContent = APP_STATE.marketTracker[2];
+            
+            const fullVal = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
+            document.getElementById('trackerValueBadge').textContent = fullVal;
+
+            const quickInput = document.getElementById('quickNumberInput');
+            if (quickInput && document.activeElement !== quickInput) {
+                quickInput.value = parseInt(fullVal, 10);
+            }
+        }
+
+        function changePlayerCount(val) {
+            APP_STATE.activePlayersCount = parseInt(val);
+            document.getElementById('playerCountVal').textContent = `${val} Players`;
+            
+            APP_STATE.players = [];
+            for (let i = 1; i <= APP_STATE.activePlayersCount; i++) {
+                APP_STATE.players.push({
+                    id: i,
+                    name: `Investor ${i}`,
+                    position: 1
+                });
+            }
+            APP_STATE.currentPlayerIndex = 0;
+            renderPlayersList();
+            drawBoard();
+        }
+
+        function rollDice() {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            const diceElem = document.getElementById('diceDisplay');
+            diceElem.textContent = roll;
+
+            const p = APP_STATE.players[APP_STATE.currentPlayerIndex];
+            p.position = Math.min(100, p.position + roll);
+
+            APP_STATE.currentPlayerIndex = (APP_STATE.currentPlayerIndex + 1) % APP_STATE.activePlayersCount;
+            document.getElementById('turnPlayerName').textContent = APP_STATE.players[APP_STATE.currentPlayerIndex].name;
+
+            renderPlayersList();
+            drawBoard();
+        }
+
+        function renderPlayersList() {
+            const container = document.getElementById('playersList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            APP_STATE.players.forEach((p, idx) => {
+                const div = document.createElement('div');
+                div.className = `flex items-center justify-between p-2 rounded-xl border ${idx === APP_STATE.currentPlayerIndex ? 'bg-slate-800 border-amber-500/50' : 'bg-slate-900/50 border-slate-800'}`;
+                div.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${PLAYER_COLORS[idx % PLAYER_COLORS.length]}"></span>
+                        <span class="font-bold text-slate-200 text-xs">${p.name}</span>
+                    </div>
+                    <span class="font-mono text-emerald-400 font-bold text-xs">Space ${p.position} / 100</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function randomizeBoardTexts() {
+            for (let i = 0; i < 100; i++) {
+                const randEvt = APP_STATE.eventPool[Math.floor(Math.random() * APP_STATE.eventPool.length)];
+                APP_STATE.tiles[i].text = randEvt;
+            }
+            drawBoard();
+        }
+
+        function loadFinancialPreset(type) {
+            if (type === 'wallstreet') {
+                APP_STATE.eventPool = [
+                    "Dividend Payout (+3)", "Bear Market (-2)", "Stock Split (+1)", "Tax Audit (-1)",
+                    "Bull Run (+2)", "Asset Swap", "Market Crash (-3)", "Interest Earned (+1)",
+                    "VC Investment (+4)", "Inflation Leak (-1)", "Portfolio Shield", "Crypto Rally (+5)",
+                    "Supply Halt (Skip)", "Dividend Yield", "Recession Dip (-2)", "IPO Launch",
+                    "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
+                ];
+            } else if (type === 'crypto') {
+                APP_STATE.eventPool = [
+                    "Staking Reward (+3)", "Gas Fee (-1)", "Token Burn (+2)", "Rug Pull (-4)",
+                    "Bull Flag (+2)", "Mainnet Swap", "Flash Crash (-3)", "Airdrop (+1)",
+                    "VC Seed (+4)", "SEC Leak (-1)", "Cold Vault", "Moon Rally (+5)",
+                    "Chain Halt (Skip)", "Yield Farming", "Bear Market (-2)", "DEX Listing",
+                    "Exploit (-4)", "NFT Boom (+3)", "DAO Bonus (+2)", "Liquidity Pool"
+                ];
+            }
+            renderEventsEditor();
+            randomizeBoardTexts();
+        }
+
+        function renderEventsEditor() {
+            const grid = document.getElementById('eventsGrid');
+            const countBadge = document.getElementById('eventCountBadge');
+            const editorCount = document.getElementById('editorPoolCount');
+            const editorCountBottom = document.getElementById('editorPoolCountBottom');
+            
+            const poolLen = APP_STATE.eventPool.length;
+            if (countBadge) countBadge.textContent = poolLen;
+            if (editorCount) editorCount.textContent = poolLen;
+            if (editorCountBottom) editorCountBottom.textContent = poolLen;
+
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            APP_STATE.eventPool.forEach((evt, idx) => {
+                const div = document.createElement('div');
+                div.className = 'bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1 relative group';
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-bold text-amber-400 uppercase">Event #${idx + 1}</label>
+                        <button onclick="removeEventFromPool(${idx})" class="text-slate-500 hover:text-red-400 text-xs px-1 transition" title="Delete event">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                    <input type="text" value="${evt.replace(/"/g, '&quot;')}" onchange="updateEventPoolItem(${idx}, this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-slate-100 font-semibold focus:border-amber-400 outline-none">
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function updateEventPoolItem(idx, val) {
+            APP_STATE.eventPool[idx] = val;
+        }
+
+        function addNewEventToPool(text) {
+            const evtText = text || `Custom Bonus (+${Math.floor(Math.random() * 3) + 1})`;
+            APP_STATE.eventPool.push(evtText);
+            renderEventsEditor();
+        }
+
+        function addNewEventFromInput() {
+            const input = document.getElementById('newEventInput');
+            if (!input || !input.value.trim()) return;
+            APP_STATE.eventPool.push(input.value.trim());
+            input.value = '';
+            renderEventsEditor();
+        }
+
+        function removeEventFromPool(idx) {
+            if (APP_STATE.eventPool.length <= 1) return;
+            APP_STATE.eventPool.splice(idx, 1);
+            renderEventsEditor();
+        }
+
+        function setBoardMode(mode) {
+            APP_STATE.boardMode = mode;
+            document.getElementById('btnSingleRing').className = mode === 'single' ? "px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition" : "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition";
+            document.getElementById('btnDoubleRing').className = mode === 'double' ? "px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition" : "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition";
+            drawBoard();
+        }
+
+        function switchTab(tabId) {
+            document.getElementById('editorTab').classList.toggle('hidden', tabId !== 'editor');
+            if (tabId === 'editor') renderEventsEditor();
+        }
+
+        // Craft Kit Functions
+        function openCraftKitModal() {
+            document.getElementById('craftKitModal').classList.remove('hidden');
+            renderAllCraftSheets();
+        }
+
+        function closeCraftKitModal() {
+            document.getElementById('craftKitModal').classList.add('hidden');
+        }
+
+        function showCraftSheet(sheetNum) {
+            for (let i = 1; i <= 4; i++) {
+                const sheet = document.getElementById(`sheet${i}View`);
+                const tab = document.getElementById(`craftTab${i}`);
+                if (sheet) sheet.classList.toggle('hidden', i !== sheetNum);
+                if (tab) {
+                    tab.className = i === sheetNum 
+                        ? "px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold" 
+                        : "px-4 py-2 rounded-lg text-slate-400 hover:text-slate-100 font-bold";
+                }
+            }
+        }
+
+        function renderAllCraftSheets() {
+            renderSheet1_MainBoard();
+            renderSheet2_NumberDials();
+            renderSheet3_CoverShields();
+        }
+
+        function renderSheet1_MainBoard() {
+            const svg = document.getElementById('sheet1Svg');
+            if (!svg) return;
+            svg.innerHTML = '';
+            const cx = 500, cy = 500;
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            if (APP_STATE.boardMode === 'single') {
+                drawSinglePerimeterRing(group, cx, cy);
+            } else {
+                drawDoublePerimeterRing(group, cx, cy);
+            }
+
+            const centerMount = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            centerMount.setAttribute("cx", cx); centerMount.setAttribute("cy", cy);
+            centerMount.setAttribute("r", "230"); centerMount.setAttribute("fill", "#090d16");
+            centerMount.setAttribute("stroke", "#eab308"); centerMount.setAttribute("stroke-width", "3");
+            centerMount.setAttribute("stroke-dasharray", "8,8");
+            group.appendChild(centerMount);
+
+            const pinCrossH = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            pinCrossH.setAttribute("x1", cx - 20); pinCrossH.setAttribute("y1", cy);
+            pinCrossH.setAttribute("x2", cx + 20); pinCrossH.setAttribute("y2", cy);
+            pinCrossH.setAttribute("stroke", "#facc15"); pinCrossH.setAttribute("stroke-width", "3");
+            group.appendChild(pinCrossH);
+
+            const pinCrossV = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            pinCrossV.setAttribute("x1", cx); pinCrossV.setAttribute("y1", cy - 20);
+            pinCrossV.setAttribute("x2", cx); pinCrossV.setAttribute("y2", cy + 20);
+            pinCrossV.setAttribute("stroke", "#facc15"); pinCrossV.setAttribute("stroke-width", "3");
+            group.appendChild(pinCrossV);
+
+            const centerTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            centerTxt.setAttribute("x", cx); centerTxt.setAttribute("y", cy + 40);
+            centerTxt.setAttribute("fill", "#facc15"); centerTxt.setAttribute("font-size", "14");
+            centerTxt.setAttribute("font-weight", "900"); centerTxt.setAttribute("text-anchor", "middle");
+            centerTxt.textContent = "SHEET 1 BASE: MOUNT ROTATING DIALS HERE";
+            group.appendChild(centerTxt);
+
+            svg.appendChild(group);
+        }
+
+        function renderSheet2_NumberDials() {
+            const svg = document.getElementById('sheet2Svg');
+            if (!svg) return;
+            svg.innerHTML = '';
+            const cx = 500, cy = 500;
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            const ringConfigs = [
+                { id: 0, name: "Units Ring", rOut: 100, rIn: 45, color: "#10b981" },
+                { id: 1, name: "Tens Ring", rOut: 160, rIn: 105, color: "#06b6d4" },
+                { id: 2, name: "Hundreds Ring", rOut: 220, rIn: 165, color: "#f59e0b" }
+            ];
+
+            ringConfigs.forEach(cfg => {
+                const rMid = (cfg.rOut + cfg.rIn) / 2;
+                
+                const outC = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                outC.setAttribute("cx", cx); outC.setAttribute("cy", cy); outC.setAttribute("r", cfg.rOut);
+                outC.setAttribute("stroke", cfg.color); outC.setAttribute("stroke-width", "2");
+                outC.setAttribute("stroke-dasharray", "6,4"); outC.setAttribute("fill", "none");
+                group.appendChild(outC);
+
+                const inC = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                inC.setAttribute("cx", cx); inC.setAttribute("cy", cy); inC.setAttribute("r", cfg.rIn);
+                inC.setAttribute("stroke", cfg.color); inC.setAttribute("stroke-width", "2");
+                inC.setAttribute("stroke-dasharray", "6,4"); inC.setAttribute("fill", "none");
+                group.appendChild(inC);
+
+                for (let d = 0; d < 10; d++) {
+                    const ang = (d * 36) * Math.PI / 180 - Math.PI / 2;
+                    const nx = cx + rMid * Math.cos(ang);
+                    const ny = cy + rMid * Math.sin(ang);
+
+                    const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    txt.setAttribute("x", nx); txt.setAttribute("y", ny);
+                    txt.setAttribute("fill", "#0f172a"); txt.setAttribute("font-size", "22");
+                    txt.setAttribute("font-weight", "900"); txt.setAttribute("text-anchor", "middle");
+                    txt.setAttribute("dominant-baseline", "central");
+                    txt.textContent = d;
+                    group.appendChild(txt);
+                }
+            });
+
+            const pinV = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            pinV.setAttribute("x1", cx); pinV.setAttribute("y1", cy - 25);
+            pinV.setAttribute("x2", cx); pinV.setAttribute("y2", cy + 25);
+            pinV.setAttribute("stroke", "#0f172a"); pinV.setAttribute("stroke-width", "2");
+            group.appendChild(pinV);
+
+            const pinH = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            pinH.setAttribute("x1", cx - 25); pinH.setAttribute("y1", cy);
+            pinH.setAttribute("x2", cx + 25); pinH.setAttribute("y2", cy);
+            pinH.setAttribute("stroke", "#0f172a"); pinH.setAttribute("stroke-width", "2");
+            group.appendChild(pinH);
+
+            svg.appendChild(group);
+        }
+
+        function renderSheet3_CoverShields() {
+            const svg = document.getElementById('sheet3Svg');
+            if (!svg) return;
+            svg.innerHTML = '';
+            const cx = 500, cy = 500;
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            const ringConfigs = [
+                { id: 0, name: "Units Cover", rOut: 100, rIn: 45, color: "#10b981" },
+                { id: 1, name: "Tens Cover", rOut: 160, rIn: 105, color: "#06b6d4" },
+                { id: 2, name: "Hundreds Cover", rOut: 220, rIn: 165, color: "#f59e0b" }
+            ];
+
+            ringConfigs.forEach(cfg => {
+                const rMid = (cfg.rOut + cfg.rIn) / 2;
+                const windowY = cy - rMid;
+
+                const cBody = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                cBody.setAttribute("cx", cx); cBody.setAttribute("cy", cy); cBody.setAttribute("r", rMid);
+                cBody.setAttribute("stroke", "#0f172a"); cBody.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
+                cBody.setAttribute("fill", "none");
+                group.appendChild(cBody);
+
+                const cutWin = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                cutWin.setAttribute("x", cx - 18); cutWin.setAttribute("y", windowY - 18);
+                cutWin.setAttribute("width", "36"); cutWin.setAttribute("height", "36");
+                cutWin.setAttribute("rx", "6");
+                cutWin.setAttribute("fill", "#ffffff"); cutWin.setAttribute("stroke", "#ef4444");
+                cutWin.setAttribute("stroke-width", "3"); cutWin.setAttribute("stroke-dasharray", "4,4");
+                group.appendChild(cutWin);
+
+                const cutTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                cutTxt.setAttribute("x", cx); cutTxt.setAttribute("y", windowY);
+                cutTxt.setAttribute("fill", "#ef4444"); cutTxt.setAttribute("font-size", "9");
+                cutTxt.setAttribute("font-weight", "900"); cutTxt.setAttribute("text-anchor", "middle");
+                cutTxt.setAttribute("dominant-baseline", "central");
+                cutTxt.textContent = "CUT OUT";
+                group.appendChild(cutTxt);
+            });
+
+            svg.appendChild(group);
+        }
+
+        // Global Initialization Window Handler
+        window.onload = function() {
+            initTiles();
+            changePlayerCount(4);
+            renderEventsEditor();
+            drawBoard();
+        };
+    </script>
+</body>
+</html>
