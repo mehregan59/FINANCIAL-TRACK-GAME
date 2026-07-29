@@ -60,7 +60,7 @@ Because Financial Track 100 is built as a zero-dependency, single-file web appli
 
 Clone the repository:
 
-git clone https://github.com/your-username/financial-track-100.git
+git clone https://github.com/mehregan59/financial-track-100.git
 
 
 Open index.html:
