@@ -6,6 +6,16 @@ https://mehregan59.github.io/FINANCIAL-TRACK-GAME/
 
 Financial Track 100 is a web-based financial board game and printable craft kit scaled for a 50 cm circular board. Players navigate a 100-sector market perimeter while dialing in portfolio points, market indices, or economic multipliers (000 – 999) using a 3-ring concentric Market Tracker mechanism.
 
+🌐 Online Multiplayer (3 – 10 players, live sync)
+
+Open the site, enter your name and choose Create a room. Share the 5-character room code or the invite link (?room=CODE) with friends. When 3 to 10 players are in the lobby, the host presses Start Game.
+
+Everyone sees the same board, dice roll, pawn positions and Market Tracker dials, live. Only the player whose turn it is can roll the dice or change the dials; the host also controls board layout, event pool and shuffling. If the host leaves, another player takes over automatically. Late joiners can watch as spectators.
+
+How it works: the site stays static (GitHub Pages). Live sync uses Supabase Realtime (Broadcast + Presence), so no database tables or server code are needed. The Supabase project URL and publishable key are set at the top of the multiplayer script in index.html (SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY). The publishable key is designed to be public; never commit a service_role or secret key. If those two values are empty, the game falls back to a same-browser test mode (rooms work only between tabs of one browser).
+
+Note: this is a casual, friends-only design. There is no login and no anti-cheat; anyone with the room code can join, and the host's browser decides dice rolls.
+
 ✨ Features
 
 🎯 Interactive SVG Board (50 cm Scale)

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Financial Track 100 - 50cm Board</title>
+    <!-- Supabase Realtime client (used only for online rooms) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -120,19 +122,26 @@
                     <p class="text-xs text-slate-400 flex items-center gap-2">
                         <span><i class="fa-solid fa-circle-dot text-emerald-400 text-[10px]"></i> 50 cm Board Scale</span>
                         <span>•</span>
-                        <span>2 to 10 Players</span>
+                        <span>3 to 10 Players Online</span>
                     </p>
                 </div>
             </div>
 
             <!-- Controls & Mode Switches -->
             <div class="flex items-center flex-wrap gap-2">
-                <button onclick="randomizeBoardTexts()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+                <div id="roomPill" class="hidden flex items-center gap-2 bg-slate-800 border border-emerald-500/40 rounded-lg px-2.5 py-1 text-xs">
+                    <i class="fa-solid fa-signal text-emerald-400"></i>
+                    <span class="text-slate-400">Room</span>
+                    <span id="roomPillCode" class="font-mono font-black text-emerald-300 tracking-widest"></span>
+                    <button onclick="copyInviteLink()" class="text-slate-400 hover:text-amber-300" title="Copy invite link"><i class="fa-solid fa-link"></i></button>
+                    <button onclick="leaveRoom()" class="text-slate-400 hover:text-red-400" title="Leave room"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+                <button onclick="randomizeBoardTexts()" class="host-only px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
                     <i class="fa-solid fa-shuffle"></i>
                     <span>Shuffle 20 Events</span>
                 </button>
 
-                <div class="flex bg-slate-800 rounded-lg p-1 border border-slate-700 text-xs font-semibold">
+                <div class="host-only flex bg-slate-800 rounded-lg p-1 border border-slate-700 text-xs font-semibold">
                     <button id="btnSingleRing" onclick="setBoardMode('single')" class="px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition">100 Perimeter</button>
                     <button id="btnDoubleRing" onclick="setBoardMode('double')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition">50/50 Dual</button>
                 </div>
@@ -141,7 +150,7 @@
                     <button onclick="switchTab('board')" id="tabBtnBoard" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-1 border border-slate-700">
                         <i class="fa-solid fa-chess-board"></i> Board
                     </button>
-                    <button onclick="switchTab('editor')" id="tabBtnEditor" class="px-3 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 text-xs font-semibold flex items-center gap-1">
+                    <button onclick="switchTab('editor')" id="tabBtnEditor" class="host-only px-3 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 text-xs font-semibold flex items-center gap-1">
                         <i class="fa-solid fa-pen-to-square"></i> Events (<span id="eventCountBadge">20</span>)
                     </button>
                     <button onclick="openCraftKitModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-md">
@@ -176,7 +185,7 @@
         <section class="lg:col-span-4 space-y-5 no-print">
             
             <!-- Market Tracker 3-Ring Controller Panel -->
-            <div class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-4">
+            <div id="trackerPanel" class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-compass text-amber-400 text-lg"></i>
@@ -249,7 +258,7 @@
                 </div>
 
                 <!-- Player Count Selection (2 to 10) -->
-                <div class="space-y-2">
+                <div id="playerCountBlock" class="space-y-2">
                     <label class="text-xs font-semibold text-slate-400 flex justify-between">
                         <span>Active Investors:</span>
                         <span id="playerCountVal" class="text-emerald-400 font-bold">4 Players</span>
@@ -265,7 +274,7 @@
                         1
                     </div>
 
-                    <button onclick="rollDice()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm tracking-wider shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <button id="rollBtn" onclick="rollDice()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm tracking-wider shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
                         <i class="fa-solid fa-dice-five"></i> ROLL MARKET DICE
                     </button>
                 </div>
@@ -277,7 +286,7 @@
             </div>
 
             <!-- Preset Financial Switcher -->
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+            <div class="host-only bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
                 <h3 class="font-bold text-xs text-slate-300 font-display tracking-wide uppercase">Financial Presets</h3>
                 <div class="grid grid-cols-1 gap-2 text-xs">
                     <button onclick="loadFinancialPreset('wallstreet')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-left border border-slate-700 flex items-center justify-between transition">
@@ -440,6 +449,78 @@
             </div>
         </div>
     </div>
+
+    <!-- ============ ONLINE MULTIPLAYER: LANDING PAGE ============ -->
+    <div id="landing" class="fixed inset-0 z-[60] bg-slate-950 overflow-y-auto no-print hidden">
+        <div class="min-h-full flex items-center justify-center p-4">
+            <div class="w-full max-w-md space-y-6">
+                <div class="text-center space-y-3">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center text-slate-950 text-3xl shadow-lg">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">FINANCIAL TRACK 100</h1>
+                    <p class="text-sm text-slate-400">Race around the 100-space market board with friends. Everyone sees the same board, dice and tracker dials, live.</p>
+                    <p class="text-xs text-slate-500"><i class="fa-solid fa-users mr-1"></i>3 to 10 players per room</p>
+                </div>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
+                    <div class="space-y-1.5">
+                        <label for="playerNameInput" class="text-xs font-semibold text-slate-400">Your name</label>
+                        <input id="playerNameInput" type="text" maxlength="16" placeholder="e.g. Mehregan" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-semibold focus:border-emerald-400 outline-none">
+                    </div>
+
+                    <button id="createRoomBtn" onclick="createRoom()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm tracking-wider shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> CREATE A ROOM
+                    </button>
+
+                    <div class="flex items-center gap-3 text-[10px] text-slate-500 uppercase tracking-widest"><span class="flex-1 h-px bg-slate-800"></span>or join friends<span class="flex-1 h-px bg-slate-800"></span></div>
+
+                    <div class="flex gap-2">
+                        <input id="roomCodeInput" type="text" maxlength="5" placeholder="ROOM CODE" autocapitalize="characters" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-center text-lg font-mono font-black tracking-[0.3em] text-amber-300 uppercase focus:border-amber-400 outline-none" onkeydown="if(event.key==='Enter') joinRoom()">
+                        <button id="joinRoomBtn" onclick="joinRoom()" class="px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm transition">JOIN</button>
+                    </div>
+
+                    <p id="landingError" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2"></p>
+                    <p id="transportNote" class="hidden text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2"></p>
+                </div>
+
+                <div class="text-center">
+                    <button onclick="playSolo()" class="text-xs text-slate-500 hover:text-slate-300 underline underline-offset-4">Skip: play on one screen / print the craft kit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ ONLINE MULTIPLAYER: LOBBY ============ -->
+    <div id="lobby" class="fixed inset-0 z-[60] bg-slate-950 overflow-y-auto no-print hidden">
+        <div class="min-h-full flex items-center justify-center p-4">
+            <div class="w-full max-w-md space-y-5">
+                <div class="text-center space-y-2">
+                    <p class="text-xs uppercase tracking-widest text-slate-500">Room code</p>
+                    <div id="lobbyCode" class="text-5xl font-mono font-black tracking-[0.3em] text-emerald-300"></div>
+                    <button onclick="copyInviteLink()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold"><i class="fa-solid fa-link mr-1"></i><span id="copyLinkLabel">Copy invite link</span></button>
+                </div>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide">INVESTORS IN THE ROOM</h2>
+                        <span id="lobbyCount" class="text-xs font-mono font-bold text-amber-300"></span>
+                    </div>
+                    <div id="lobbyList" class="space-y-1.5 text-xs"></div>
+                    <p id="lobbyHint" class="text-xs text-slate-400 text-center"></p>
+                </div>
+
+                <button id="startGameBtn" onclick="hostStartGame()" class="hidden flex w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm tracking-wider shadow-lg transition items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> START GAME
+                </button>
+                <div class="text-center">
+                    <button onclick="leaveRoom()" class="text-xs text-slate-500 hover:text-red-400 underline underline-offset-4">Leave room</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] hidden bg-slate-800 border border-slate-600 text-slate-100 text-xs font-semibold px-4 py-2 rounded-xl shadow-2xl no-print"></div>
 
     <script>
         const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#a855f7'];
@@ -808,6 +889,7 @@
 
         function startRingDrag(e, ringIdx) {
             e.preventDefault();
+            if (!canControlTracker()) return;
             APP_STATE.draggedRingIndex = ringIdx;
             const pt = getSvgEventCoords(e);
             const cx = 500, cy = 500;
@@ -837,6 +919,7 @@
 
             updateMarketTrackerUI();
             drawBoard();
+            syncTracker();
         }
 
         function stopRingDrag() {
@@ -858,20 +941,25 @@
         }
 
         function adjustRing(ringIdx, step) {
+            if (!canControlTracker()) return;
             APP_STATE.marketTracker[ringIdx] = (APP_STATE.marketTracker[ringIdx] + step + 10) % 10;
             APP_STATE.ringRotations[ringIdx] = -APP_STATE.marketTracker[ringIdx] * 36;
             updateMarketTrackerUI();
             drawBoard();
+            syncTracker();
         }
 
         function resetMarketTracker() {
+            if (!canControlTracker()) return;
             APP_STATE.marketTracker = [0, 0, 0];
             APP_STATE.ringRotations = [0, 0, 0];
             updateMarketTrackerUI();
             drawBoard();
+            syncTracker();
         }
 
         function setDirectMarketTrackerValue(val) {
+            if (!canControlTracker()) return;
             let num = parseInt(val, 10);
             if (isNaN(num)) num = 0;
             if (num < 0) num = 0;
@@ -886,6 +974,7 @@
 
             updateMarketTrackerUI();
             drawBoard();
+            syncTracker();
         }
 
         function updateMarketTrackerUI() {
@@ -920,6 +1009,7 @@
         }
 
         function rollDice() {
+            if (MP.on) { requestOnlineRoll(); return; }
             const roll = Math.floor(Math.random() * 6) + 1;
             const diceElem = document.getElementById('diceDisplay');
             diceElem.textContent = roll;
@@ -934,18 +1024,24 @@
             drawBoard();
         }
 
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
         function renderPlayersList() {
             const container = document.getElementById('playersList');
             if (!container) return;
             container.innerHTML = '';
 
             APP_STATE.players.forEach((p, idx) => {
+                const isMe = MP.on && p.id === MP.id;
+                const offline = MP.on && MP.phase === 'playing' && !MP.members.some(m => m.id === p.id);
                 const div = document.createElement('div');
-                div.className = `flex items-center justify-between p-2 rounded-xl border ${idx === APP_STATE.currentPlayerIndex ? 'bg-slate-800 border-amber-500/50' : 'bg-slate-900/50 border-slate-800'}`;
+                div.className = `flex items-center justify-between p-2 rounded-xl border ${idx === APP_STATE.currentPlayerIndex ? 'bg-slate-800 border-amber-500/50' : 'bg-slate-900/50 border-slate-800'} ${offline ? 'opacity-50' : ''}`;
                 div.innerHTML = `
                     <div class="flex items-center space-x-2">
                         <span class="w-3 h-3 rounded-full" style="background-color: ${PLAYER_COLORS[idx % PLAYER_COLORS.length]}"></span>
-                        <span class="font-bold text-slate-200 text-xs">${p.name}</span>
+                        <span class="font-bold text-slate-200 text-xs">${escapeHtml(p.name)}${isMe ? ' <span class="text-emerald-400">(you)</span>' : ''}${offline ? ' <span class="text-red-400">(offline)</span>' : ''}</span>
                     </div>
                     <span class="font-mono text-emerald-400 font-bold text-xs">Space ${p.position} / 100</span>
                 `;
@@ -954,14 +1050,17 @@
         }
 
         function randomizeBoardTexts() {
+            if (MP.on && !isHost()) return;
             for (let i = 0; i < 100; i++) {
                 const randEvt = APP_STATE.eventPool[Math.floor(Math.random() * APP_STATE.eventPool.length)];
                 APP_STATE.tiles[i].text = randEvt;
             }
             drawBoard();
+            broadcastIfHost();
         }
 
         function loadFinancialPreset(type) {
+            if (MP.on && !isHost()) return;
             if (type === 'wallstreet') {
                 APP_STATE.eventPool = [
                     "Dividend Payout (+3)", "Bear Market (-2)", "Stock Split (+1)", "Tax Audit (-1)",
@@ -1038,10 +1137,12 @@
         }
 
         function setBoardMode(mode) {
+            if (MP.on && !isHost()) return;
             APP_STATE.boardMode = mode;
             document.getElementById('btnSingleRing').className = mode === 'single' ? "px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition" : "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition";
             document.getElementById('btnDoubleRing').className = mode === 'double' ? "px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition" : "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition";
             drawBoard();
+            broadcastIfHost();
         }
 
         function switchTab(tabId) {
@@ -1227,7 +1328,447 @@
             changePlayerCount(4);
             renderEventsEditor();
             drawBoard();
+            mpInit();
         };
+    </script>
+
+    <script>
+/* ====================================================================
+   ONLINE MULTIPLAYER (3-10 players, live sync)
+   --------------------------------------------------------------------
+   * The site stays static (works on GitHub Pages). Live sync goes through
+     Supabase Realtime (Broadcast + Presence). No database tables needed.
+   * The room's host is the authority for dice rolls and turn order; every
+     client keeps a full copy of the state, so if the host leaves, the next
+     player takes over from that copy.
+   ==================================================================== */
+
+// Fill in after creating the Supabase project (Project Settings -> API Keys).
+// The *publishable* key is meant to be public. NEVER put a service_role or secret key here.
+const SUPABASE_URL = 'https://tqrhvacwsswvuzjxdipv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ok9vrk-K-iu7fLTOFi8oeQ_37ogNkru';
+
+const MIN_PLAYERS = 3, MAX_PLAYERS = 10;
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+const MP = {
+    on: false, code: '', id: '', name: '', hostId: '', phase: 'idle', // idle | lobby | playing
+    seq: 0, members: [], arrival: [], t: null, creatorJoin: false, gotState: false,
+    lastRollSeq: 0, rollPending: false, hostTimer: null, skipTimer: null, joinTimer: null,
+    diceTimer: null, trackerTimer: null, lastTrackerSend: 0, toastTimer: null
+};
+
+const isHost = () => MP.on && MP.hostId === MP.id;
+const usingSupabase = () => !!(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && window.supabase);
+const $ = id => document.getElementById(id);
+
+/* ---------- Transports (same API, two backends) ---------- */
+
+// Test/dev backend: works only between tabs of the SAME browser. Used when Supabase is not configured.
+function LocalTransport(code) {
+    const bc = new BroadcastChannel('ftg-' + code);
+    const peers = new Map();
+    let msgH = () => {}, presH = () => {}, meta = null, timer = null;
+    const beat = () => { if (meta) bc.postMessage({ k: 'pres', meta }); };
+    const emit = () => {
+        const now = Date.now();
+        for (const [id, p] of peers) if (now - p.seen > 3500) peers.delete(id);
+        presH([meta, ...[...peers.values()].map(p => p.meta)].filter(Boolean));
+    };
+    bc.onmessage = ev => {
+        const m = ev.data;
+        if (m.k === 'pres') { const known = peers.has(m.meta.id); peers.set(m.meta.id, { meta: m.meta, seen: Date.now() }); if (!known) beat(); emit(); }
+        else if (m.k === 'bye') { peers.delete(m.id); emit(); }
+        else if (m.k === 'msg') msgH(m.e, m.d);
+    };
+    return {
+        async join(m) { meta = m; beat(); timer = setInterval(() => { beat(); emit(); }, 1000); await new Promise(r => setTimeout(r, 700)); emit(); },
+        updateMeta(m) { meta = m; beat(); emit(); },
+        send(e, d) { bc.postMessage({ k: 'msg', e, d }); },
+        onMessage(f) { msgH = f; }, onPresence(f) { presH = f; },
+        leave() { if (meta) bc.postMessage({ k: 'bye', id: meta.id }); clearInterval(timer); bc.close(); }
+    };
+}
+
+// Production backend: Supabase Realtime.
+function SupabaseTransport(code) {
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { realtime: { params: { eventsPerSecond: 20 } } });
+    let ch, msgH = () => {}, presH = () => {}, meta = null;
+    const readPresence = () => presH(Object.values(ch.presenceState()).map(a => a[a.length - 1]));
+    return {
+        join(m) {
+            meta = m;
+            ch = client.channel('ftg-room-' + code, { config: { broadcast: { self: false }, presence: { key: m.id } } });
+            ch.on('broadcast', { event: 'msg' }, ({ payload }) => msgH(payload.e, payload.d));
+            ch.on('presence', { event: 'sync' }, readPresence);
+            return new Promise((resolve, reject) => {
+                let settled = false;
+                const to = setTimeout(() => { if (!settled) { settled = true; reject(new Error('Could not reach the game server (timeout).')); } }, 10000);
+                ch.subscribe(async status => {
+                    if (status === 'SUBSCRIBED') {
+                        await ch.track(meta); // also re-announces us after an automatic reconnect
+                        if (!settled) { settled = true; clearTimeout(to); resolve(); } else showToast('Reconnected');
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                        if (!settled) { settled = true; clearTimeout(to); reject(new Error('Could not connect to the game server.')); }
+                        else showToast('Connection lost, reconnecting...');
+                    }
+                });
+            });
+        },
+        updateMeta(m) { meta = m; ch.track(m); },
+        send(e, d) { ch.send({ type: 'broadcast', event: 'msg', payload: { e, d } }); },
+        onMessage(f) { msgH = f; }, onPresence(f) { presH = f; },
+        leave() { try { ch.untrack(); } catch (_) {} try { client.removeChannel(ch); } catch (_) {} }
+    };
+}
+
+const makeTransport = code => usingSupabase() ? SupabaseTransport(code) : LocalTransport(code);
+
+/* ---------- Small helpers ---------- */
+
+function showToast(msg) {
+    const el = $('toast'); el.textContent = msg; el.classList.remove('hidden');
+    clearTimeout(MP.toastTimer); MP.toastTimer = setTimeout(() => el.classList.add('hidden'), 2600);
+}
+function getClientId() {
+    let id = null;
+    try { id = sessionStorage.getItem('ftg_id'); } catch (_) {}
+    if (!id) { id = 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-3); try { sessionStorage.setItem('ftg_id', id); } catch (_) {} }
+    return id;
+}
+const cleanName = s => String(s || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16);
+const cleanCode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+function newRoomCode() {
+    const b = new Uint8Array(5); crypto.getRandomValues(b);
+    return [...b].map(x => CODE_ALPHABET[x % CODE_ALPHABET.length]).join('');
+}
+function rollD6() { const b = new Uint32Array(1); let x; do { crypto.getRandomValues(b); x = b[0]; } while (x >= 4294967292); return (x % 6) + 1; }
+function inviteLink() { return location.origin + location.pathname + '?room=' + MP.code; }
+function copyInviteLink() {
+    const url = inviteLink();
+    const done = () => { showToast('Invite link copied'); const l = $('copyLinkLabel'); if (l) { l.textContent = 'Copied!'; setTimeout(() => l.textContent = 'Copy invite link', 1500); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => window.prompt('Copy this link:', url));
+    else window.prompt('Copy this link:', url);
+}
+const memberName = id => { const m = MP.members.find(x => x.id === id); return m ? m.name : ''; };
+
+/* ---------- Landing page ---------- */
+
+function mpInit() {
+    const params = new URLSearchParams(location.search);
+    const pre = cleanCode(params.get('room'));
+    try { $('playerNameInput').value = localStorage.getItem('ftg_name') || ''; } catch (_) {}
+    if (pre) $('roomCodeInput').value = pre;
+    if (!usingSupabase()) {
+        const n = $('transportNote');
+        n.textContent = 'Test mode: rooms only work between tabs of this browser, because the online game server is not connected yet.';
+        n.classList.remove('hidden');
+    }
+    $('landing').classList.remove('hidden');
+    (pre ? $('playerNameInput') : $('playerNameInput')).focus();
+}
+function showLandingError(msg) { const e = $('landingError'); e.textContent = msg || ''; e.classList.toggle('hidden', !msg); }
+function setLandingBusy(b) { ['createRoomBtn', 'joinRoomBtn'].forEach(id => { $(id).disabled = b; $(id).classList.toggle('opacity-50', b); }); }
+function playSolo() { $('landing').classList.add('hidden'); }
+function readName() {
+    const n = cleanName($('playerNameInput').value);
+    if (!n) { showLandingError('Please enter your name first.'); $('playerNameInput').focus(); return ''; }
+    try { localStorage.setItem('ftg_name', n); } catch (_) {}
+    return n;
+}
+async function createRoom() { const n = readName(); if (n) await enterRoom(newRoomCode(), n, true); }
+async function joinRoom() {
+    const n = readName(); if (!n) return;
+    const code = cleanCode($('roomCodeInput').value);
+    if (code.length !== 5) { showLandingError('Room codes have 5 characters.'); return; }
+    await enterRoom(code, n, false);
+}
+
+async function enterRoom(code, name, creator) {
+    showLandingError(''); setLandingBusy(true);
+    Object.assign(MP, { on: true, code, name, id: getClientId(), hostId: creator ? getClientId() : '', phase: 'lobby', seq: 0,
+        members: [], arrival: [], creatorJoin: creator, gotState: false, lastRollSeq: 0, rollPending: false, admitted: false });
+    const admitWait = new Promise(res => { MP.admitResolve = res; setTimeout(res, 2500); });
+    MP.t = makeTransport(code);
+    MP.t.onMessage(onMpMessage);
+    MP.t.onPresence(onMpPresence);
+    try { await MP.t.join({ id: MP.id, name, creator }); }
+    catch (err) { abortJoin(err.message || 'Could not join the room.'); return; }
+    await admitWait;
+    if (!MP.on) return;
+    // One-time capacity check at the moment we join (never re-run, so existing players are not kicked out).
+    if (!creator && MP.members.filter(m => m.id !== MP.id).length >= MAX_PLAYERS) { abortJoin('This room is full (max ' + MAX_PLAYERS + ' players).'); return; }
+    try { history.replaceState(null, '', location.pathname + '?room=' + code); } catch (_) {}
+    $('landing').classList.add('hidden');
+    showLobby();
+    if (!creator) {
+        MP.joinTimer = setTimeout(() => {
+            if (MP.on && !MP.hostId && MP.phase === 'lobby') abortJoin('Room ' + code + ' was not found. Check the code, or ask the host to open the room first.');
+        }, 6000);
+    }
+}
+function resetMP() {
+    try { MP.t && MP.t.leave(); } catch (_) {}
+    ['hostTimer', 'skipTimer', 'joinTimer', 'trackerTimer'].forEach(k => { clearTimeout(MP[k]); MP[k] = null; });
+    Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', members: [], arrival: [] });
+}
+function abortJoin(msg) {
+    resetMP(); setLandingBusy(false);
+    $('lobby').classList.add('hidden'); $('landing').classList.remove('hidden');
+    try { history.replaceState(null, '', location.pathname); } catch (_) {}
+    showLandingError(msg);
+}
+function leaveRoom() { resetMP(); location.href = location.pathname; }
+window.addEventListener('pagehide', () => { try { MP.t && MP.t.leave(); } catch (_) {} });
+
+/* ---------- Lobby ---------- */
+
+function orderedMembers() {
+    const rank = id => { const i = MP.arrival.indexOf(id); return i < 0 ? 999 : i; };
+    return [...MP.members].sort((a, b) => (a.id === MP.hostId ? -1 : b.id === MP.hostId ? 1 : rank(a.id) - rank(b.id)));
+}
+function showLobby() { $('lobby').classList.remove('hidden'); renderLobby(); }
+function renderLobby() {
+    if (!MP.on) return;
+    $('lobbyCode').textContent = MP.code;
+    const list = $('lobbyList'); list.innerHTML = '';
+    const ordered = orderedMembers();
+    ordered.forEach((m, i) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between p-2 rounded-xl border bg-slate-900/50 border-slate-800';
+        row.innerHTML = `<div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full" style="background-color:${PLAYER_COLORS[i % PLAYER_COLORS.length]}"></span>
+            <span class="font-bold text-slate-200 text-xs">${escapeHtml(m.name)}${m.id === MP.id ? ' <span class="text-emerald-400">(you)</span>' : ''}</span></div>
+            <span class="text-[10px] font-bold text-amber-300">${m.id === MP.hostId ? 'HOST' : ''}</span>`;
+        list.appendChild(row);
+    });
+    const n = ordered.length, enough = n >= MIN_PLAYERS;
+    $('lobbyCount').textContent = `${n}/${MAX_PLAYERS}`;
+    const btn = $('startGameBtn');
+    btn.classList.toggle('hidden', !isHost());
+    btn.disabled = !enough;
+    $('lobbyHint').textContent = isHost()
+        ? (enough ? 'Everyone here? Start when you are ready.' : `Waiting for ${MIN_PLAYERS - n} more player${MIN_PLAYERS - n > 1 ? 's' : ''}. Share the room code or invite link.`)
+        : 'Waiting for the host to start the game...';
+}
+
+/* ---------- Presence, host tracking ---------- */
+
+function onMpPresence(list) {
+    if (!MP.on) return;
+    const prev = new Set(MP.members.map(m => m.id));
+    MP.members = list.filter(m => m && m.id).map(m => ({ id: String(m.id), name: cleanName(m.name) || 'Investor', creator: !!m.creator }));
+    MP.members.forEach(m => { if (!MP.arrival.includes(m.id)) MP.arrival.push(m.id); });
+
+    if (!MP.hostId) { const c = MP.members.find(m => m.creator); if (c) { MP.hostId = c.id; clearTimeout(MP.joinTimer); } }
+
+    // First presence update that includes us = we are admitted; unblocks the one-time capacity check in enterRoom().
+    if (!MP.admitted && MP.members.some(m => m.id === MP.id)) { MP.admitted = true; if (MP.admitResolve) MP.admitResolve(); }
+    // New arrival while a game is running: host re-sends the full state.
+    if (isHost() && MP.phase === 'playing' && MP.members.some(m => !prev.has(m.id) && m.id !== MP.id)) setTimeout(broadcastState, 250);
+
+    watchHost();
+    watchCurrentPlayer();
+    if (MP.phase === 'playing') { renderPlayersList(); updateTurnUI(); } else renderLobby();
+}
+
+// If the host vanishes for 4s, the lowest-id remaining player takes over using their own copy of the state.
+function watchHost() {
+    const hostPresent = !MP.hostId || MP.members.some(m => m.id === MP.hostId);
+    if (hostPresent) { clearTimeout(MP.hostTimer); MP.hostTimer = null; return; }
+    if (MP.hostTimer) return; // countdown already running: presence updates must not restart it
+    MP.hostTimer = setTimeout(() => {
+        MP.hostTimer = null;
+        if (!MP.on || MP.members.some(m => m.id === MP.hostId)) return;
+        const candidate = MP.members.map(m => m.id).sort()[0];
+        if (candidate !== MP.id) return;
+        MP.hostId = MP.id;
+        showToast('The host left. You are now the host.');
+        broadcastState(); applyRoleUI();
+        if (MP.phase === 'playing') { renderPlayersList(); updateTurnUI(); watchCurrentPlayer(); } else renderLobby();
+    }, 4000);
+}
+// Host skips a disconnected player's turn after 8s so the game never stalls.
+function watchCurrentPlayer() {
+    const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
+    const needsSkip = isHost() && MP.phase === 'playing' && cur && cur.id !== MP.id && !MP.members.some(m => m.id === cur.id);
+    if (!needsSkip) { clearTimeout(MP.skipTimer); MP.skipTimer = null; MP.skipFor = null; return; }
+    if (MP.skipTimer && MP.skipFor === cur.id) return; // already counting down for this player
+    clearTimeout(MP.skipTimer); MP.skipFor = cur.id;
+    MP.skipTimer = setTimeout(() => {
+        MP.skipTimer = null; MP.skipFor = null;
+        const c2 = APP_STATE.players[APP_STATE.currentPlayerIndex];
+        if (!isHost() || !c2 || c2.id !== cur.id || MP.members.some(m => m.id === c2.id)) return;
+        APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
+        broadcastState(); renderPlayersList(); updateTurnUI(); watchCurrentPlayer();
+        showToast(c2.name + ' is offline: turn skipped');
+    }, 8000);
+}
+function nextPlayerIndex(cur) {
+    const ps = APP_STATE.players, n = ps.length;
+    for (let k = 1; k <= n; k++) {
+        const i = (cur + k) % n, p = ps[i];
+        if (p.id === MP.id || MP.members.some(m => m.id === p.id)) return i;
+    }
+    return cur;
+}
+
+/* ---------- State sync ---------- */
+
+function snapshot() {
+    return {
+        seq: MP.seq, hostId: MP.hostId, phase: MP.phase, boardMode: APP_STATE.boardMode,
+        marketTracker: [...APP_STATE.marketTracker], ringRotations: [...APP_STATE.ringRotations],
+        eventPool: [...APP_STATE.eventPool], tiles: APP_STATE.tiles.map(t => t.text),
+        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position })),
+        currentPlayerIndex: APP_STATE.currentPlayerIndex, roll: APP_STATE.lastRoll || null
+    };
+}
+function broadcastState() { if (!MP.on || !MP.t) return; MP.seq++; MP.t.send('state', { from: MP.id, state: snapshot() }); }
+function broadcastIfHost() { if (MP.on && isHost() && MP.phase === 'playing') broadcastState(); }
+
+function paintModeButtons(mode) {
+    $('btnSingleRing').className = mode === 'single' ? 'px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition' : 'px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition';
+    $('btnDoubleRing').className = mode === 'double' ? 'px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition' : 'px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition';
+}
+const digit = v => Math.max(0, Math.min(9, parseInt(v, 10) || 0));
+
+function applyState(s) {
+    MP.gotState = true; clearTimeout(MP.joinTimer);
+    MP.hostId = String(s.hostId || MP.hostId);
+    const was = MP.phase; MP.phase = s.phase === 'playing' ? 'playing' : 'lobby';
+    if (MP.phase === 'playing') {
+        APP_STATE.boardMode = s.boardMode === 'double' ? 'double' : 'single';
+        APP_STATE.marketTracker = [0, 1, 2].map(i => digit(s.marketTracker && s.marketTracker[i]));
+        APP_STATE.ringRotations = [0, 1, 2].map(i => Number(s.ringRotations && s.ringRotations[i]) || 0);
+        APP_STATE.eventPool = (s.eventPool || []).slice(0, 60).map(t => String(t).slice(0, 80));
+        if (!APP_STATE.eventPool.length) APP_STATE.eventPool = ['Reserve Vault'];
+        APP_STATE.tiles = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, text: String((s.tiles || [])[i] || '').slice(0, 80) }));
+        APP_STATE.players = (s.players || []).slice(0, MAX_PLAYERS).map(p => ({ id: String(p.id), name: cleanName(p.name) || 'Investor', position: Math.max(1, Math.min(100, parseInt(p.position, 10) || 1)) }));
+        APP_STATE.activePlayersCount = APP_STATE.players.length;
+        APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));
+        paintModeButtons(APP_STATE.boardMode);
+        MP.rollPending = false;
+        updateMarketTrackerUI(); renderEventsEditor(); renderPlayersList(); drawBoard(); updateTurnUI();
+        presentRoll(s.roll);
+        if (was !== 'playing') enterGameView();
+    } else if (!$('lobby').classList.contains('hidden')) renderLobby();
+    applyRoleUI();
+}
+
+function onMpMessage(e, d) {
+    if (!MP.on || !d) return;
+    if (e === 'state') {
+        const s = d.state;
+        if (s && s.hostId === d.from && s.seq > MP.seq) { MP.seq = s.seq; applyState(s); }
+    } else if (e === 'roll') {
+        if (isHost() && MP.phase === 'playing') hostRoll(String(d.from));
+    } else if (e === 'tracker') {
+        if (MP.phase !== 'playing' || !trackerSenderAllowed(String(d.from)) || !Array.isArray(d.m) || !Array.isArray(d.r)) return;
+        APP_STATE.marketTracker = [0, 1, 2].map(i => digit(d.m[i]));
+        APP_STATE.ringRotations = [0, 1, 2].map(i => Number(d.r[i]) || 0);
+        updateMarketTrackerUI(); drawBoard();
+    }
+}
+
+/* ---------- Game actions ---------- */
+
+function trackerSenderAllowed(from) {
+    const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
+    return from === MP.hostId || (!!cur && cur.id === from);
+}
+function canControlTracker() {
+    if (!MP.on) return true;
+    if (MP.phase !== 'playing') return false;
+    return trackerSenderAllowed(MP.id);
+}
+function syncTracker() {
+    if (!MP.on || MP.phase !== 'playing') return;
+    const send = () => { MP.lastTrackerSend = Date.now(); MP.t.send('tracker', { from: MP.id, m: [...APP_STATE.marketTracker], r: [...APP_STATE.ringRotations] }); };
+    clearTimeout(MP.trackerTimer);
+    if (Date.now() - MP.lastTrackerSend >= 60) send(); else MP.trackerTimer = setTimeout(send, 60);
+}
+
+function requestOnlineRoll() {
+    if (MP.phase !== 'playing' || MP.rollPending) return;
+    const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
+    if (!cur || cur.id !== MP.id) { showToast("It's not your turn"); return; }
+    if (isHost()) { hostRoll(MP.id); return; }
+    MP.rollPending = true; updateTurnUI();
+    setTimeout(() => { if (MP.rollPending) { MP.rollPending = false; updateTurnUI(); } }, 3000);
+    MP.t.send('roll', { from: MP.id });
+}
+function hostRoll(fromId) {
+    const idx = APP_STATE.currentPlayerIndex, p = APP_STATE.players[idx];
+    if (!p || p.id !== fromId) return;
+    const n = rollD6();
+    p.position = Math.min(100, p.position + n);
+    APP_STATE.lastRoll = { n, by: p.id, seq: MP.seq + 1 };
+    APP_STATE.currentPlayerIndex = nextPlayerIndex(idx);
+    broadcastState();
+    presentRoll(APP_STATE.lastRoll);
+    renderPlayersList(); drawBoard(); updateTurnUI(); watchCurrentPlayer();
+}
+function presentRoll(r) {
+    if (!r || !(r.seq > MP.lastRollSeq)) return;
+    MP.lastRollSeq = r.seq;
+    const el = $('diceDisplay'); let ticks = 0;
+    clearInterval(MP.diceTimer);
+    MP.diceTimer = setInterval(() => {
+        if (++ticks > 8) {
+            clearInterval(MP.diceTimer); el.textContent = r.n;
+            const who = APP_STATE.players.find(p => p.id === r.by);
+            showToast(`${who ? who.name : 'Someone'} rolled a ${r.n}`);
+            return;
+        }
+        el.textContent = 1 + Math.floor(Math.random() * 6);
+    }, 60);
+}
+
+function hostStartGame() {
+    if (!isHost() || MP.phase !== 'lobby') return;
+    const present = MP.arrival.filter(id => MP.members.some(m => m.id === id));
+    const order = [MP.id, ...present.filter(id => id !== MP.id)].slice(0, MAX_PLAYERS);
+    if (order.length < MIN_PLAYERS) { showToast(`You need at least ${MIN_PLAYERS} players to start`); return; }
+    const used = {};
+    APP_STATE.players = order.map((id, i) => {
+        let name = memberName(id) || `Investor ${i + 1}`;
+        used[name] = (used[name] || 0) + 1;
+        if (used[name] > 1) name = `${name} ${used[name]}`;
+        return { id, name, position: 1 };
+    });
+    APP_STATE.activePlayersCount = order.length;
+    APP_STATE.currentPlayerIndex = 0; APP_STATE.lastRoll = null;
+    APP_STATE.marketTracker = [0, 0, 0]; APP_STATE.ringRotations = [0, 0, 0];
+    MP.phase = 'playing';
+    broadcastState();
+    updateMarketTrackerUI(); renderPlayersList(); drawBoard(); updateTurnUI();
+    enterGameView(); applyRoleUI(); watchCurrentPlayer();
+}
+
+/* ---------- UI state ---------- */
+
+function enterGameView() {
+    $('lobby').classList.add('hidden'); $('landing').classList.add('hidden');
+    $('roomPill').classList.remove('hidden'); $('roomPillCode').textContent = MP.code;
+    $('playerCountBlock').classList.add('hidden');
+    if (!APP_STATE.players.some(p => p.id === MP.id)) showToast('This game already started: you are watching as a spectator');
+}
+function applyRoleUI() {
+    const restrict = MP.on && !isHost();
+    document.querySelectorAll('.host-only').forEach(el => el.classList.toggle('hidden', restrict));
+    if (restrict && !$('editorTab').classList.contains('hidden')) switchTab('board');
+    if (MP.on && MP.phase === 'playing') updateTurnUI();
+}
+function updateTurnUI() {
+    if (!MP.on) return;
+    const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
+    $('turnPlayerName').textContent = cur ? cur.name + (cur.id === MP.id ? ' (you)' : '') : '';
+    const mine = !!cur && cur.id === MP.id, btn = $('rollBtn');
+    btn.disabled = !mine || MP.rollPending;
+    btn.classList.toggle('opacity-40', btn.disabled); btn.classList.toggle('cursor-not-allowed', btn.disabled);
+    const can = canControlTracker(), panel = $('trackerPanel');
+    panel.classList.toggle('opacity-60', !can); panel.classList.toggle('pointer-events-none', !can);
+}
     </script>
 </body>
 </html>
