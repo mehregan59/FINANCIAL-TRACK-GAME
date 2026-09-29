@@ -12,9 +12,13 @@ Open the site, enter your name, choose how many players (3 to 10) and press Crea
 
 The Market Tracker in the middle of the board is not moved by hand: the player whose turn it is (or the host) changes it with the MARKET TRACKER DIALS panel, and everyone sees it update live.
 
+In the lobby each player picks a unique avatar (12 to choose from). In the game, the top-left dice is rolled by clicking it (3D tumble with sound; mute button included). When it stops, the player presses Accept and their avatar hops space by space, counting, from the current space forward by the dice number. The player whose turn it is glows (dice dock, banner and player list) and gets a chime.
+
 Everyone sees the same board, dice roll, pawn positions and Market Tracker dials, live. Only the player whose turn it is can roll the dice or change the dials; the host also controls board layout, event pool and shuffling. If the host leaves, another player takes over automatically. A player who refreshes the page can rejoin their seat with the same code. Rooms are exactly the size the host chose, so extra people are turned away.
 
-How it works: the site stays static (GitHub Pages). Live sync uses Supabase Realtime (Broadcast + Presence), so no database tables or server code are needed. The Supabase project URL and publishable key are set at the top of the multiplayer script in index.html (SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY). The publishable key is designed to be public; never commit a service_role or secret key. If those two values are empty, the game falls back to a same-browser test mode (rooms work only between tabs of one browser).
+How it works: the site stays static (GitHub Pages). Live sync uses Supabase Realtime (Broadcast + Presence), so no database tables or server code are needed. The Supabase project URL and publishable key are set in js/config.js (SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY). The publishable key is designed to be public; never commit a service_role or secret key. If those two values are empty, the game falls back to a same-browser test mode (rooms work only between tabs of one browser).
+
+Project layout (no build step): index.html (markup only), css/ (styles.css, game.css), js/ (config, util, state, audio, dice, board, events-editor, craftkit, transport, multiplayer, lobby, game, main). Turn logic lives in js/game.js, sync in js/multiplayer.js + js/transport.js.
 
 Note: this is a casual, friends-only design. There is no login and no anti-cheat; anyone with the room code can join, and the host's browser decides dice rolls.
 
@@ -46,7 +50,7 @@ Upright Digit Alignment: Digits auto-counter-rotate relative to ring rotation to
 
 Support for 2 to 10 active players with distinct color-coded tokens (P1 – P10).
 
-Integrated 3D Market Dice Roller with step-by-step movement animations and leaderboard tracking.
+Integrated 3D dice with sound, Accept button and step-by-step hopping avatars with leaderboard tracking.
 
 ✏️ Customizable Event Pool (1 to 20)
 

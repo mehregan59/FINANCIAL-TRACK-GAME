@@ -295,39 +295,63 @@ function drawMarketTrackerRings(group, cx, cy) {
     group.appendChild(hubVal);
 }
 
-function drawPlayerPawns(group, cx, cy) {
-    APP_STATE.players.forEach((p, idx) => {
-        if (p.position <= 0) return;
-        
-        const tileIndex = p.position - 1;
-        const totalSectors = 100;
-        const stepAngle = (2 * Math.PI) / totalSectors;
-        const midA = (tileIndex + 0.5) * stepAngle - Math.PI / 2;
-        
-        const rPawn = 472 - idx * 24.5; // one radial lane per player: all pawns stay visible
-        const px = cx + rPawn * Math.cos(midA);
-        const py = cy + rPawn * Math.sin(midA);
+const SVG_NS = "http://www.w3.org/2000/svg";
+function svgEl(name, attrs) {
+    const e = document.createElementNS(SVG_NS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+}
 
-        const pawnGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        pawnGroup.setAttribute("class", "pawn-element");
+// Pawn position for a 1-based board space (may be fractional while an avatar hops).
+// Each player has a fixed radial lane, so all pawns stay visible even on the same space.
+function pawnXY(idx, pos) {
+    const angle = (pos - 0.5) * (2 * Math.PI / 100) - Math.PI / 2;
+    const r = 472 - idx * 24.5;
+    return { x: 500 + r * Math.cos(angle), y: 500 + r * Math.sin(angle) };
+}
 
-        const pawnCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        pawnCircle.setAttribute("cx", px); pawnCircle.setAttribute("cy", py);
-        pawnCircle.setAttribute("r", "10");
-        pawnCircle.setAttribute("fill", PLAYER_COLORS[idx % PLAYER_COLORS.length]);
-        pawnCircle.setAttribute("stroke", "#ffffff"); pawnCircle.setAttribute("stroke-width", "2.5");
-        pawnGroup.appendChild(pawnCircle);
+function fillPawnLayer(layer) {
+    const cur = APP_STATE.currentPlayerIndex;
+    // The player whose turn it is is drawn last, so they sit on top.
+    const order = APP_STATE.players.map((_, i) => i).sort((a, b) => (a === cur) - (b === cur));
+    order.forEach(idx => {
+        const p = APP_STATE.players[idx];
+        const anim = APP_STATE.anim && APP_STATE.anim.id === p.id ? APP_STATE.anim : null;
+        const { x, y } = pawnXY(idx, anim ? anim.pos : p.position);
+        const lift = anim ? anim.lift : 0;
+        const yy = y - lift * 12;
+        const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+        const isTurn = idx === cur;
 
-        const pawnTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        pawnTxt.setAttribute("x", px); pawnTxt.setAttribute("y", py);
-        pawnTxt.setAttribute("fill", "#ffffff"); pawnTxt.setAttribute("font-size", "9");
-        pawnTxt.setAttribute("font-weight", "900"); pawnTxt.setAttribute("text-anchor", "middle");
-        pawnTxt.setAttribute("dominant-baseline", "central");
-        pawnTxt.textContent = `P${idx + 1}`;
-        pawnGroup.appendChild(pawnTxt);
-
-        group.appendChild(pawnGroup);
+        const g = svgEl('g', { class: 'pawn-element' });
+        g.appendChild(svgEl('ellipse', { cx: x, cy: y + 11, rx: 9 - lift * 3, ry: 3.2 - lift, fill: 'rgba(0,0,0,0.45)' }));
+        if (isTurn) g.appendChild(svgEl('circle', { class: 'pawn-glow', cx: x, cy: yy, r: 15, fill: 'none', stroke: color, 'stroke-width': 3 }));
+        g.appendChild(svgEl('circle', { cx: x, cy: yy, r: isTurn ? 12 : 11, fill: color, stroke: '#ffffff', 'stroke-width': 2 }));
+        const face = svgEl('text', { x, y: yy + 0.5, 'font-size': 13, 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+        face.textContent = avatarEmoji(p.avatar);
+        g.appendChild(face);
+        if (anim && anim.count > 0) { // the number being counted as the avatar hops forward
+            g.appendChild(svgEl('rect', { x: x - 11, y: yy - 36, width: 22, height: 18, rx: 9, fill: '#facc15', stroke: '#1e293b', 'stroke-width': 1.5 }));
+            const n = svgEl('text', { x, y: yy - 27, 'font-size': 12, 'font-weight': 900, fill: '#1e293b', 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+            n.textContent = anim.count;
+            g.appendChild(n);
+        }
+        layer.appendChild(g);
     });
+}
+
+function drawPlayerPawns(group) {
+    const layer = svgEl('g', { id: 'pawnLayer' });
+    fillPawnLayer(layer);
+    group.appendChild(layer);
+}
+
+// Redraw only the pawns (cheap), used every animation frame instead of redrawing the whole board.
+function renderPawnLayer() {
+    const layer = document.getElementById('pawnLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    fillPawnLayer(layer);
 }
 
 function adjustRing(ringIdx, step) {

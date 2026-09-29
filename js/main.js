@@ -7,6 +7,7 @@ window.onload = function() {
     renderEventsEditor();
     drawBoard();
     renderPawnCutouts();
+    initDock();
     mpInit();
 };
 

@@ -1,36 +1,229 @@
-/* Capital Clash: turn flow and player panel. */
+/* Capital Clash: turn flow (roll -> accept -> hop), player panel and turn glow.
+
+   One rule keeps everyone in sync: a single "authority" decides what happens.
+   - Online: the room host is the authority (guests send 'roll' / 'accept' requests to the host).
+   - Solo (one screen): this browser is its own authority.
+   The authority changes the shared state, publishes it, and every client (including the
+   authority itself) plays the same dice animation and avatar hop from that state. */
+
+const STEP_MS = 340; // time for an avatar to hop one space
+
+const G = {
+    solo: false,            // playing on one screen
+    seenRoll: 0, seenMove: 0, // last dice / move animation this client has already played
+    diceReady: true,        // false while the dice are still tumbling
+    rollPending: false, acceptPending: false, // request sent to the host, waiting for its answer
+    finishTimer: null, animTimer: null, prevMine: false
+};
+
+const curPlayer = () => APP_STATE.players[APP_STATE.currentPlayerIndex] || null;
+const isGameActive = () => (MP.on ? MP.phase === 'playing' : G.solo);
+// Online you act only for yourself; on one screen whoever's turn it is uses the shared dice.
+const isMyTurn = () => { const c = curPlayer(); return !!c && (MP.on ? c.id === MP.id : true); };
+const nextEvt = () => ++APP_STATE.evtSeq;
+
+/* ---------- Setup (solo) ---------- */
+
+function resetTurnState() {
+    clearTimeout(G.finishTimer); stopAnim();
+    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null });
+    G.seenRoll = G.seenMove = APP_STATE.evtSeq;
+    G.rollPending = G.acceptPending = false; G.diceReady = true;
+}
 
 function changePlayerCount(val) {
     APP_STATE.activePlayersCount = parseInt(val);
-    document.getElementById('playerCountVal').textContent = `${val} Players`;
-    
+    $('playerCountVal').textContent = `${val} Players`;
     APP_STATE.players = [];
     for (let i = 1; i <= APP_STATE.activePlayersCount; i++) {
-        APP_STATE.players.push({
-            id: i,
-            name: `Investor ${i}`,
-            position: 1
-        });
+        APP_STATE.players.push({ id: i, name: `Investor ${i}`, position: 1, avatar: AVATARS[i - 1].id });
     }
     APP_STATE.currentPlayerIndex = 0;
-    renderPlayersList();
-    drawBoard();
+    resetTurnState();
+    renderPlayersList(); drawBoard(); updateTurnUI();
 }
 
-function rollDice() {
-    if (MP.on) { requestOnlineRoll(); return; }
-    const roll = Math.floor(Math.random() * 6) + 1;
-    const diceElem = document.getElementById('diceDisplay');
-    diceElem.textContent = roll;
+function startSoloGame() { G.solo = true; syncEffects(true); }
 
-    const p = APP_STATE.players[APP_STATE.currentPlayerIndex];
-    p.position = Math.min(100, p.position + roll);
+function initDock() {
+    Dice.init();
+    const b = $('soundBtn');
+    if (b) b.textContent = Sound.muted ? '\u{1F507}' : '\u{1F50A}';
+}
 
-    APP_STATE.currentPlayerIndex = (APP_STATE.currentPlayerIndex + 1) % APP_STATE.activePlayersCount;
-    document.getElementById('turnPlayerName').textContent = APP_STATE.players[APP_STATE.currentPlayerIndex].name;
+function toggleSound() {
+    Sound.setMuted(!Sound.muted);
+    $('soundBtn').textContent = Sound.muted ? '\u{1F507}' : '\u{1F50A}';
+}
 
-    renderPlayersList();
-    drawBoard();
+/* ---------- What the local player does ---------- */
+
+function onDiceClick() {
+    Sound.unlock();
+    if ($('diceBtn').disabled) return;
+    if (MP.on && !isHost()) { // guests ask the host to roll
+        G.rollPending = true; updateTurnUI();
+        setTimeout(() => { if (G.rollPending) { G.rollPending = false; updateTurnUI(); } }, 3000);
+        MP.t.send('roll', { from: MP.id });
+        return;
+    }
+    authRoll(curPlayer().id);
+}
+
+function onAcceptClick() {
+    Sound.unlock();
+    if ($('acceptBtn').disabled) return;
+    if (MP.on && !isHost()) {
+        G.acceptPending = true; updateTurnUI();
+        setTimeout(() => { if (G.acceptPending) { G.acceptPending = false; updateTurnUI(); } }, 3000);
+        MP.t.send('accept', { from: MP.id });
+        return;
+    }
+    authAccept(curPlayer().id);
+}
+
+/* ---------- The authority (host, or this browser when solo) ---------- */
+
+function publish() {
+    if (MP.on) broadcastState();
+    syncEffects(false);
+}
+
+function authRoll(fromId) {
+    const cur = curPlayer();
+    if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'roll') return;
+    const n = rollD6();
+    APP_STATE.pending = n;
+    APP_STATE.turnPhase = 'accept';
+    APP_STATE.lastRoll = { n, by: cur.id, seq: nextEvt() };
+    publish();
+}
+
+function authAccept(fromId) {
+    const cur = curPlayer();
+    if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'accept' || !APP_STATE.pending) return;
+    const from = cur.position, to = Math.min(100, from + APP_STATE.pending);
+    cur.position = to;
+    APP_STATE.pending = null;
+    APP_STATE.turnPhase = 'moving';
+    APP_STATE.lastMove = { by: cur.id, from, to, seq: nextEvt() };
+    publish();
+    scheduleFinish((to - from) * STEP_MS + 500);
+}
+
+function scheduleFinish(ms) { clearTimeout(G.finishTimer); G.finishTimer = setTimeout(authFinishTurn, ms); }
+
+// After the hop has finished on every screen, pass the turn on.
+function authFinishTurn() {
+    if (APP_STATE.turnPhase !== 'moving' || (MP.on && !isHost())) return;
+    APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
+    APP_STATE.turnPhase = 'roll';
+    publish();
+    watchCurrentPlayer();
+}
+
+// A new host that inherits a move in progress finishes it.
+function resumeAfterTakeover() { if (APP_STATE.turnPhase === 'moving') scheduleFinish(1500); }
+
+// Used when a disconnected player's turn is skipped.
+function authSkipTurn() {
+    clearTimeout(G.finishTimer);
+    APP_STATE.pending = null;
+    APP_STATE.turnPhase = 'roll';
+    APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
+    publish();
+}
+
+/* ---------- What every screen plays (driven by the shared state) ---------- */
+
+// fresh = we just joined / refreshed: show the current dice, do not replay old animations.
+function syncEffects(fresh) {
+    const r = APP_STATE.lastRoll, m = APP_STATE.lastMove;
+    if (fresh) {
+        stopAnim();
+        G.seenRoll = r ? r.seq : 0; G.seenMove = m ? m.seq : 0;
+        G.diceReady = true; G.rollPending = G.acceptPending = false;
+        Dice.show(APP_STATE.pending || (r ? r.n : 1));
+    } else {
+        if (r && r.seq > G.seenRoll) { G.seenRoll = r.seq; startDiceRoll(r); }
+        if (m && m.seq > G.seenMove) { G.seenMove = m.seq; startPawnMove(m); }
+    }
+    updateTurnUI();
+}
+
+function startDiceRoll(r) {
+    G.rollPending = false; G.diceReady = false;
+    Dice.roll(r.n, () => { G.diceReady = true; updateTurnUI(); });
+}
+
+function startPawnMove(m) {
+    G.acceptPending = false;
+    stopAnim();
+    if (!APP_STATE.players.some(p => p.id === m.by) || m.to <= m.from) return;
+    const steps = m.to - m.from, t0 = performance.now();
+    let lastK = -1;
+    APP_STATE.anim = { id: m.by, pos: m.from, lift: 0, count: 0 };
+    // Time-based (not frame-based) so it also completes correctly in background tabs.
+    G.animTimer = setInterval(() => {
+        const elapsed = performance.now() - t0;
+        if (elapsed >= steps * STEP_MS) { stopAnim(); Sound.arrive(); updateTurnUI(); return; }
+        const k = Math.floor(elapsed / STEP_MS), f = (elapsed - k * STEP_MS) / STEP_MS;
+        const ease = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+        const a = APP_STATE.anim;
+        a.pos = m.from + k + ease; a.lift = Math.sin(Math.PI * f); a.count = k + 1;
+        if (k !== lastK) { lastK = k; Sound.step(k); renderPlayersList(); }
+        renderPawnLayer();
+    }, 16);
+}
+
+function stopAnim() {
+    clearInterval(G.animTimer); G.animTimer = null;
+    APP_STATE.anim = null;
+    renderPawnLayer();
+}
+
+/* ---------- Screen: dice dock, banner, player list ---------- */
+
+function updateTurnUI() {
+    const active = isGameActive();
+    $('diceDock').classList.toggle('dock-hidden', !active);
+    $('turnBanner').classList.toggle('hidden', !active);
+    if (!active) { document.title = 'Capital Clash'; return; }
+    const cur = curPlayer(); if (!cur) return;
+
+    const mine = isMyTurn(), phase = APP_STATE.turnPhase, idx = APP_STATE.currentPlayerIndex;
+    const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+    const online = MP.on;
+
+    $('diceBtn').disabled = !(mine && phase === 'roll' && !G.rollPending && !Dice.rolling);
+
+    let msg;
+    if (phase === 'roll') msg = mine ? (online ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : `${cur.name} is about to roll...`;
+    else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (mine && online ? `You rolled ${APP_STATE.pending}!` : `${cur.name} rolled ${APP_STATE.pending}`);
+    else msg = `${cur.name} is moving...`;
+    $('diceStatus').textContent = msg;
+
+    const ab = $('acceptBtn');
+    ab.classList.toggle('hidden', !(mine && phase === 'accept' && G.diceReady));
+    ab.disabled = G.acceptPending;
+    ab.textContent = `Accept: move ${APP_STATE.pending || ''}`;
+
+    $('diceDock').classList.toggle('yourturn', mine && phase !== 'moving');
+
+    const banner = $('turnBanner');
+    banner.style.setProperty('--pc', color);
+    banner.classList.toggle('mine', mine && online);
+    banner.innerHTML = `<span class="banner-avatar">${avatarEmoji(cur.avatar)}</span><span>${mine && online ? 'Your turn!' : escapeHtml(cur.name) + "'s turn"}</span>`;
+
+    if (online && mine && !G.prevMine) Sound.chime();
+    G.prevMine = online && mine;
+    document.title = online && mine ? '\u{1F3B2} Your turn - Capital Clash' : 'Capital Clash';
+
+    if (online) {
+        const can = canControlTracker(), panel = $('trackerPanel');
+        panel.classList.toggle('opacity-60', !can); panel.classList.toggle('pointer-events-none', !can);
+    }
+    renderPlayersList(); renderPawnLayer();
 }
 
 function renderPlayersList() {
@@ -41,65 +234,20 @@ function renderPlayersList() {
     APP_STATE.players.forEach((p, idx) => {
         const isMe = MP.on && p.id === MP.id;
         const offline = MP.on && MP.phase === 'playing' && !MP.members.some(m => m.id === p.id);
+        const turn = idx === APP_STATE.currentPlayerIndex && isGameActive();
+        const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+        const a = APP_STATE.anim && APP_STATE.anim.id === p.id ? APP_STATE.anim : null;
+        const shownPos = a ? Math.floor(a.pos + 0.5) : p.position; // counts up while the avatar hops
         const div = document.createElement('div');
-        div.className = `flex items-center justify-between p-2 rounded-xl border ${idx === APP_STATE.currentPlayerIndex ? 'bg-slate-800 border-amber-500/50' : 'bg-slate-900/50 border-slate-800'} ${offline ? 'opacity-50' : ''}`;
+        div.className = `player-row flex items-center justify-between p-2 rounded-xl border ${turn ? 'turn-glow' : 'bg-slate-900/50 border-slate-800'} ${offline ? 'opacity-50' : ''}`;
+        div.style.setProperty('--pc', color);
         div.innerHTML = `
             <div class="flex items-center space-x-2">
-                <span class="w-3 h-3 rounded-full" style="background-color: ${PLAYER_COLORS[idx % PLAYER_COLORS.length]}"></span>
+                <span class="avatar-chip" style="--pc:${color}">${avatarEmoji(p.avatar)}</span>
                 <span class="font-bold text-slate-200 text-xs">${escapeHtml(p.name)}${isMe ? ' <span class="text-emerald-400">(you)</span>' : ''}${offline ? ' <span class="text-red-400">(offline)</span>' : ''}</span>
             </div>
-            <span class="font-mono text-emerald-400 font-bold text-xs">Space ${p.position} / 100</span>
+            <span class="font-mono text-emerald-400 font-bold text-xs">Space ${shownPos} / 100</span>
         `;
         container.appendChild(div);
     });
 }
-
-function requestOnlineRoll() {
-    if (MP.phase !== 'playing' || MP.rollPending) return;
-    const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
-    if (!cur || cur.id !== MP.id) { showToast("It's not your turn"); return; }
-    if (isHost()) { hostRoll(MP.id); return; }
-    MP.rollPending = true; updateTurnUI();
-    setTimeout(() => { if (MP.rollPending) { MP.rollPending = false; updateTurnUI(); } }, 3000);
-    MP.t.send('roll', { from: MP.id });
-}
-
-function hostRoll(fromId) {
-    const idx = APP_STATE.currentPlayerIndex, p = APP_STATE.players[idx];
-    if (!p || p.id !== fromId) return;
-    const n = rollD6();
-    p.position = Math.min(100, p.position + n);
-    APP_STATE.lastRoll = { n, by: p.id, seq: MP.seq + 1 };
-    APP_STATE.currentPlayerIndex = nextPlayerIndex(idx);
-    broadcastState();
-    presentRoll(APP_STATE.lastRoll);
-    renderPlayersList(); drawBoard(); updateTurnUI(); watchCurrentPlayer();
-}
-
-function presentRoll(r) {
-    if (!r || !(r.seq > MP.lastRollSeq)) return;
-    MP.lastRollSeq = r.seq;
-    const el = $('diceDisplay'); let ticks = 0;
-    clearInterval(MP.diceTimer);
-    MP.diceTimer = setInterval(() => {
-        if (++ticks > 8) {
-            clearInterval(MP.diceTimer); el.textContent = r.n;
-            const who = APP_STATE.players.find(p => p.id === r.by);
-            showToast(`${who ? who.name : 'Someone'} rolled a ${r.n}`);
-            return;
-        }
-        el.textContent = 1 + Math.floor(Math.random() * 6);
-    }, 60);
-}
-
-function updateTurnUI() {
-    if (!MP.on) return;
-    const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
-    $('turnPlayerName').textContent = cur ? cur.name + (cur.id === MP.id ? ' (you)' : '') : '';
-    const mine = !!cur && cur.id === MP.id, btn = $('rollBtn');
-    btn.disabled = !mine || MP.rollPending;
-    btn.classList.toggle('opacity-40', btn.disabled); btn.classList.toggle('cursor-not-allowed', btn.disabled);
-    const can = canControlTracker(), panel = $('trackerPanel');
-    panel.classList.toggle('opacity-60', !can); panel.classList.toggle('pointer-events-none', !can);
-}
-

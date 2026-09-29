@@ -2,34 +2,58 @@
 
 const MP = {
     on: false, code: '', id: '', name: '', hostId: '', phase: 'idle', expected: 0, // phase: idle | lobby | playing
-    seq: 0, members: [], arrival: [], t: null, creatorJoin: false, gotState: false,
-    lastRollSeq: 0, rollPending: false, hostTimer: null, skipTimer: null, joinTimer: null,
-    diceTimer: null, trackerTimer: null, lastTrackerSend: 0, toastTimer: null
+    avatar: '', seq: 0, members: [], arrival: [], t: null, creatorJoin: false, gotState: false,
+    hostTimer: null, skipTimer: null, joinTimer: null, trackerTimer: null, lastTrackerSend: 0, toastTimer: null
 };
 
 const isHost = () => MP.on && MP.hostId === MP.id;
 
-function myMeta() { return { id: MP.id, name: MP.name, creator: MP.creatorJoin && MP.hostId === MP.id, expected: MP.expected }; }
+function myMeta() { return { id: MP.id, name: MP.name, creator: MP.creatorJoin && MP.hostId === MP.id, expected: MP.expected, avatar: MP.avatar }; }
 
 function resetMP() {
     try { MP.t && MP.t.leave(); } catch (_) {}
     ['hostTimer', 'skipTimer', 'joinTimer', 'trackerTimer'].forEach(k => { clearTimeout(MP[k]); MP[k] = null; });
-    Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', members: [], arrival: [] });
+    Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', avatar: '', members: [], arrival: [] });
 }
 
 const memberName = id => { const m = MP.members.find(x => x.id === id); return m ? m.name : ''; };
-
-/* ---------- Landing page ---------- */
 
 function orderedMembers() {
     const rank = id => { const i = MP.arrival.indexOf(id); return i < 0 ? 999 : i; };
     return [...MP.members].sort((a, b) => (a.id === MP.hostId ? -1 : b.id === MP.hostId ? 1 : rank(a.id) - rank(b.id)));
 }
 
+/* ---------- Avatars (unique within a room) ---------- */
+
+function setMyAvatar(id, announce) {
+    MP.avatar = id;
+    const me = MP.members.find(m => m.id === MP.id);
+    if (me) me.avatar = id; // optimistic: show it before the server echoes it back
+    try { MP.t.updateMeta(myMeta()); } catch (_) {}
+    if (announce) showToast('Someone picked your avatar first, so you got a new one');
+}
+
+// Everyone runs the same rule: if two people hold the same avatar, the one with the lower id keeps it.
+function resolveAvatarConflicts() {
+    if (MP.phase !== 'lobby' || !MP.admitted) return;
+    if (!MP.members.some(m => m.id === MP.id)) return;
+    const others = MP.members.filter(m => m.id !== MP.id);
+    const clash = !!MP.avatar && others.some(o => o.avatar === MP.avatar && o.id < MP.id);
+    if (MP.avatar && !clash) return;
+    const used = new Set(others.map(o => o.avatar).filter(Boolean));
+    const free = AVATARS.find(a => !used.has(a.id));
+    if (free) setMyAvatar(free.id, clash);
+}
+
+/* ---------- Presence and host tracking ---------- */
+
 function onMpPresence(list) {
     if (!MP.on) return;
     const prev = new Set(MP.members.map(m => m.id));
-    MP.members = list.filter(m => m && m.id).map(m => ({ id: String(m.id), name: cleanName(m.name) || 'Investor', creator: !!m.creator, expected: clampExpected(m.expected) }));
+    MP.members = list.filter(m => m && m.id).map(m => ({
+        id: String(m.id), name: cleanName(m.name) || 'Investor', creator: !!m.creator,
+        expected: clampExpected(m.expected), avatar: isAvatarId(m.avatar) ? m.avatar : ''
+    }));
     if (!MP.expected) { const k = MP.members.find(m => m.expected); if (k) MP.expected = k.expected; }
     MP.members.forEach(m => { if (!MP.arrival.includes(m.id)) MP.arrival.push(m.id); });
 
@@ -40,9 +64,10 @@ function onMpPresence(list) {
     // New arrival while a game is running: host re-sends the full state.
     if (isHost() && MP.phase === 'playing' && MP.members.some(m => !prev.has(m.id) && m.id !== MP.id)) setTimeout(broadcastState, 250);
 
+    resolveAvatarConflicts();
     watchHost();
     watchCurrentPlayer();
-    if (MP.phase === 'playing') { renderPlayersList(); updateTurnUI(); } else renderLobby();
+    if (MP.phase === 'playing') updateTurnUI(); else renderLobby();
 }
 
 // If the host vanishes for 4s, the lowest-id remaining player takes over using their own copy of the state.
@@ -59,7 +84,7 @@ function watchHost() {
         try { MP.t.updateMeta(myMeta()); } catch (_) {}
         showToast('The host left. You are now the host.');
         broadcastState(); applyRoleUI();
-        if (MP.phase === 'playing') { renderPlayersList(); updateTurnUI(); watchCurrentPlayer(); } else renderLobby();
+        if (MP.phase === 'playing') { resumeAfterTakeover(); updateTurnUI(); watchCurrentPlayer(); } else renderLobby();
     }, 4000);
 }
 
@@ -74,14 +99,14 @@ function watchCurrentPlayer() {
         MP.skipTimer = null; MP.skipFor = null;
         const c2 = APP_STATE.players[APP_STATE.currentPlayerIndex];
         if (!isHost() || !c2 || c2.id !== cur.id || MP.members.some(m => m.id === c2.id)) return;
-        APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
-        broadcastState(); renderPlayersList(); updateTurnUI(); watchCurrentPlayer();
+        authSkipTurn(); watchCurrentPlayer();
         showToast(c2.name + ' is offline: turn skipped');
     }, 8000);
 }
 
 function nextPlayerIndex(cur) {
     const ps = APP_STATE.players, n = ps.length;
+    if (!MP.on) return (cur + 1) % n; // one-screen game: everyone is always present
     for (let k = 1; k <= n; k++) {
         const i = (cur + k) % n, p = ps[i];
         if (p.id === MP.id || MP.members.some(m => m.id === p.id)) return i;
@@ -96,14 +121,28 @@ function snapshot() {
         seq: MP.seq, hostId: MP.hostId, phase: MP.phase, expected: MP.expected, boardMode: APP_STATE.boardMode,
         marketTracker: [...APP_STATE.marketTracker], ringRotations: [...APP_STATE.ringRotations],
         eventPool: [...APP_STATE.eventPool], tiles: APP_STATE.tiles.map(t => t.text),
-        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position })),
-        currentPlayerIndex: APP_STATE.currentPlayerIndex, roll: APP_STATE.lastRoll || null
+        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar })),
+        currentPlayerIndex: APP_STATE.currentPlayerIndex,
+        turnPhase: APP_STATE.turnPhase, pending: APP_STATE.pending, evtSeq: APP_STATE.evtSeq,
+        lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove
     };
 }
 
 function broadcastState() { if (!MP.on || !MP.t) return; MP.seq++; MP.t.send('state', { from: MP.id, state: snapshot() }); }
 
 function broadcastIfHost() { if (MP.on && isHost() && MP.phase === 'playing') broadcastState(); }
+
+const int = (v, lo, hi) => { const n = parseInt(v, 10); return n >= lo && n <= hi ? n : null; };
+function cleanRoll(r) {
+    if (!r || typeof r !== 'object') return null;
+    const n = int(r.n, 1, 6), seq = int(r.seq, 1, 1e9);
+    return n && seq ? { n, by: String(r.by), seq } : null;
+}
+function cleanMove(m) {
+    if (!m || typeof m !== 'object') return null;
+    const from = int(m.from, 1, 100), to = int(m.to, 1, 100), seq = int(m.seq, 1, 1e9);
+    return from && to && seq ? { by: String(m.by), from, to, seq } : null;
+}
 
 function applyState(s) {
     MP.gotState = true; clearTimeout(MP.joinTimer);
@@ -117,14 +156,22 @@ function applyState(s) {
         APP_STATE.eventPool = (s.eventPool || []).slice(0, 60).map(t => String(t).slice(0, 80));
         if (!APP_STATE.eventPool.length) APP_STATE.eventPool = ['Reserve Vault'];
         APP_STATE.tiles = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, text: String((s.tiles || [])[i] || '').slice(0, 80) }));
-        APP_STATE.players = (s.players || []).slice(0, MAX_PLAYERS).map(p => ({ id: String(p.id), name: cleanName(p.name) || 'Investor', position: Math.max(1, Math.min(100, parseInt(p.position, 10) || 1)) }));
+        APP_STATE.players = (s.players || []).slice(0, MAX_PLAYERS).map((p, i) => ({
+            id: String(p.id), name: cleanName(p.name) || 'Investor', position: int(p.position, 1, 100) || 1,
+            avatar: isAvatarId(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length].id
+        }));
         APP_STATE.activePlayersCount = APP_STATE.players.length;
         APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));
+        APP_STATE.turnPhase = ['roll', 'accept', 'moving'].includes(s.turnPhase) ? s.turnPhase : 'roll';
+        APP_STATE.pending = int(s.pending, 1, 6);
+        APP_STATE.evtSeq = int(s.evtSeq, 0, 1e9) || 0;
+        APP_STATE.lastRoll = cleanRoll(s.lastRoll);
+        APP_STATE.lastMove = cleanMove(s.lastMove);
         paintModeButtons(APP_STATE.boardMode);
-        MP.rollPending = false;
-        updateMarketTrackerUI(); renderEventsEditor(); renderPlayersList(); drawBoard(); updateTurnUI();
-        presentRoll(s.roll);
-        if (was !== 'playing') enterGameView();
+        const first = was !== 'playing';
+        if (first) enterGameView();
+        syncEffects(first);           // starts the dice / hop animation before the board is redrawn
+        updateMarketTrackerUI(); renderEventsEditor(); drawBoard();
     } else if (!$('lobby').classList.contains('hidden')) renderLobby();
     applyRoleUI();
 }
@@ -135,7 +182,9 @@ function onMpMessage(e, d) {
         const s = d.state;
         if (s && s.hostId === d.from && s.seq > MP.seq) { MP.seq = s.seq; applyState(s); }
     } else if (e === 'roll') {
-        if (isHost() && MP.phase === 'playing') hostRoll(String(d.from));
+        if (isHost() && MP.phase === 'playing') authRoll(String(d.from));
+    } else if (e === 'accept') {
+        if (isHost() && MP.phase === 'playing') authAccept(String(d.from));
     } else if (e === 'tracker') {
         if (MP.phase !== 'playing' || !trackerSenderAllowed(String(d.from)) || !Array.isArray(d.m) || !Array.isArray(d.r)) return;
         APP_STATE.marketTracker = [0, 1, 2].map(i => digit(d.m[i]));
@@ -144,7 +193,7 @@ function onMpMessage(e, d) {
     }
 }
 
-/* ---------- Game actions ---------- */
+/* ---------- Permissions ---------- */
 
 function trackerSenderAllowed(from) {
     const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
@@ -165,6 +214,3 @@ function applyRoleUI() {
 }
 
 window.addEventListener('pagehide', () => { try { MP.t && MP.t.leave(); } catch (_) {} });
-
-/* ---------- Lobby ---------- */
-

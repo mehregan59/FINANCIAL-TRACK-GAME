@@ -34,7 +34,7 @@ function stepExpected(d) {
     $('expectedVal').textContent = EXPECTED_SETUP;
 }
 
-function playSolo() { $('landing').classList.add('hidden'); }
+function playSolo() { $('landing').classList.add('hidden'); startSoloGame(); }
 
 function readName() {
     const n = cleanName($('playerNameInput').value);
@@ -55,7 +55,7 @@ async function joinRoom() {
 async function enterRoom(code, name, creator, expected) {
     showLandingError(''); setLandingBusy(true);
     Object.assign(MP, { on: true, code, name, id: getClientId(), hostId: creator ? getClientId() : '', phase: 'lobby', seq: 0,
-        members: [], arrival: [], creatorJoin: creator, gotState: false, lastRollSeq: 0, rollPending: false, admitted: false,
+        members: [], arrival: [], creatorJoin: creator, gotState: false, admitted: false, avatar: '',
         expected: creator ? expected : 0 });
     const admitWait = new Promise(res => { MP.admitResolve = res; setTimeout(res, 2500); });
     MP.t = makeTransport(code);
@@ -100,15 +100,16 @@ function renderLobby() {
         const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
         if (m) {
             row.className = 'flex items-center justify-between p-2 rounded-xl border bg-slate-900/50 border-slate-800';
-            row.innerHTML = `<div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full" style="background-color:${color}"></span>
+            row.innerHTML = `<div class="flex items-center space-x-2"><span class="avatar-chip" style="--pc:${color}">${m.avatar ? avatarEmoji(m.avatar) : ''}</span>
                 <span class="font-bold text-slate-200 text-xs">${escapeHtml(m.name)}${m.id === MP.id ? ' <span class="text-emerald-400">(you)</span>' : ''}</span></div>
                 <span class="text-[10px] font-bold text-amber-300">${m.id === MP.hostId ? 'HOST' : ''}</span>`;
         } else {
             row.className = 'flex items-center p-2 rounded-xl border border-dashed border-slate-700 text-slate-500';
-            row.innerHTML = `<span class="w-3 h-3 rounded-full border border-slate-600 mr-2"></span><span class="text-xs">Waiting for player ${i + 1}...</span>`;
+            row.innerHTML = `<span class="avatar-chip" style="--pc:#334155"></span><span class="text-xs ml-2">Waiting for player ${i + 1}...</span>`;
         }
         list.appendChild(row);
     }
+    renderAvatarGrid();
     const n = ordered.length, full = n >= N && n >= MIN_PLAYERS;
     $('lobbyCount').textContent = `${n} of ${N} joined`;
     const btn = $('startGameBtn');
@@ -121,6 +122,32 @@ function renderLobby() {
     $('lobbyHint').textContent = isHost()
         ? (full ? 'Everyone is here. Start when you are ready.' : `Waiting for ${Math.max(N - n, 0)} more player${N - n === 1 ? '' : 's'}. Share the room code or invite link.`)
         : 'Waiting for the host to start the game...';
+}
+
+// Avatar picker: taken avatars are greyed out and show who has them.
+function renderAvatarGrid() {
+    const grid = $('avatarGrid'); if (!grid) return;
+    grid.innerHTML = '';
+    AVATARS.forEach(a => {
+        const owner = MP.members.find(m => m.avatar === a.id && m.id !== MP.id);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'avatar-btn' + (MP.avatar === a.id ? ' mine' : '');
+        b.textContent = a.emoji;
+        b.disabled = !!owner;
+        b.title = owner ? `${a.label} (taken by ${owner.name})` : a.label;
+        b.setAttribute('aria-label', b.title);
+        b.dataset.avatar = a.id;
+        b.onclick = () => chooseAvatar(a.id);
+        grid.appendChild(b);
+    });
+}
+
+function chooseAvatar(id) {
+    if (MP.phase !== 'lobby' || id === MP.avatar) return;
+    if (MP.members.some(m => m.id !== MP.id && m.avatar === id)) { showToast('That avatar is already taken'); return; }
+    setMyAvatar(id, false);
+    renderLobby();
 }
 
 /* ---------- Presence, host tracking ---------- */
@@ -138,20 +165,27 @@ function hostStartGame() {
     const present = MP.arrival.filter(id => MP.members.some(m => m.id === id));
     const order = [MP.id, ...present.filter(id => id !== MP.id)].slice(0, MP.expected || MAX_PLAYERS);
     if (order.length < MIN_PLAYERS) { showToast(`You need at least ${MIN_PLAYERS} players to start`); return; }
+    // Keep the avatars people picked; hand out a free one to anyone without (or with a duplicate).
+    const avatars = order.map(id => (MP.members.find(m => m.id === id) || {}).avatar || '');
+    avatars.forEach((a, i) => { if (a && avatars.indexOf(a) !== i) avatars[i] = ''; });
+    avatars.forEach((a, i) => { if (!a) avatars[i] = AVATARS.find(x => !avatars.includes(x.id)).id; });
     const used = {};
     APP_STATE.players = order.map((id, i) => {
         let name = memberName(id) || `Investor ${i + 1}`;
         used[name] = (used[name] || 0) + 1;
         if (used[name] > 1) name = `${name} ${used[name]}`;
-        return { id, name, position: 1 };
+        return { id, name, position: 1, avatar: avatars[i] };
     });
     APP_STATE.activePlayersCount = order.length;
-    APP_STATE.currentPlayerIndex = 0; APP_STATE.lastRoll = null;
+    APP_STATE.currentPlayerIndex = 0;
+    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, evtSeq: 0 });
     APP_STATE.marketTracker = [0, 0, 0]; APP_STATE.ringRotations = [0, 0, 0];
     MP.phase = 'playing';
     broadcastState();
-    updateMarketTrackerUI(); renderPlayersList(); drawBoard(); updateTurnUI();
-    enterGameView(); applyRoleUI(); watchCurrentPlayer();
+    enterGameView();
+    syncEffects(true);
+    updateMarketTrackerUI(); drawBoard();
+    applyRoleUI(); watchCurrentPlayer();
 }
 
 /* ---------- UI state ---------- */
