@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Track 100 - 50cm Board</title>
+    <title>Capital Clash</title>
     <!-- Supabase Realtime client (used only for online rooms) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Tailwind CSS -->
@@ -117,7 +117,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-                        FINANCIAL TRACK 100
+                        CAPITAL CLASH
                     </h1>
                     <p class="text-xs text-slate-400 flex items-center gap-2">
                         <span><i class="fa-solid fa-circle-dot text-emerald-400 text-[10px]"></i> 50 cm Board Scale</span>
@@ -169,7 +169,7 @@
         <!-- Board Visual Container -->
         <section id="boardSection" class="lg:col-span-8 flex flex-col items-center justify-center">
             <div class="w-full flex items-center justify-between mb-3 text-xs text-slate-400 px-2 no-print">
-                <span class="flex items-center gap-1"><i class="fa-solid fa-arrows-spin text-amber-400"></i> Drag center rings to dial Market Tracker (0-999)</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-arrows-spin text-amber-400"></i> Change the Market Tracker (0-999) with the MARKET TRACKER DIALS panel</span>
                 <span class="font-mono text-emerald-400 font-bold">Scale: 50.0 cm x 50.0 cm</span>
             </div>
 
@@ -458,7 +458,7 @@
                     <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center text-slate-950 text-3xl shadow-lg">
                         <i class="fa-solid fa-chart-line"></i>
                     </div>
-                    <h1 class="text-3xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">FINANCIAL TRACK 100</h1>
+                    <h1 class="text-3xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">CAPITAL CLASH</h1>
                     <p class="text-sm text-slate-400">Race around the 100-space market board with friends. Everyone sees the same board, dice and tracker dials, live.</p>
                     <p class="text-xs text-slate-500"><i class="fa-solid fa-users mr-1"></i>3 to 10 players per room</p>
                 </div>
@@ -746,8 +746,7 @@
 
                 // Rotatable Dial Group
                 const ringGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                ringGroup.setAttribute("class", "ring-interactive");
-                ringGroup.setAttribute("id", `ringGroup_${cfg.id}`);
+                                ringGroup.setAttribute("id", `ringGroup_${cfg.id}`);
                 
                 const rotDeg = APP_STATE.ringRotations[cfg.id];
                 ringGroup.setAttribute("transform", `rotate(${rotDeg}, ${cx}, ${cy})`);
@@ -791,8 +790,7 @@
                 coverRing.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
                 coverRing.setAttribute("fill", "none");
                 coverRing.setAttribute("mask", `url(#${maskId})`);
-                coverRing.setAttribute("class", "ring-interactive");
-                group.appendChild(coverRing);
+                                group.appendChild(coverRing);
 
                 // Trim Lines
                 const outerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -818,14 +816,8 @@
                 aperture.setAttribute("stroke", cfg.color);
                 aperture.setAttribute("stroke-width", "3");
                 aperture.setAttribute("filter", "drop-shadow(0 0 6px " + cfg.color + ")");
-                aperture.setAttribute("class", "ring-interactive");
-                group.appendChild(aperture);
+                                group.appendChild(aperture);
 
-                // Event Drag Listeners
-                [ringGroup, coverRing, aperture].forEach(el => {
-                    el.addEventListener('mousedown', (e) => startRingDrag(e, cfg.id));
-                    el.addEventListener('touchstart', (e) => startRingDrag(e, cfg.id));
-                });
             });
 
             // Center Hub Badge
@@ -836,15 +828,21 @@
             group.appendChild(hubBg);
 
             const hubLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            hubLabel.setAttribute("x", cx); hubLabel.setAttribute("y", cy - 10);
-            hubLabel.setAttribute("fill", "#94a3b8"); hubLabel.setAttribute("font-size", "8");
+            hubLabel.setAttribute("x", cx); hubLabel.setAttribute("y", cy - 20);
+            hubLabel.setAttribute("fill", "#cbd5e1"); hubLabel.setAttribute("font-size", "10");
             hubLabel.setAttribute("font-weight", "800"); hubLabel.setAttribute("text-anchor", "middle");
-            hubLabel.textContent = "MARKET TRACKER";
+            hubLabel.textContent = "MARKET";
             group.appendChild(hubLabel);
+            const hubLabel2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            hubLabel2.setAttribute("x", cx); hubLabel2.setAttribute("y", cy - 8);
+            hubLabel2.setAttribute("fill", "#cbd5e1"); hubLabel2.setAttribute("font-size", "10");
+            hubLabel2.setAttribute("font-weight", "800"); hubLabel2.setAttribute("text-anchor", "middle");
+            hubLabel2.textContent = "TRACKER";
+            group.appendChild(hubLabel2);
 
             const trackerValStr = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
             const hubVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            hubVal.setAttribute("x", cx); hubVal.setAttribute("y", cy + 12);
+            hubVal.setAttribute("x", cx); hubVal.setAttribute("y", cy + 16);
             hubVal.setAttribute("fill", "#facc15"); hubVal.setAttribute("font-size", "20");
             hubVal.setAttribute("font-weight", "900"); hubLabel.setAttribute("text-anchor", "middle");
             hubVal.setAttribute("text-anchor", "middle");
@@ -885,59 +883,6 @@
 
                 group.appendChild(pawnGroup);
             });
-        }
-
-        function startRingDrag(e, ringIdx) {
-            e.preventDefault();
-            if (!canControlTracker()) return;
-            APP_STATE.draggedRingIndex = ringIdx;
-            const pt = getSvgEventCoords(e);
-            const cx = 500, cy = 500;
-            APP_STATE.dragStartAngle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
-
-            window.addEventListener('mousemove', onRingDrag);
-            window.addEventListener('touchmove', onRingDrag);
-            window.addEventListener('mouseup', stopRingDrag);
-            window.addEventListener('touchend', stopRingDrag);
-        }
-
-        function onRingDrag(e) {
-            if (APP_STATE.draggedRingIndex === null) return;
-            const pt = getSvgEventCoords(e);
-            const cx = 500, cy = 500;
-            const currentAngle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
-            const delta = currentAngle - APP_STATE.dragStartAngle;
-
-            const ringIdx = APP_STATE.draggedRingIndex;
-            APP_STATE.ringRotations[ringIdx] = (APP_STATE.ringRotations[ringIdx] + delta) % 360;
-            APP_STATE.dragStartAngle = currentAngle;
-
-            let angleAtTop = (-APP_STATE.ringRotations[ringIdx]) % 360;
-            if (angleAtTop < 0) angleAtTop += 360;
-            const digit = Math.round(angleAtTop / 36) % 10;
-            APP_STATE.marketTracker[ringIdx] = digit;
-
-            updateMarketTrackerUI();
-            drawBoard();
-            syncTracker();
-        }
-
-        function stopRingDrag() {
-            APP_STATE.draggedRingIndex = null;
-            window.removeEventListener('mousemove', onRingDrag);
-            window.removeEventListener('touchmove', onRingDrag);
-            window.removeEventListener('mouseup', stopRingDrag);
-            window.removeEventListener('touchend', stopRingDrag);
-        }
-
-        function getSvgEventCoords(e) {
-            const svg = document.getElementById('boardSvg');
-            const pt = svg.createSVGPoint();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            pt.x = clientX;
-            pt.y = clientY;
-            return pt.matrixTransform(svg.getScreenCTM().inverse());
         }
 
         function adjustRing(ringIdx, step) {

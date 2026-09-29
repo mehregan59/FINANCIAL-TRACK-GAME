@@ -1,10 +1,10 @@
 # FINANCIAL-TRACK-GAME
 
-Financial Track 100 — Interactive Board Game & DIY Craft Kit
+Capital Clash (formerly Financial Track 100) — Interactive Board Game & DIY Craft Kit
 
 https://mehregan59.github.io/FINANCIAL-TRACK-GAME/
 
-Financial Track 100 is a web-based financial board game and printable craft kit scaled for a 50 cm circular board. Players navigate a 100-sector market perimeter while dialing in portfolio points, market indices, or economic multipliers (000 – 999) using a 3-ring concentric Market Tracker mechanism.
+Capital Clash is a web-based financial board game and printable craft kit scaled for a 50 cm circular board. Players navigate a 100-sector market perimeter while dialing in portfolio points, market indices, or economic multipliers (000 – 999) using a 3-ring concentric Market Tracker mechanism.
 
 🌐 Online Multiplayer (3 – 10 players, live sync)
 
