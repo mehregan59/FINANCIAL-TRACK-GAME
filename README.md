@@ -8,9 +8,11 @@ Capital Clash is a web-based financial board game and printable craft kit scaled
 
 🌐 Online Multiplayer (3 – 10 players, live sync)
 
-Open the site, enter your name and choose Create a room. Share the 5-character room code or the invite link (?room=CODE) with friends. When 3 to 10 players are in the lobby, the host presses Start Game.
+Open the site, enter your name, choose how many players (3 to 10) and press Create a room. Share the 5-character room code or the invite link (?room=CODE). Each friend opens the link, types their own name and joins; the lobby shows every seat, filled or waiting. When everyone has arrived the host presses Start Game (or "Start now with N players" if someone did not show up). The board then opens for all players, each with their own coloured pawn.
 
-Everyone sees the same board, dice roll, pawn positions and Market Tracker dials, live. Only the player whose turn it is can roll the dice or change the dials; the host also controls board layout, event pool and shuffling. If the host leaves, another player takes over automatically. Late joiners can watch as spectators.
+The Market Tracker in the middle of the board is not moved by hand: the player whose turn it is (or the host) changes it with the MARKET TRACKER DIALS panel, and everyone sees it update live.
+
+Everyone sees the same board, dice roll, pawn positions and Market Tracker dials, live. Only the player whose turn it is can roll the dice or change the dials; the host also controls board layout, event pool and shuffling. If the host leaves, another player takes over automatically. A player who refreshes the page can rejoin their seat with the same code. Rooms are exactly the size the host chose, so extra people are turned away.
 
 How it works: the site stays static (GitHub Pages). Live sync uses Supabase Realtime (Broadcast + Presence), so no database tables or server code are needed. The Supabase project URL and publishable key are set at the top of the multiplayer script in index.html (SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY). The publishable key is designed to be public; never commit a service_role or secret key. If those two values are empty, the game falls back to a same-browser test mode (rooms work only between tabs of one browser).
 
