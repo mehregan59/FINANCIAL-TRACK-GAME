@@ -302,22 +302,30 @@ function svgEl(name, attrs) {
     return e;
 }
 
-// Pawn position for a 1-based board space (may be fractional while an avatar hops).
-// Each player has a fixed radial lane, so all pawns stay visible even on the same space.
-function pawnXY(idx, pos) {
+// Pawns stand OUTSIDE the board, on the perimeter, next to the space they are on.
+// A pawn's spot: radius/side offsets make players on the same space fan out (3 side by side, more rings outward).
+const PAWN_R0 = 518;
+function pawnSlots() {
+    const seen = {}, slots = [];
+    APP_STATE.players.forEach((p, i) => { const k = seen[p.position] = (seen[p.position] || 0) + 1; slots[i] = k - 1; });
+    return slots;
+}
+function pawnXY(idx, pos, slot) {
     const angle = (pos - 0.5) * (2 * Math.PI / 100) - Math.PI / 2;
-    const r = 472 - idx * 24.5;
-    return { x: 500 + r * Math.cos(angle), y: 500 + r * Math.sin(angle) };
+    const side = ((slot % 3) - 1) * 12;              // along the perimeter: -12, 0, +12
+    const r = PAWN_R0 + Math.floor(slot / 3) * 22;   // further out when more than 3 share a space
+    const tx = -Math.sin(angle), ty = Math.cos(angle);
+    return { x: 500 + r * Math.cos(angle) + tx * side, y: 500 + r * Math.sin(angle) + ty * side };
 }
 
 function fillPawnLayer(layer) {
-    const cur = APP_STATE.currentPlayerIndex;
+    const cur = APP_STATE.currentPlayerIndex, slots = pawnSlots();
     // The player whose turn it is is drawn last, so they sit on top.
     const order = APP_STATE.players.map((_, i) => i).sort((a, b) => (a === cur) - (b === cur));
     order.forEach(idx => {
         const p = APP_STATE.players[idx];
         const anim = APP_STATE.anim && APP_STATE.anim.id === p.id ? APP_STATE.anim : null;
-        const { x, y } = pawnXY(idx, anim ? anim.pos : p.position);
+        const { x, y } = pawnXY(idx, anim ? anim.pos : p.position, slots[idx]);
         const lift = anim ? anim.lift : 0;
         const yy = y - lift * 12;
         const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
@@ -399,6 +407,7 @@ function updateMarketTrackerUI() {
     const fullVal = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
     document.getElementById('trackerValueBadge').textContent = fullVal;
 
+    if (typeof renderWallet === 'function') renderWallet();
     const quickInput = document.getElementById('quickNumberInput');
     if (quickInput && document.activeElement !== quickInput) {
         quickInput.value = parseInt(fullVal, 10);

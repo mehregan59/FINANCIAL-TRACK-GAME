@@ -43,7 +43,15 @@ function readName() {
     return n;
 }
 
-async function createRoom() { const n = readName(); if (n) await enterRoom(newRoomCode(), n, true, EXPECTED_SETUP); }
+// Landing page "Game settings": starting Market value, money and shares per player.
+function readSettingsForm() {
+    const s = cleanSettings({ market: $('setMarket').value, money: $('setMoney').value, shares: $('setShares').value });
+    $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
+    return s;
+}
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; }
+
+async function createRoom() { const n = readName(); if (n) { APP_STATE.settings = readSettingsForm(); await enterRoom(newRoomCode(), n, true, EXPECTED_SETUP); } }
 
 async function joinRoom() {
     const n = readName(); if (!n) return;
@@ -174,12 +182,12 @@ function hostStartGame() {
         let name = memberName(id) || `Investor ${i + 1}`;
         used[name] = (used[name] || 0) + 1;
         if (used[name] > 1) name = `${name} ${used[name]}`;
-        return { id, name, position: 1, avatar: avatars[i] };
+        return { id, name, position: 1, avatar: avatars[i], ...newWallet() };
     });
     APP_STATE.activePlayersCount = order.length;
-    APP_STATE.currentPlayerIndex = 0;
+    APP_STATE.currentPlayerIndex = randInt(order.length); // random first player, then one by one
     Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, evtSeq: 0 });
-    APP_STATE.marketTracker = [0, 0, 0]; APP_STATE.ringRotations = [0, 0, 0];
+    setTrackerNumber(APP_STATE.settings.market);
     MP.phase = 'playing';
     broadcastState();
     enterGameView();

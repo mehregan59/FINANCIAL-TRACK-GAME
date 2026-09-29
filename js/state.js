@@ -28,6 +28,8 @@ const APP_STATE = {
         "Supply Halt (Skip)", "Dividend Yield", "Recession Dip (-2)", "IPO Launch",
         "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
     ],
+    // Starting values chosen on the landing page (host's choice is what the room uses).
+    settings: { market: 500, money: 5000, shares: 5 },
     players: [],
     activePlayersCount: 4,
     currentPlayerIndex: 0,
@@ -39,6 +41,22 @@ const APP_STATE = {
     evtSeq: 0,
     anim: null         // local only: { id, pos, lift, count } while an avatar is hopping
 };
+
+const SETTING_LIMITS = { market: [0, 999, 500], money: [0, 1000000, 5000], shares: [0, 1000, 5] };
+function cleanSettings(s) {
+    s = s || {};
+    const o = {};
+    for (const k in SETTING_LIMITS) { const [lo, hi, def] = SETTING_LIMITS[k]; o[k] = clampInt(s[k], lo, hi, def); }
+    return o;
+}
+// Current Market Tracker value (0-999) as a number.
+const marketValue = () => APP_STATE.marketTracker[2] * 100 + APP_STATE.marketTracker[1] * 10 + APP_STATE.marketTracker[0];
+const newWallet = () => ({ money: APP_STATE.settings.money, shares: APP_STATE.settings.shares });
+// Put the Market Tracker dials on a value.
+function setTrackerNumber(num) {
+    const v = clampInt(num, 0, 999, 0), h = Math.floor(v / 100), t = Math.floor((v % 100) / 10), u = v % 10;
+    APP_STATE.marketTracker = [u, t, h]; APP_STATE.ringRotations = [-u * 36, -t * 36, -h * 36];
+}
 
 function initTiles() {
     APP_STATE.tiles = [];

@@ -35,3 +35,8 @@ const clampExpected = v => { const n = parseInt(v, 10); return n >= MIN_PLAYERS 
 
 const digit = v => Math.max(0, Math.min(9, parseInt(v, 10) || 0));
 
+
+// Whole number in [lo, hi]; falls back to def when the input is empty or not a number.
+const clampInt = (v, lo, hi, def) => { const n = parseInt(v, 10); return isNaN(n) ? def : Math.max(lo, Math.min(hi, n)); };
+// Random whole number 0..n-1 (crypto, like the dice).
+const randInt = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };

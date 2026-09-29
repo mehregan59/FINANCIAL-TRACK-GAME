@@ -21,6 +21,8 @@ const isGameActive = () => (MP.on ? MP.phase === 'playing' : G.solo);
 // Online you act only for yourself; on one screen whoever's turn it is uses the shared dice.
 const isMyTurn = () => { const c = curPlayer(); return !!c && (MP.on ? c.id === MP.id : true); };
 const nextEvt = () => ++APP_STATE.evtSeq;
+// True when the current player's last move came from a 6 (they roll again).
+const rolledSix = () => { const m = APP_STATE.lastMove, c = curPlayer(); return !!(m && c && m.n === 6 && m.by === c.id); };
 
 /* ---------- Setup (solo) ---------- */
 
@@ -36,14 +38,21 @@ function changePlayerCount(val) {
     $('playerCountVal').textContent = `${val} Players`;
     APP_STATE.players = [];
     for (let i = 1; i <= APP_STATE.activePlayersCount; i++) {
-        APP_STATE.players.push({ id: i, name: `Investor ${i}`, position: 1, avatar: AVATARS[i - 1].id });
+        APP_STATE.players.push({ id: i, name: `Investor ${i}`, position: 1, avatar: AVATARS[i - 1].id, ...newWallet() });
     }
-    APP_STATE.currentPlayerIndex = 0;
+    APP_STATE.currentPlayerIndex = randInt(APP_STATE.players.length); // random first player
     resetTurnState();
     renderPlayersList(); drawBoard(); updateTurnUI();
 }
 
-function startSoloGame() { G.solo = true; syncEffects(true); }
+function startSoloGame() {
+    G.solo = true;
+    APP_STATE.settings = readSettingsForm();
+    setTrackerNumber(APP_STATE.settings.market);
+    changePlayerCount(APP_STATE.activePlayersCount); // new wallets + random first player
+    updateMarketTrackerUI(); drawBoard();
+    syncEffects(true);
+}
 
 function initDock() {
     Dice.init();
@@ -103,10 +112,11 @@ function authAccept(fromId) {
     const cur = curPlayer();
     if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'accept' || !APP_STATE.pending) return;
     const from = cur.position, to = Math.min(100, from + APP_STATE.pending);
+    const rolled = APP_STATE.pending;
     cur.position = to;
     APP_STATE.pending = null;
     APP_STATE.turnPhase = 'moving';
-    APP_STATE.lastMove = { by: cur.id, from, to, seq: nextEvt() };
+    APP_STATE.lastMove = { by: cur.id, from, to, n: rolled, seq: nextEvt() };
     publish();
     scheduleFinish((to - from) * STEP_MS + 500);
 }
@@ -116,7 +126,8 @@ function scheduleFinish(ms) { clearTimeout(G.finishTimer); G.finishTimer = setTi
 // After the hop has finished on every screen, pass the turn on.
 function authFinishTurn() {
     if (APP_STATE.turnPhase !== 'moving' || (MP.on && !isHost())) return;
-    APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
+    // A 6 earns another roll; any other number passes the turn on, one player after the other.
+    if (!rolledSix()) APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
     APP_STATE.turnPhase = 'roll';
     publish();
     watchCurrentPlayer();
@@ -198,7 +209,8 @@ function updateTurnUI() {
     $('diceBtn').disabled = !(mine && phase === 'roll' && !G.rollPending && !Dice.rolling);
 
     let msg;
-    if (phase === 'roll') msg = mine ? (online ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : `${cur.name} is about to roll...`;
+    const again = rolledSix();
+    if (phase === 'roll') msg = mine ? (again ? 'A 6! Roll again' : online ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : (again ? `${cur.name} rolled a 6 and goes again` : `${cur.name} is about to roll...`);
     else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (mine && online ? `You rolled ${APP_STATE.pending}!` : `${cur.name} rolled ${APP_STATE.pending}`);
     else msg = `${cur.name} is moving...`;
     $('diceStatus').textContent = msg;
@@ -213,7 +225,7 @@ function updateTurnUI() {
     const banner = $('turnBanner');
     banner.style.setProperty('--pc', color);
     banner.classList.toggle('mine', mine && online);
-    banner.innerHTML = `<span class="banner-avatar">${avatarEmoji(cur.avatar)}</span><span>${mine && online ? 'Your turn!' : escapeHtml(cur.name) + "'s turn"}</span>`;
+    banner.innerHTML = `<span class="banner-avatar">${avatarEmoji(cur.avatar)}</span><span>${(mine && online ? 'Your turn!' : escapeHtml(cur.name) + "'s turn") + (again && phase === 'roll' ? ' (6: again!)' : '')}</span>`;
 
     if (online && mine && !G.prevMine) Sound.chime();
     G.prevMine = online && mine;
@@ -223,7 +235,7 @@ function updateTurnUI() {
         const can = canControlTracker(), panel = $('trackerPanel');
         panel.classList.toggle('opacity-60', !can); panel.classList.toggle('pointer-events-none', !can);
     }
-    renderPlayersList(); renderPawnLayer();
+    renderPlayersList(); renderWallet(); renderPawnLayer();
 }
 
 function renderPlayersList() {
@@ -249,5 +261,31 @@ function renderPlayersList() {
             <span class="font-mono text-emerald-400 font-bold text-xs">Space ${shownPos} / 100</span>
         `;
         container.appendChild(div);
+    });
+}
+
+/* ---------- Wallet table under the dice: avatar | shares | money | total ---------- */
+
+const fmtNum = n => Number(n).toLocaleString('en-US');
+
+function renderWallet() {
+    const box = $('walletRows');
+    if (!box) return;
+    const mv = marketValue();
+    $('walletMarket').textContent = mv;
+    box.innerHTML = '';
+    APP_STATE.players.forEach((p, idx) => {
+        const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+        const turn = idx === APP_STATE.currentPlayerIndex && isGameActive();
+        const isMe = MP.on && p.id === MP.id;
+        const row = document.createElement('div');
+        row.className = 'wallet-row' + (turn ? ' turn' : '');
+        row.style.setProperty('--pc', color);
+        row.title = p.name + (isMe ? ' (you)' : '');
+        row.innerHTML = `<span class="avatar-chip">${avatarEmoji(p.avatar)}</span>
+            <span class="wallet-cell">${fmtNum(p.shares)}</span>
+            <span class="wallet-cell">${fmtNum(p.money)}</span>
+            <span class="wallet-cell wallet-total">${fmtNum(p.money + p.shares * mv)}</span>`;
+        box.appendChild(row);
     });
 }

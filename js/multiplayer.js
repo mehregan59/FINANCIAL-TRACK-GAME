@@ -121,7 +121,8 @@ function snapshot() {
         seq: MP.seq, hostId: MP.hostId, phase: MP.phase, expected: MP.expected, boardMode: APP_STATE.boardMode,
         marketTracker: [...APP_STATE.marketTracker], ringRotations: [...APP_STATE.ringRotations],
         eventPool: [...APP_STATE.eventPool], tiles: APP_STATE.tiles.map(t => t.text),
-        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar })),
+        settings: { ...APP_STATE.settings },
+        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar, money: p.money, shares: p.shares })),
         currentPlayerIndex: APP_STATE.currentPlayerIndex,
         turnPhase: APP_STATE.turnPhase, pending: APP_STATE.pending, evtSeq: APP_STATE.evtSeq,
         lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove
@@ -141,7 +142,7 @@ function cleanRoll(r) {
 function cleanMove(m) {
     if (!m || typeof m !== 'object') return null;
     const from = int(m.from, 1, 100), to = int(m.to, 1, 100), seq = int(m.seq, 1, 1e9);
-    return from && to && seq ? { by: String(m.by), from, to, seq } : null;
+    return from && to && seq ? { by: String(m.by), from, to, n: int(m.n, 0, 6) || 0, seq } : null;
 }
 
 function applyState(s) {
@@ -153,12 +154,14 @@ function applyState(s) {
         APP_STATE.boardMode = s.boardMode === 'double' ? 'double' : 'single';
         APP_STATE.marketTracker = [0, 1, 2].map(i => digit(s.marketTracker && s.marketTracker[i]));
         APP_STATE.ringRotations = [0, 1, 2].map(i => Number(s.ringRotations && s.ringRotations[i]) || 0);
+        APP_STATE.settings = cleanSettings(s.settings);
         APP_STATE.eventPool = (s.eventPool || []).slice(0, 60).map(t => String(t).slice(0, 80));
         if (!APP_STATE.eventPool.length) APP_STATE.eventPool = ['Reserve Vault'];
         APP_STATE.tiles = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, text: String((s.tiles || [])[i] || '').slice(0, 80) }));
         APP_STATE.players = (s.players || []).slice(0, MAX_PLAYERS).map((p, i) => ({
             id: String(p.id), name: cleanName(p.name) || 'Investor', position: int(p.position, 1, 100) || 1,
-            avatar: isAvatarId(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length].id
+            avatar: isAvatarId(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length].id,
+            money: clampInt(p.money, -1e9, 1e9, APP_STATE.settings.money), shares: clampInt(p.shares, 0, 1e6, APP_STATE.settings.shares)
         }));
         APP_STATE.activePlayersCount = APP_STATE.players.length;
         APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));
