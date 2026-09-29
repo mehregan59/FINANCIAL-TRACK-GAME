@@ -303,44 +303,65 @@ function svgEl(name, attrs) {
 }
 
 // Pawns stand OUTSIDE the board, on the perimeter, next to the space they are on.
-// A pawn's spot: radius/side offsets make players on the same space fan out (3 side by side, more rings outward).
-const PAWN_R0 = 518;
-function pawnSlots() {
-    const seen = {}, slots = [];
-    APP_STATE.players.forEach((p, i) => { const k = seen[p.position] = (seen[p.position] || 0) + 1; slots[i] = k - 1; });
-    return slots;
-}
-function pawnXY(idx, pos, slot) {
-    const angle = (pos - 0.5) * (2 * Math.PI / 100) - Math.PI / 2;
-    const side = ((slot % 3) - 1) * 12;              // along the perimeter: -12, 0, +12
-    const r = PAWN_R0 + Math.floor(slot / 3) * 22;   // further out when more than 3 share a space
-    const tx = -Math.sin(angle), ty = Math.cos(angle);
-    return { x: 500 + r * Math.cos(angle) + tx * side, y: 500 + r * Math.sin(angle) + ty * side };
+// They are big enough to read and never touch: each pawn takes the free spot closest to its space
+// (first straight out from the space, then further out / to the sides), and a thin line links it to its tile.
+const PAWN_R = 21;            // pawn radius
+const PAWN_R0 = 487 + 32;     // first row, just outside the outer edge of the tiles (485)
+const PAWN_GAP = 4;           // free space kept between two pawns
+const pawnAngle = pos => (pos - 0.5) * (2 * Math.PI / 100) - Math.PI / 2;
+
+// Spots of all players (index = player index). Uses stored positions, so a hopping pawn keeps its spot.
+function pawnSpots() {
+    const spots = [], placed = [];
+    const need = 2 * PAWN_R + PAWN_GAP, side = need, rowStep = need * 0.87;
+    const evenRow = [0, -1, 1, -2, 2, -3, 3, -4, 4], oddRow = [-0.5, 0.5, -1.5, 1.5, -2.5, 2.5, -3.5, 3.5];
+    APP_STATE.players.forEach((p, i) => {
+        const ang = pawnAngle(p.position), tx = -Math.sin(ang), ty = Math.cos(ang);
+        let best = null;
+        for (let row = 0; row < 4 && !best; row++) {
+            for (const sd of (row % 2 ? oddRow : evenRow)) {
+                const r = PAWN_R0 + row * rowStep, o = sd * side;
+                const x = 500 + r * Math.cos(ang) + tx * o, y = 500 + r * Math.sin(ang) + ty * o;
+                if (placed.every(q => Math.hypot(q.x - x, q.y - y) >= need)) { best = { x, y }; break; }
+            }
+        }
+        if (!best) best = { x: 500 + (PAWN_R0 + 4 * rowStep) * Math.cos(ang), y: 500 + (PAWN_R0 + 4 * rowStep) * Math.sin(ang) };
+        spots[i] = best; placed.push(best);
+    });
+    return spots;
 }
 
 function fillPawnLayer(layer) {
-    const cur = APP_STATE.currentPlayerIndex, slots = pawnSlots();
+    const cur = APP_STATE.currentPlayerIndex, spots = pawnSpots();
     // The player whose turn it is is drawn last, so they sit on top.
     const order = APP_STATE.players.map((_, i) => i).sort((a, b) => (a === cur) - (b === cur));
     order.forEach(idx => {
         const p = APP_STATE.players[idx];
         const anim = APP_STATE.anim && APP_STATE.anim.id === p.id ? APP_STATE.anim : null;
-        const { x, y } = pawnXY(idx, anim ? anim.pos : p.position, slots[idx]);
+        let { x, y } = spots[idx];
+        if (anim) { // while hopping, the pawn travels along the perimeter from space to space
+            const ang = pawnAngle(anim.pos), r = PAWN_R0;
+            x = 500 + r * Math.cos(ang); y = 500 + r * Math.sin(ang);
+        }
         const lift = anim ? anim.lift : 0;
-        const yy = y - lift * 12;
+        const yy = y - lift * 14;
         const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
         const isTurn = idx === cur;
+        const ang = pawnAngle(anim ? anim.pos : p.position);
 
         const g = svgEl('g', { class: 'pawn-element' });
-        g.appendChild(svgEl('ellipse', { cx: x, cy: y + 11, rx: 9 - lift * 3, ry: 3.2 - lift, fill: 'rgba(0,0,0,0.45)' }));
-        if (isTurn) g.appendChild(svgEl('circle', { class: 'pawn-glow', cx: x, cy: yy, r: 15, fill: 'none', stroke: color, 'stroke-width': 3 }));
-        g.appendChild(svgEl('circle', { cx: x, cy: yy, r: isTurn ? 12 : 11, fill: color, stroke: '#ffffff', 'stroke-width': 2 }));
-        const face = svgEl('text', { x, y: yy + 0.5, 'font-size': 13, 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+        // link to the tile the pawn is standing at
+        g.appendChild(svgEl('line', { x1: 500 + 487 * Math.cos(ang), y1: 500 + 487 * Math.sin(ang), x2: x, y2: y, stroke: color, 'stroke-width': 3, 'stroke-linecap': 'round', opacity: 0.85 }));
+        g.appendChild(svgEl('circle', { cx: 500 + 487 * Math.cos(ang), cy: 500 + 487 * Math.sin(ang), r: 4, fill: color, stroke: '#fff', 'stroke-width': 1.5 }));
+        g.appendChild(svgEl('ellipse', { cx: x, cy: y + PAWN_R - 2, rx: PAWN_R * 0.8 - lift * 4, ry: 4 - lift, fill: 'rgba(0,0,0,0.45)' }));
+        if (isTurn) g.appendChild(svgEl('circle', { class: 'pawn-glow', cx: x, cy: yy, r: PAWN_R + 3, fill: 'none', stroke: color, 'stroke-width': 4 }));
+        g.appendChild(svgEl('circle', { class: 'pawn-body', cx: x, cy: yy, r: PAWN_R, fill: '#0f172a', stroke: color, 'stroke-width': 5 }));
+        const face = svgEl('text', { x, y: yy + 1, 'font-size': 25, 'text-anchor': 'middle', 'dominant-baseline': 'central' });
         face.textContent = avatarEmoji(p.avatar);
         g.appendChild(face);
         if (anim && anim.count > 0) { // the number being counted as the avatar hops forward
-            g.appendChild(svgEl('rect', { x: x - 11, y: yy - 36, width: 22, height: 18, rx: 9, fill: '#facc15', stroke: '#1e293b', 'stroke-width': 1.5 }));
-            const n = svgEl('text', { x, y: yy - 27, 'font-size': 12, 'font-weight': 900, fill: '#1e293b', 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+            g.appendChild(svgEl('rect', { x: x - 15, y: yy - 58, width: 30, height: 24, rx: 12, fill: '#facc15', stroke: '#1e293b', 'stroke-width': 2 }));
+            const n = svgEl('text', { x, y: yy - 46, 'font-size': 16, 'font-weight': 900, fill: '#1e293b', 'text-anchor': 'middle', 'dominant-baseline': 'central' });
             n.textContent = anim.count;
             g.appendChild(n);
         }

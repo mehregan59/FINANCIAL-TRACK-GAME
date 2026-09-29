@@ -14,7 +14,7 @@ body {
 .board-container {
     position: relative;
     width: 100%;
-    max-width: 820px;
+    max-width: min(940px, calc(100vh - 150px));
     margin: 0 auto;
     aspect-ratio: 1 / 1;
 }

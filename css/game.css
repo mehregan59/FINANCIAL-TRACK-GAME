@@ -4,7 +4,7 @@
 .dice-dock {
     position: fixed; top: calc(84px + 15vh); left: 12px; z-index: 35; box-sizing: border-box;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
-    width: 161px; max-height: calc(100vh - 84px - 15vh - 12px); overflow-y: auto; padding: 12px 8px 10px; border-radius: 18px;
+    width: 210px; max-height: calc(100vh - 84px - 15vh - 12px); overflow-y: auto; padding: 12px 8px 10px; border-radius: 18px;
     background: rgba(2, 6, 23, 0.86); border: 1px solid rgba(148, 163, 184, 0.28);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); backdrop-filter: blur(6px);
 }
@@ -12,21 +12,32 @@
 .dice-dock.yourturn { border-color: #facc15; animation: dockGlow 1.4s ease-in-out infinite; }
 
 .dice-scene {
-    width: 83px; height: 83px; margin: 6px 0 4px; padding: 0; border: 0; background: none;
+    width: 112px; height: 112px; margin: 10px 0 6px; position: relative; padding: 0; border: 0; background: none;
     cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .dice-scene:disabled { cursor: default; }
-#diceScene { perspective: 494px; }            /* must sit on the direct parent of the cube */
+#diceScene { perspective: 700px; }            /* must sit on the direct parent of the cube */
 #diceScene.dice-hop { animation: diceHop 1.2s ease-out; }
 .dice-cube {
-    --dice: 83px; --half: 41.5px;
+    --dice: 84px; --half: 42px;
     position: relative; width: var(--dice); height: var(--dice);
     transform-style: preserve-3d; transform: rotateX(0deg) rotateY(0deg);
 }
+/* Fixed viewing angle so the die always looks like a real cube (front face + top + side visible). */
+.dice-tilt {
+    position: absolute; left: 50%; top: 50%; width: var(--dice, 84px); height: var(--dice, 84px);
+    margin: calc(var(--dice, 84px) / -2) 0 0 calc(var(--dice, 84px) / -2);
+    transform-style: preserve-3d; transform: rotateX(-24deg) rotateY(-30deg);
+    --dice: 84px;
+}
+.dice-shadow {
+    position: absolute; left: 50%; bottom: -4px; width: 78px; height: 14px; margin-left: -39px; border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0) 70%); pointer-events: none;
+}
 .dice-face {
     position: absolute; inset: 0; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-    padding: 12px; border-radius: 15px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    background: linear-gradient(145deg, #ffffff, #dbe3ee); border: 1px solid #94a3b8;
+    padding: 13px; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: linear-gradient(145deg, #ffffff, #d5dde9); border: 1px solid #8b9ab0;
     box-shadow: inset 0 0 10px rgba(15, 23, 42, 0.18);
 }
 .dice-face[data-face="1"] { transform: translateZ(var(--half)); }
@@ -35,17 +46,20 @@
 .dice-face[data-face="5"] { transform: rotateY(-90deg) translateZ(var(--half)); }
 .dice-face[data-face="3"] { transform: rotateX(90deg) translateZ(var(--half)); }
 .dice-face[data-face="4"] { transform: rotateX(-90deg) translateZ(var(--half)); }
+.dice-face::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: rgba(15, 23, 42, var(--shade, 0)); }
+.dice-face[data-face="2"], .dice-face[data-face="5"] { --shade: 0.16; }
+.dice-face[data-face="4"], .dice-face[data-face="6"] { --shade: 0.08; }
 .dice-pip {
-    align-self: center; justify-self: center; width: 14px; height: 14px; border-radius: 50%;
+    align-self: center; justify-self: center; width: 15px; height: 15px; border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, #475569, #0f172a);
 }
-.dice-pip-one { width: 19px; height: 19px; background: radial-gradient(circle at 35% 35%, #f87171, #b91c1c); }
+.dice-pip-one { width: 22px; height: 22px; background: radial-gradient(circle at 35% 35%, #f87171, #b91c1c); }
 
-.dice-status { min-height: 32px; text-align: center; font-size: 11px; line-height: 1.3; font-weight: 700; color: #cbd5e1; }
+.dice-status { min-height: 34px; text-align: center; font-size: 13px; line-height: 1.3; font-weight: 700; color: #cbd5e1; }
 .dice-dock.yourturn .dice-status { color: #fde68a; }
 .dice-accept {
-    width: 100%; padding: 8px 6px; border: 0; border-radius: 12px; cursor: pointer;
-    font-size: 12px; font-weight: 900; letter-spacing: 0.03em; color: #022c22;
+    width: 100%; padding: 10px 6px; border: 0; border-radius: 12px; cursor: pointer;
+    font-size: 14px; font-weight: 900; letter-spacing: 0.03em; color: #022c22;
     background: linear-gradient(90deg, #34d399, #2dd4bf); animation: acceptPulse 1s ease-in-out infinite;
 }
 .dice-accept.hidden { display: none; }
@@ -74,13 +88,8 @@
 }
 
 @media (max-width: 640px) {
-    .dice-dock { top: calc(70px + 15vh); left: 6px; width: 135px; padding: 8px 6px; max-height: calc(100vh - 70px - 15vh - 8px); }
-    .dice-cube { --dice: 68px; --half: 34px; }
-    #diceScene { perspective: 400px; }
-    .dice-scene { width: 68px; height: 68px; }
-    .dice-face { padding: 9px; }
-    .dice-pip { width: 11px; height: 11px; }
-    .dice-pip-one { width: 15px; height: 15px; }
+    .dice-dock { top: calc(70px + 15vh); left: 6px; width: 172px; padding: 8px 6px; max-height: calc(100vh - 70px - 15vh - 8px); }
+    .wallet-cell { font-size: 11px; padding: 6px 0; }
 }
 
 /* ---------- Turn banner above the board ---------- */
@@ -129,23 +138,26 @@
 /* ---------- Pawns on the board (SVG) ---------- */
 .pawn-glow { animation: pawnPulse 1.1s ease-in-out infinite; }
 @keyframes pawnPulse {
-    0%, 100% { r: 15px; opacity: 0.95; }
-    50% { r: 24px; opacity: 0.25; }
+    0%, 100% { r: 24px; opacity: 0.95; }
+    50% { r: 34px; opacity: 0.2; }
 }
 
 /* ---------- Wallet table (under the dice) ---------- */
 .wallet { width: 100%; margin-top: 4px; border-top: 1px solid rgba(148, 163, 184, 0.25); padding-top: 6px; }
-.wallet-head, .wallet-row { display: grid; grid-template-columns: 24px 1fr 1fr 1.25fr; gap: 3px; align-items: center; }
-.wallet-head { font-size: 8px; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; text-align: center; margin-bottom: 3px; }
+.wallet-head, .wallet-row { display: grid; grid-template-columns: 30px 1fr 1fr 1.3fr; gap: 4px; align-items: center; }
+.wallet-head { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; text-align: center; margin-bottom: 3px; }
 .wallet-row { --pc: #64748b; margin-bottom: 3px; padding: 2px; border-radius: 9px; border: 1px solid transparent; }
 .wallet-row.turn { border-color: var(--pc); background: rgba(30, 41, 59, 0.9); animation: rowGlow 1.4s ease-in-out infinite; }
-.wallet-row .avatar-chip { width: 22px; height: 22px; font-size: 12px; }
+.wallet-row .avatar-chip { width: 30px; height: 30px; font-size: 17px; }
 .wallet-cell {
-    font: 700 10px/1 ui-monospace, Menlo, Consolas, monospace; text-align: center; color: #e2e8f0;
-    background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 5px 1px; overflow: hidden; white-space: nowrap;
+    font: 700 12.5px/1 ui-monospace, Menlo, Consolas, monospace; text-align: center; color: #e2e8f0;
+    background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px 1px; overflow: hidden; white-space: nowrap;
 }
 .wallet-row .wallet-cell:nth-child(2) { color: #67e8f9; }
 .wallet-row .wallet-cell:nth-child(3) { color: #6ee7b7; }
 .wallet-total { color: #fde68a; }
-.wallet-foot { margin-top: 4px; font-size: 9px; color: #94a3b8; text-align: center; }
+.wallet-foot { margin-top: 5px; font-size: 11px; color: #94a3b8; text-align: center; }
 .wallet-foot b { color: #fbbf24; font-family: ui-monospace, monospace; }
+
+/* With many players the dock scrolls instead of squashing the dice and buttons. */
+.dice-dock > * { flex-shrink: 0; }
