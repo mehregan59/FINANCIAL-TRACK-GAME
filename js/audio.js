@@ -58,6 +58,9 @@ const Sound = (() => {
         thud() { tone(150, 0, 0.16, 'sine', 0.5, 55); click(0, 500, 0.5); },
         step(k) { tone(440 + (k % 8) * 55, 0, 0.09, 'triangle', 0.22); },
         chime() { tone(660, 0, 0.18, 'sine', 0.22); tone(990, 0.12, 0.28, 'sine', 0.2); },
+        // Bank sounds: buy = cash register "ka-ching", sell = coins pouring into a tray.
+        buy() { click(0, 3200, 0.5); tone(1320, 0.03, 0.14, 'triangle', 0.24); tone(1760, 0.16, 0.5, 'sine', 0.26); tone(2637, 0.2, 0.35, 'sine', 0.12); },
+        sell() { for (let i = 0; i < 7; i++) { const t = i * 0.055; click(t, 2500 + Math.random() * 2500, 0.3); tone(1900 + Math.random() * 900, t, 0.1, 'sine', 0.16); } tone(880, 0.42, 0.28, 'triangle', 0.16); },
         arrive() { tone(523, 0, 0.12, 'triangle', 0.22); tone(659, 0.09, 0.12, 'triangle', 0.22); tone(784, 0.18, 0.22, 'triangle', 0.22); }
     };
 })();

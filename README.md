@@ -20,7 +20,7 @@ Everyone sees the same board, dice roll, pawn positions and Market Tracker dials
 
 How it works: the site stays static (GitHub Pages). Live sync uses Supabase Realtime (Broadcast + Presence), so no database tables or server code are needed. The Supabase project URL and publishable key are set in js/config.js (SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY). The publishable key is designed to be public; never commit a service_role or secret key. If those two values are empty, the game falls back to a same-browser test mode (rooms work only between tabs of one browser).
 
-Project layout (no build step): index.html (markup only), css/ (styles.css, game.css), js/ (config, util, state, audio, dice, board, events-editor, craftkit, transport, multiplayer, lobby, game, main). Turn logic lives in js/game.js, sync in js/multiplayer.js + js/transport.js.
+Project layout (no build step): index.html (markup only), css/ (styles.css, game.css, ui.css = bright theme, side rails, bank, landing), js/ (config, util, state, audio, dice, board, events-editor, craftkit, transport, multiplayer, lobby, game, main). Turn logic lives in js/game.js, sync in js/multiplayer.js + js/transport.js.
 
 Temporary test feature: in the lobby the host can press "+ Add 2 test players" to add two computer players that roll and accept by themselves, so one person can test the whole game. To remove it later, set TEST_BOTS = false in js/config.js and delete the blocks marked TEST BOTS (js/lobby.js, index.html #botsBtn).
 
@@ -112,3 +112,6 @@ Stack Layers: Stack from bottom to top:
 $$\text{Main Board} \longrightarrow \text{Hundreds Dial} \longrightarrow \text{Hundreds Cover} \longrightarrow \text{Tens Dial} \longrightarrow \text{Tens Cover} \longrightarrow \text{Units Dial} \longrightarrow \text{Units Cover}$$
 
 Fasten: Push a single brass split pin (paper fastener) through the center hole ($+$) to lock all layers together so the dials spin freely!
+
+
+Screen layout: left rail = dice on top, players wallet below; centre = board; right rail = Bank (Sell/Buy buttons with sounds, not wired yet), a "coming soon" card slot, and the Market Tracker dials. The toolbar (room code, shuffle, layout, board/events, craft kit, print) sits behind the Menu button. The "Start page" button returns to the landing page. Starting values, the event preset and the one-screen player count live in the landing page's Settings.

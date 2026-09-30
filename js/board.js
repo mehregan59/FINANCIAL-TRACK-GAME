@@ -47,7 +47,7 @@ function drawSinglePerimeterRing(group, cx, cy) {
         const sectorPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
         sectorPath.setAttribute("d", pathData);
         sectorPath.setAttribute("fill", palette[i % palette.length]);
-        sectorPath.setAttribute("stroke", "#020617");
+        sectorPath.setAttribute("stroke", "#0d2a63");
         sectorPath.setAttribute("stroke-width", "1.5");
         group.appendChild(sectorPath);
 
@@ -109,7 +109,7 @@ function drawDoublePerimeterRing(group, cx, cy) {
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", pathData);
         path.setAttribute("fill", palette[i % palette.length]);
-        path.setAttribute("stroke", "#020617");
+        path.setAttribute("stroke", "#0d2a63");
         path.setAttribute("stroke-width", "1.5");
         group.appendChild(path);
 
@@ -156,6 +156,11 @@ function drawMarketTrackerRings(group, cx, cy) {
         group.appendChild(defs);
     }
 
+    // backing disc behind the dials (deep royal blue, not black)
+    const disc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    disc.setAttribute("cx", cx); disc.setAttribute("cy", cy); disc.setAttribute("r", 230); disc.setAttribute("fill", "#1b4796");
+    group.appendChild(disc);
+
     ringConfigs.forEach((cfg) => {
         const rMid = (cfg.rOut + cfg.rIn) / 2;
         const windowY = cy - rMid;
@@ -200,7 +205,7 @@ function drawMarketTrackerRings(group, cx, cy) {
         ringBg.setAttribute("cx", cx);
         ringBg.setAttribute("cy", cy);
         ringBg.setAttribute("r", rMid);
-        ringBg.setAttribute("stroke", "#090d16");
+        ringBg.setAttribute("stroke", "#12336f");
         ringBg.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
         ringBg.setAttribute("fill", "none");
         ringGroup.appendChild(ringBg);
@@ -231,7 +236,7 @@ function drawMarketTrackerRings(group, cx, cy) {
         coverRing.setAttribute("cx", cx);
         coverRing.setAttribute("cy", cy);
         coverRing.setAttribute("r", rMid);
-        coverRing.setAttribute("stroke", "#090d16");
+        coverRing.setAttribute("stroke", "#12336f");
         coverRing.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
         coverRing.setAttribute("fill", "none");
         coverRing.setAttribute("mask", `url(#${maskId})`);
@@ -240,13 +245,13 @@ function drawMarketTrackerRings(group, cx, cy) {
         // Trim Lines
         const outerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         outerBorder.setAttribute("cx", cx); outerBorder.setAttribute("cy", cy);
-        outerBorder.setAttribute("r", cfg.rOut); outerBorder.setAttribute("stroke", "#1e293b");
+        outerBorder.setAttribute("r", cfg.rOut); outerBorder.setAttribute("stroke", "#8fbcff");
         outerBorder.setAttribute("stroke-width", "1.5"); outerBorder.setAttribute("fill", "none");
         group.appendChild(outerBorder);
 
         const innerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         innerBorder.setAttribute("cx", cx); innerBorder.setAttribute("cy", cy);
-        innerBorder.setAttribute("r", cfg.rIn); innerBorder.setAttribute("stroke", "#1e293b");
+        innerBorder.setAttribute("r", cfg.rIn); innerBorder.setAttribute("stroke", "#8fbcff");
         innerBorder.setAttribute("stroke-width", "1.5"); innerBorder.setAttribute("fill", "none");
         group.appendChild(innerBorder);
 
@@ -268,7 +273,7 @@ function drawMarketTrackerRings(group, cx, cy) {
     // Center Hub Badge
     const hubBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     hubBg.setAttribute("cx", cx); hubBg.setAttribute("cy", cy); hubBg.setAttribute("r", "42");
-    hubBg.setAttribute("fill", "#020617"); hubBg.setAttribute("stroke", "#eab308");
+    hubBg.setAttribute("fill", "#0d2a63"); hubBg.setAttribute("stroke", "#eab308");
     hubBg.setAttribute("stroke-width", "3");
     group.appendChild(hubBg);
 
@@ -305,8 +310,8 @@ function svgEl(name, attrs) {
 // Pawns stand OUTSIDE the board, on the perimeter, next to the space they are on.
 // They are big enough to read and never touch: each pawn takes the free spot closest to its space
 // (first straight out from the space, then further out / to the sides), and a thin line links it to its tile.
-const PAWN_R = 21;            // pawn radius
-const PAWN_R0 = 487 + 32;     // first row, just outside the outer edge of the tiles (485)
+const PAWN_R = 27;            // pawn radius
+const PAWN_R0 = 487 + 30;     // first row, just outside the outer edge of the tiles (485)
 const PAWN_GAP = 4;           // free space kept between two pawns
 const pawnAngle = pos => (pos - 0.5) * (2 * Math.PI / 100) - Math.PI / 2;
 
@@ -322,7 +327,7 @@ function pawnSpots() {
             for (const sd of (row % 2 ? oddRow : evenRow)) {
                 const r = PAWN_R0 + row * rowStep, o = sd * side;
                 const x = 500 + r * Math.cos(ang) + tx * o, y = 500 + r * Math.sin(ang) + ty * o;
-                if (placed.every(q => Math.hypot(q.x - x, q.y - y) >= need)) { best = { x, y }; break; }
+                if (placed.every(q => Math.hypot(q.x - x, q.y - y) >= need - 0.05)) { best = { x, y }; break; }
             }
         }
         if (!best) best = { x: 500 + (PAWN_R0 + 4 * rowStep) * Math.cos(ang), y: 500 + (PAWN_R0 + 4 * rowStep) * Math.sin(ang) };
@@ -355,8 +360,8 @@ function fillPawnLayer(layer) {
         g.appendChild(svgEl('circle', { cx: 500 + 487 * Math.cos(ang), cy: 500 + 487 * Math.sin(ang), r: 4, fill: color, stroke: '#fff', 'stroke-width': 1.5 }));
         g.appendChild(svgEl('ellipse', { cx: x, cy: y + PAWN_R - 2, rx: PAWN_R * 0.8 - lift * 4, ry: 4 - lift, fill: 'rgba(0,0,0,0.45)' }));
         if (isTurn) g.appendChild(svgEl('circle', { class: 'pawn-glow', cx: x, cy: yy, r: PAWN_R + 3, fill: 'none', stroke: color, 'stroke-width': 4 }));
-        g.appendChild(svgEl('circle', { class: 'pawn-body', cx: x, cy: yy, r: PAWN_R, fill: '#0f172a', stroke: color, 'stroke-width': 5 }));
-        const face = svgEl('text', { x, y: yy + 1, 'font-size': 25, 'text-anchor': 'middle', 'dominant-baseline': 'central' });
+        g.appendChild(svgEl('circle', { class: 'pawn-body', cx: x, cy: yy, r: PAWN_R, fill: '#0f172a', stroke: color, 'stroke-width': 6 }));
+        const face = svgEl('text', { x, y: yy + 1, 'font-size': 33, 'text-anchor': 'middle', 'dominant-baseline': 'central' });
         face.textContent = avatarEmoji(p.avatar);
         g.appendChild(face);
         if (anim && anim.count > 0) { // the number being counted as the avatar hops forward

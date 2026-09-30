@@ -35,7 +35,6 @@ function resetTurnState() {
 
 function changePlayerCount(val) {
     APP_STATE.activePlayersCount = parseInt(val);
-    $('playerCountVal').textContent = `${val} Players`;
     APP_STATE.players = [];
     for (let i = 1; i <= APP_STATE.activePlayersCount; i++) {
         APP_STATE.players.push({ id: i, name: `Investor ${i}`, position: 1, avatar: AVATARS[i - 1].id, ...newWallet() });
@@ -49,6 +48,9 @@ function startSoloGame() {
     G.solo = true;
     APP_STATE.settings = readSettingsForm();
     setTrackerNumber(APP_STATE.settings.market);
+    applyChosenPreset(chosenPreset());
+    APP_STATE.activePlayersCount = clampInt($('setSoloPlayers').value, 2, 10, 4);
+    $('setSoloPlayers').value = APP_STATE.activePlayersCount;
     changePlayerCount(APP_STATE.activePlayersCount); // new wallets, player 1 starts
     updateMarketTrackerUI(); drawBoard();
     syncEffects(true);
@@ -198,6 +200,7 @@ function stopAnim() {
 function updateTurnUI() {
     const active = isGameActive();
     $('diceDock').classList.toggle('dock-hidden', !active);
+    $('leftRail').classList.toggle('dock-hidden', !active);
     $('turnBanner').classList.toggle('hidden', !active);
     if (!active) { document.title = 'Capital Clash'; return; }
     const cur = curPlayer(); if (!cur) return;
@@ -238,31 +241,8 @@ function updateTurnUI() {
     renderPlayersList(); renderWallet(); renderPawnLayer();
 }
 
-function renderPlayersList() {
-    const container = document.getElementById('playersList');
-    if (!container) return;
-    container.innerHTML = '';
-
-    APP_STATE.players.forEach((p, idx) => {
-        const isMe = MP.on && p.id === MP.id;
-        const offline = MP.on && MP.phase === 'playing' && !isPresent(p);
-        const turn = idx === APP_STATE.currentPlayerIndex && isGameActive();
-        const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
-        const a = APP_STATE.anim && APP_STATE.anim.id === p.id ? APP_STATE.anim : null;
-        const shownPos = a ? Math.floor(a.pos + 0.5) : p.position; // counts up while the avatar hops
-        const div = document.createElement('div');
-        div.className = `player-row flex items-center justify-between p-2 rounded-xl border ${turn ? 'turn-glow' : 'bg-slate-900/50 border-slate-800'} ${offline ? 'opacity-50' : ''}`;
-        div.style.setProperty('--pc', color);
-        div.innerHTML = `
-            <div class="flex items-center space-x-2">
-                <span class="avatar-chip" style="--pc:${color}">${avatarEmoji(p.avatar)}</span>
-                <span class="font-bold text-slate-200 text-xs">${escapeHtml(p.name)}${p.bot ? ' <span class="text-amber-400">(test)</span>' : ''}${isMe ? ' <span class="text-emerald-400">(you)</span>' : ''}${offline ? ' <span class="text-red-400">(offline)</span>' : ''}</span>
-            </div>
-            <span class="font-mono text-emerald-400 font-bold text-xs">Space ${shownPos} / 100</span>
-        `;
-        container.appendChild(div);
-    });
-}
+// The player list and the wallet are one card now.
+function renderPlayersList() { renderWallet(); }
 
 /* ---------- Wallet table under the dice: avatar | shares | money | total ---------- */
 
@@ -273,19 +253,48 @@ function renderWallet() {
     if (!box) return;
     const mv = marketValue();
     $('walletMarket').textContent = mv;
+    const keepScroll = box.scrollTop;
     box.innerHTML = '';
     APP_STATE.players.forEach((p, idx) => {
         const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
         const turn = idx === APP_STATE.currentPlayerIndex && isGameActive();
         const isMe = MP.on && p.id === MP.id;
+        const offline = MP.on && MP.phase === 'playing' && !isPresent(p);
+        const a = APP_STATE.anim && APP_STATE.anim.id === p.id ? APP_STATE.anim : null;
+        const shownPos = a ? Math.floor(a.pos + 0.5) : p.position; // counts up while the avatar hops
         const row = document.createElement('div');
-        row.className = 'wallet-row' + (turn ? ' turn' : '');
+        row.className = 'wallet-row player-row' + (turn ? ' turn turn-glow' : '') + (offline ? ' offline' : '');
         row.style.setProperty('--pc', color);
-        row.title = p.name + (isMe ? ' (you)' : '');
-        row.innerHTML = `<span class="avatar-chip">${avatarEmoji(p.avatar)}</span>
-            <span class="wallet-cell">${fmtNum(p.shares)}</span>
-            <span class="wallet-cell">${fmtNum(p.money)}</span>
-            <span class="wallet-cell wallet-total">${fmtNum(p.money + p.shares * mv)}</span>`;
+        row.innerHTML = `<div class="wallet-top">
+                <span class="avatar-chip" style="--pc:${color}">${avatarEmoji(p.avatar)}</span>
+                <span class="wallet-name">${escapeHtml(p.name)}${isMe ? '<small style="color:#86f0b4">(you)</small>' : ''}${p.bot ? '<small style="color:#ffd54a">(test)</small>' : ''}${offline ? '<small style="color:#ff9b9b">(offline)</small>' : ''}</span>
+                <span class="wallet-space">Space ${shownPos}</span>
+            </div>
+            <div class="wallet-cells">
+                <span class="wallet-cell sh" data-label="Shares">${fmtNum(p.shares)}</span>
+                <span class="wallet-cell mo" data-label="Money">${fmtNum(p.money)}</span>
+                <span class="wallet-cell to" data-label="Total">${fmtNum(p.money + p.shares * mv)}</span>
+            </div>`;
         box.appendChild(row);
     });
+    box.scrollTop = keepScroll;
+    const cur = box.children[APP_STATE.currentPlayerIndex];
+    if (cur && isGameActive() && G.lastScrolled !== APP_STATE.currentPlayerIndex) { // bring the active player into view
+        G.lastScrolled = APP_STATE.currentPlayerIndex;
+        if (cur.offsetTop < box.scrollTop || cur.offsetTop + cur.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = cur.offsetTop - 4;
+    }
+}
+
+// Bank buttons: only the sounds for now (trading gets wired later).
+function bankAction(kind) {
+    Sound.unlock();
+    if (kind === 'buy') Sound.buy(); else Sound.sell();
+    const b = document.querySelector('.bank-btn.' + kind);
+    if (b) { b.classList.add('pressed'); setTimeout(() => b.classList.remove('pressed'), 160); }
+    showToast(kind === 'buy' ? 'Bank: buying shares is coming soon' : 'Bank: selling shares is coming soon');
+}
+
+function toggleMenu() {
+    const bar = $('menuBar'); bar.classList.toggle('hidden');
+    $('menuBtn').setAttribute('aria-expanded', String(!bar.classList.contains('hidden')));
 }

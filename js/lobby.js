@@ -49,9 +49,20 @@ function readSettingsForm() {
     $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
     return s;
 }
-function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; }
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; }
 
-async function createRoom() { const n = readName(); if (n) { APP_STATE.settings = readSettingsForm(); await enterRoom(newRoomCode(), n, true, EXPECTED_SETUP); } }
+// Event set chosen under Settings ('classic' keeps the board as it is).
+const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
+function applyChosenPreset(p) { if (p && p !== 'classic') loadFinancialPreset(p); }
+let SETUP_PRESET = 'classic';
+
+// Back to the start page (leaves the room / resets the one-screen game).
+function goHome() {
+    const msg = MP.on ? 'Leave this game and go back to the start page? You can rejoin with the room code.' : 'Go back to the start page? The one-screen game will be reset.';
+    if (window.confirm(msg)) leaveRoom();
+}
+
+async function createRoom() { const n = readName(); if (n) { APP_STATE.settings = readSettingsForm(); SETUP_PRESET = chosenPreset(); await enterRoom(newRoomCode(), n, true, EXPECTED_SETUP); } }
 
 async function joinRoom() {
     const n = readName(); if (!n) return;
@@ -78,7 +89,7 @@ async function enterRoom(code, name, creator, expected) {
     if (!creator && MP.members.filter(m => m.id !== MP.id).length >= cap) { abortJoin('This room is full (' + cap + ' players).'); return; }
     try { history.replaceState(null, '', location.pathname + '?room=' + code); } catch (_) {}
     $('landing').classList.add('hidden');
-    showLobby();
+    if (MP.phase !== 'playing') showLobby(); // a running game may already have arrived while we waited
     if (!creator) {
         MP.joinTimer = setTimeout(() => {
             if (MP.on && !MP.hostId && MP.phase === 'lobby') abortJoin('Room ' + code + ' was not found. Check the code, or ask the host to open the room first.');
@@ -172,7 +183,6 @@ function chooseAvatar(id) {
 function enterGameView() {
     $('lobby').classList.add('hidden'); $('landing').classList.add('hidden');
     $('roomPill').classList.remove('hidden'); $('roomPillCode').textContent = MP.code;
-    $('playerCountBlock').classList.add('hidden');
     if (!APP_STATE.players.some(p => p.id === MP.id)) showToast('This game already started: you are watching as a spectator');
     else showToast('Game on! ' + APP_STATE.players.length + ' investors at the start line');
 }
@@ -201,6 +211,7 @@ function hostStartGame() {
     APP_STATE.currentPlayerIndex = 0; // the host (player 1) starts, then one after the other
     Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, evtSeq: 0 });
     setTrackerNumber(APP_STATE.settings.market);
+    applyChosenPreset(SETUP_PRESET);
     MP.phase = 'playing';
     broadcastState();
     enterGameView();
