@@ -1,5 +1,8 @@
 /* Capital Clash: SVG board, Market Tracker dials and pawns. */
 
+// Inner radius of the single ring (smaller hole = longer bars).
+const SINGLE_R_IN = 200;
+
 function drawBoard() {
     const svg = document.getElementById('boardSvg');
     if (!svg) return;
@@ -23,66 +26,51 @@ function drawBoard() {
 }
 
 function drawSinglePerimeterRing(group, cx, cy) {
+    // 100 bars with a clear gap between them (GAP board units, cut evenly at both radii), text in its own lane:
+    // number (yellow, bigger) | name | effect (bold, at the end).
     const totalSectors = 100;
     const R_out = 485;
-    const R_in = 230;
+    const R_in = SINGLE_R_IN;
+    const GAP = 5;
     const stepAngle = (2 * Math.PI) / totalSectors;
     const palette = ['#0284c7', '#059669', '#d97706', '#7c3aed', '#dc2626'];
+    const pt = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
 
     for (let i = 0; i < totalSectors; i++) {
         const tile = APP_STATE.tiles[i];
         const A1 = i * stepAngle - Math.PI / 2;
         const A2 = (i + 1) * stepAngle - Math.PI / 2;
+        const o1 = pt(R_out, A1 + GAP / 2 / R_out), o2 = pt(R_out, A2 - GAP / 2 / R_out);
+        const i2 = pt(R_in, A2 - GAP / 2 / R_in), i1 = pt(R_in, A1 + GAP / 2 / R_in);
 
-        const x1_out = cx + R_out * Math.cos(A1);
-        const y1_out = cy + R_out * Math.sin(A1);
-        const x2_out = cx + R_out * Math.cos(A2);
-        const y2_out = cy + R_out * Math.sin(A2);
-
-        const x2_in = cx + R_in * Math.cos(A2);
-        const y2_in = cy + R_in * Math.sin(A2);
-        const x1_in = cx + R_in * Math.cos(A1);
-        const y1_in = cy + R_in * Math.sin(A1);
-
-        const pathData = `M ${x1_out} ${y1_out} A ${R_out} ${R_out} 0 0 1 ${x2_out} ${y2_out} L ${x2_in} ${y2_in} A ${R_in} ${R_in} 0 0 0 ${x1_in} ${y1_in} Z`;
-
-        const sectorPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        sectorPath.setAttribute("d", pathData);
-        sectorPath.setAttribute("fill", palette[i % palette.length]);
-        sectorPath.setAttribute("stroke", "#0d2a63");
-        sectorPath.setAttribute("stroke-width", "1.5");
+        const sectorPath = svgEl('path', {
+            d: `M ${o1[0]} ${o1[1]} A ${R_out} ${R_out} 0 0 1 ${o2[0]} ${o2[1]} L ${i2[0]} ${i2[1]} A ${R_in} ${R_in} 0 0 0 ${i1[0]} ${i1[1]} Z`,
+            fill: palette[i % palette.length]
+        });
         group.appendChild(sectorPath);
 
         const midA = (A1 + A2) / 2;
-        const textStartX = cx + (R_out - 12) * Math.cos(midA);
-        const textStartY = cy + (R_out - 12) * Math.sin(midA);
-        let textAngle = (midA * 180 / Math.PI) + 180;
+        const [textStartX, textStartY] = pt(R_out - 9, midA);
+        const textAngle = (midA * 180 / Math.PI) + 180;
 
-        const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        textGroup.setAttribute("transform", `translate(${textStartX}, ${textStartY}) rotate(${textAngle})`);
+        const textGroup = svgEl('g', { transform: `translate(${textStartX}, ${textStartY}) rotate(${textAngle})` });
+        // "Bubble Eruption (-18)" -> name + effect
+        const m = tile.text.match(/^(.*) \(([^)]*)\)$/);
+        const name = m ? m[1] : tile.text, effect = m ? m[2] : '';
+        // Long names get a slightly smaller size so name and effect always fit in the ring length.
+        const fs = Math.min(14.5, Math.max(11.5, (R_out - R_in - 70) / (name.length * 0.58)));
 
-        const textElem = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        textElem.setAttribute("x", "0");
-        textElem.setAttribute("y", "0");
-        textElem.setAttribute("fill", "#ffffff");
-        const fs = Math.max(11, Math.min(16.5, 228 / ((tile.text.length + 4) * 0.58)));
-        textElem.setAttribute("font-size", fs.toFixed(1));
-        textElem.setAttribute("font-weight", "800");
-        textElem.setAttribute("dominant-baseline", "central");
-        textElem.setAttribute("class", "text-stroke");
-
-        const numSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-        numSpan.textContent = tile.number + " ";
-        numSpan.setAttribute("fill", "#facc15");
-        numSpan.setAttribute("font-weight", "900");
-        numSpan.setAttribute("font-size", (fs + 3).toFixed(1));
-
-        const textSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-        textSpan.textContent = tile.text;
-        textSpan.setAttribute("fill", "#ffffff");
-
-        textElem.appendChild(numSpan);
-        textElem.appendChild(textSpan);
+        const textElem = svgEl('text', { x: 0, y: 0, fill: '#ffffff', 'font-size': fs.toFixed(1), 'font-weight': 800, 'dominant-baseline': 'central', class: 'text-stroke' });
+        const numSpan = svgEl('tspan', { fill: '#facc15', 'font-weight': 900, 'font-size': (fs + 3).toFixed(1) });
+        numSpan.textContent = tile.number;
+        const nameSpan = svgEl('tspan', { dx: 6, fill: '#ffffff' });
+        nameSpan.textContent = name;
+        textElem.appendChild(numSpan); textElem.appendChild(nameSpan);
+        if (effect) {
+            const effSpan = svgEl('tspan', { dx: 6, fill: '#ffffff', 'font-weight': 900, 'font-size': (fs + 1.5).toFixed(1) });
+            effSpan.textContent = effect;
+            textElem.appendChild(effSpan);
+        }
         textGroup.appendChild(textElem);
         group.appendChild(textGroup);
     }
@@ -148,15 +136,16 @@ function drawDoublePerimeterRing(group, cx, cy) {
 
 function drawMarketTrackerRings(group, cx, cy) {
     // Centre of the board: just the current market value (no dials).
-    const disc = svgEl("circle", { cx, cy, r: 230, fill: "#1b4796", stroke: "#8fbcff", "stroke-width": 2 });
+    const single = APP_STATE.boardMode === 'single', rDisc = single ? SINGLE_R_IN : 230, rInner = rDisc - 25;
+    const disc = svgEl("circle", { cx, cy, r: rDisc, fill: "#1b4796", stroke: "#8fbcff", "stroke-width": 2 });
     group.appendChild(disc);
-    group.appendChild(svgEl("circle", { cx, cy, r: 205, fill: "#12336f", stroke: "#eab308", "stroke-width": 5 }));
+    group.appendChild(svgEl("circle", { cx, cy, r: rInner, fill: "#12336f", stroke: "#eab308", "stroke-width": 5 }));
     const v = APP_STATE.marketTracker[2] * 100 + APP_STATE.marketTracker[1] * 10 + APP_STATE.marketTracker[0];
-    const t1 = svgEl("text", { x: cx, y: cy - 78, fill: "#cfe0ff", "font-size": 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
+    const t1 = svgEl("text", { x: cx, y: cy - 70, fill: "#cfe0ff", "font-size": single ? 27 : 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
     t1.textContent = "MARKET TRACKER";
-    const t2 = svgEl("text", { x: cx, y: cy - 40, fill: "#cfe0ff", "font-size": 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
+    const t2 = svgEl("text", { x: cx, y: cy - 36, fill: "#cfe0ff", "font-size": single ? 27 : 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
     t2.textContent = "VALUE";
-    const val = svgEl("text", { id: "centerValue", x: cx, y: cy + 82, fill: "#facc15", "font-size": 150, "font-weight": 900, "text-anchor": "middle" });
+    const val = svgEl("text", { id: "centerValue", x: cx, y: cy + 76, fill: "#facc15", "font-size": single ? 135 : 150, "font-weight": 900, "text-anchor": "middle" });
     val.textContent = v;
     group.appendChild(t1); group.appendChild(t2); group.appendChild(val);
 }
