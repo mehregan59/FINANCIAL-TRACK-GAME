@@ -13,9 +13,11 @@ function myMeta() { return { id: MP.id, name: MP.name, creator: MP.creatorJoin &
 function resetMP() {
     try { MP.t && MP.t.leave(); } catch (_) {}
     ['hostTimer', 'skipTimer', 'joinTimer', 'trackerTimer'].forEach(k => { clearTimeout(MP[k]); MP[k] = null; });
-    Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', avatar: '', members: [], arrival: [] });
+    Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', avatar: '', members: [], arrival: [], bots: 0 });
 }
 
+// A player counts as present when it is me, a connected member, or a test bot (bots are run by the host).
+const isPresent = p => !!p && (!!p.bot || p.id === MP.id || MP.members.some(m => m.id === p.id));
 const memberName = id => { const m = MP.members.find(x => x.id === id); return m ? m.name : ''; };
 
 function orderedMembers() {
@@ -91,14 +93,14 @@ function watchHost() {
 // Host skips a disconnected player's turn after 8s so the game never stalls.
 function watchCurrentPlayer() {
     const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
-    const needsSkip = isHost() && MP.phase === 'playing' && cur && cur.id !== MP.id && !MP.members.some(m => m.id === cur.id);
+    const needsSkip = isHost() && MP.phase === 'playing' && cur && !isPresent(cur);
     if (!needsSkip) { clearTimeout(MP.skipTimer); MP.skipTimer = null; MP.skipFor = null; return; }
     if (MP.skipTimer && MP.skipFor === cur.id) return; // already counting down for this player
     clearTimeout(MP.skipTimer); MP.skipFor = cur.id;
     MP.skipTimer = setTimeout(() => {
         MP.skipTimer = null; MP.skipFor = null;
         const c2 = APP_STATE.players[APP_STATE.currentPlayerIndex];
-        if (!isHost() || !c2 || c2.id !== cur.id || MP.members.some(m => m.id === c2.id)) return;
+        if (!isHost() || !c2 || c2.id !== cur.id || isPresent(c2)) return;
         authSkipTurn(); watchCurrentPlayer();
         showToast(c2.name + ' is offline: turn skipped');
     }, 8000);
@@ -109,7 +111,7 @@ function nextPlayerIndex(cur) {
     if (!MP.on) return (cur + 1) % n; // one-screen game: everyone is always present
     for (let k = 1; k <= n; k++) {
         const i = (cur + k) % n, p = ps[i];
-        if (p.id === MP.id || MP.members.some(m => m.id === p.id)) return i;
+        if (isPresent(p)) return i;
     }
     return cur;
 }
@@ -122,7 +124,7 @@ function snapshot() {
         marketTracker: [...APP_STATE.marketTracker], ringRotations: [...APP_STATE.ringRotations],
         eventPool: [...APP_STATE.eventPool], tiles: APP_STATE.tiles.map(t => t.text),
         settings: { ...APP_STATE.settings },
-        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar, money: p.money, shares: p.shares })),
+        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar, money: p.money, shares: p.shares, bot: !!p.bot })),
         currentPlayerIndex: APP_STATE.currentPlayerIndex,
         turnPhase: APP_STATE.turnPhase, pending: APP_STATE.pending, evtSeq: APP_STATE.evtSeq,
         lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove
@@ -161,7 +163,7 @@ function applyState(s) {
         APP_STATE.players = (s.players || []).slice(0, MAX_PLAYERS).map((p, i) => ({
             id: String(p.id), name: cleanName(p.name) || 'Investor', position: int(p.position, 1, 100) || 1,
             avatar: isAvatarId(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length].id,
-            money: clampInt(p.money, -1e9, 1e9, APP_STATE.settings.money), shares: clampInt(p.shares, 0, 1e6, APP_STATE.settings.shares)
+            ...(p.bot ? { bot: true } : {}), money: clampInt(p.money, -1e9, 1e9, APP_STATE.settings.money), shares: clampInt(p.shares, 0, 1e6, APP_STATE.settings.shares)
         }));
         APP_STATE.activePlayersCount = APP_STATE.players.length;
         APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));

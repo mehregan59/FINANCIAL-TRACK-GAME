@@ -10,3 +10,7 @@ const MIN_PLAYERS = 3, MAX_PLAYERS = 10;
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+
+// TEMP TEST FEATURE: lets the host add 2 computer players ("test bots") to try the game alone.
+// Set to false (and delete every block marked TEST BOTS) when testing is finished.
+const TEST_BOTS = true;

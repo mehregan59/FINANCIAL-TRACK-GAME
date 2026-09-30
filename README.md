@@ -14,13 +14,15 @@ The Market Tracker in the middle of the board is not moved by hand: the player w
 
 In the lobby each player picks a unique avatar (12 to choose from). In the game, the top-left dice is rolled by clicking it (3D tumble with sound; mute button included). When it stops, the player presses Accept and their avatar hops space by space, counting, from the current space forward by the dice number. The player whose turn it is glows (dice dock, banner and player list) and gets a chime.
 
-Turn rules: the first player is chosen at random, then play goes one by one; rolling a 6 gives the same player another roll. Under the dice each player has a row: avatar, shares, money and total value (money + shares x Market value). Starting Market value (default 500), money (5000) and shares (5) are set under "Game settings" on the landing page. Pawns are large avatar tokens outside the board ring, never touching, each linked by a line to its space. See BOARD_ITEMS.md for every item on the board.
+Turn rules: player 1 (the host) starts, then play goes one by one in seat order; rolling a 6 gives the same player another roll. Under the dice each player has a row: avatar, shares, money and total value (money + shares x Market value). Starting Market value (default 500), money (5000) and shares (5) are set under "Game settings" on the landing page. Pawns are large avatar tokens outside the board ring, never touching, each linked by a line to its space. See BOARD_ITEMS.md for every item on the board.
 
 Everyone sees the same board, dice roll, pawn positions and Market Tracker dials, live. Only the player whose turn it is can roll the dice or change the dials; the host also controls board layout, event pool and shuffling. If the host leaves, another player takes over automatically. A player who refreshes the page can rejoin their seat with the same code. Rooms are exactly the size the host chose, so extra people are turned away.
 
 How it works: the site stays static (GitHub Pages). Live sync uses Supabase Realtime (Broadcast + Presence), so no database tables or server code are needed. The Supabase project URL and publishable key are set in js/config.js (SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY). The publishable key is designed to be public; never commit a service_role or secret key. If those two values are empty, the game falls back to a same-browser test mode (rooms work only between tabs of one browser).
 
 Project layout (no build step): index.html (markup only), css/ (styles.css, game.css), js/ (config, util, state, audio, dice, board, events-editor, craftkit, transport, multiplayer, lobby, game, main). Turn logic lives in js/game.js, sync in js/multiplayer.js + js/transport.js.
+
+Temporary test feature: in the lobby the host can press "+ Add 2 test players" to add two computer players that roll and accept by themselves, so one person can test the whole game. To remove it later, set TEST_BOTS = false in js/config.js and delete the blocks marked TEST BOTS (js/lobby.js, index.html #botsBtn).
 
 Note: this is a casual, friends-only design. There is no login and no anti-cheat; anyone with the room code can join, and the host's browser decides dice rolls.
 

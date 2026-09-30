@@ -117,18 +117,27 @@ function renderLobby() {
         }
         list.appendChild(row);
     }
+    const bots = TEST_BOTS && isHost() ? (MP.bots | 0) : 0; // TEST BOTS
+    for (let b = 1; b <= bots; b++) {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between p-2 rounded-xl border bg-amber-500/10 border-amber-500/30';
+        row.innerHTML = `<div class="flex items-center space-x-2"><span class="avatar-chip">\u{1F916}</span><span class="font-bold text-slate-200 text-xs">Test Bot ${b}</span></div><span class="text-[10px] font-bold text-amber-300">TEST</span>`;
+        list.appendChild(row);
+    }
+    const bb = $('botsBtn');
+    if (bb) { bb.classList.toggle('hidden', !(TEST_BOTS && isHost())); bb.textContent = MP.bots ? 'Remove the 2 test players' : '+ Add 2 test players (temporary)'; }
     renderAvatarGrid();
-    const n = ordered.length, full = n >= N && n >= MIN_PLAYERS;
+    const n = ordered.length, full = (n >= N && n >= MIN_PLAYERS) || (bots > 0 && n + bots >= MIN_PLAYERS);
     $('lobbyCount').textContent = `${n} of ${N} joined`;
     const btn = $('startGameBtn');
     btn.classList.toggle('hidden', !isHost());
     btn.disabled = !full;
     const early = $('startEarlyBtn');
-    const canEarly = isHost() && n >= MIN_PLAYERS && n < N;
+    const canEarly = isHost() && n >= MIN_PLAYERS && n < N && !bots;
     early.classList.toggle('hidden', !canEarly);
     early.textContent = `Start now with ${n} players instead`;
     $('lobbyHint').textContent = isHost()
-        ? (full ? 'Everyone is here. Start when you are ready.' : `Waiting for ${Math.max(N - n, 0)} more player${N - n === 1 ? '' : 's'}. Share the room code or invite link.`)
+        ? (full ? (bots ? 'Test players are ready. Start when you are ready.' : 'Everyone is here. Start when you are ready.') : `Waiting for ${Math.max(N - n, 0)} more player${N - n === 1 ? '' : 's'}. Share the room code or invite link.`)
         : 'Waiting for the host to start the game...';
 }
 
@@ -172,9 +181,10 @@ function hostStartGame() {
     if (!isHost() || MP.phase !== 'lobby') return;
     const present = MP.arrival.filter(id => MP.members.some(m => m.id === id));
     const order = [MP.id, ...present.filter(id => id !== MP.id)].slice(0, MP.expected || MAX_PLAYERS);
-    if (order.length < MIN_PLAYERS) { showToast(`You need at least ${MIN_PLAYERS} players to start`); return; }
+    const bots = TEST_BOTS ? Math.min(MP.bots | 0, MAX_PLAYERS - order.length) : 0; // TEST BOTS
+    if (order.length + bots < MIN_PLAYERS) { showToast(`You need at least ${MIN_PLAYERS} players to start`); return; }
     // Keep the avatars people picked; hand out a free one to anyone without (or with a duplicate).
-    const avatars = order.map(id => (MP.members.find(m => m.id === id) || {}).avatar || '');
+    const avatars = order.concat(Array(bots).fill('')).map(id => (MP.members.find(m => m.id === id) || {}).avatar || '');
     avatars.forEach((a, i) => { if (a && avatars.indexOf(a) !== i) avatars[i] = ''; });
     avatars.forEach((a, i) => { if (!a) avatars[i] = AVATARS.find(x => !avatars.includes(x.id)).id; });
     const used = {};
@@ -184,8 +194,11 @@ function hostStartGame() {
         if (used[name] > 1) name = `${name} ${used[name]}`;
         return { id, name, position: 1, avatar: avatars[i], ...newWallet() };
     });
-    APP_STATE.activePlayersCount = order.length;
-    APP_STATE.currentPlayerIndex = randInt(order.length); // random first player, then one by one
+    for (let b = 1; b <= bots; b++) { // TEST BOTS
+        APP_STATE.players.push({ id: 'bot-' + b, name: 'Test Bot ' + b, position: 1, avatar: avatars[order.length + b - 1], bot: true, ...newWallet() });
+    }
+    APP_STATE.activePlayersCount = APP_STATE.players.length;
+    APP_STATE.currentPlayerIndex = 0; // the host (player 1) starts, then one after the other
     Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, evtSeq: 0 });
     setTrackerNumber(APP_STATE.settings.market);
     MP.phase = 'playing';
@@ -198,3 +211,20 @@ function hostStartGame() {
 
 /* ---------- UI state ---------- */
 
+
+// TEST BOTS: toggle two computer players (host only).
+function toggleBots() { if (!isHost()) return; MP.bots = MP.bots ? 0 : 2; renderLobby(); }
+
+// TEST BOTS: the host plays the bots' turns: roll, wait a moment, accept.
+const BOT = { key: '', due: 0 };
+function botLoop() {
+    if (!TEST_BOTS || !MP.on || !isHost() || MP.phase !== 'playing') return;
+    const c = curPlayer();
+    if (!c || !c.bot || APP_STATE.turnPhase === 'moving' || Dice.rolling || !G.diceReady) { BOT.key = ''; return; }
+    const key = APP_STATE.turnPhase + ':' + APP_STATE.evtSeq + ':' + c.id;
+    if (BOT.key !== key) { BOT.key = key; BOT.due = Date.now() + 1300; return; }
+    if (Date.now() < BOT.due) return;
+    BOT.key = '';
+    if (APP_STATE.turnPhase === 'roll') authRoll(c.id); else authAccept(c.id);
+}
+setInterval(botLoop, 300);

@@ -40,7 +40,7 @@ function changePlayerCount(val) {
     for (let i = 1; i <= APP_STATE.activePlayersCount; i++) {
         APP_STATE.players.push({ id: i, name: `Investor ${i}`, position: 1, avatar: AVATARS[i - 1].id, ...newWallet() });
     }
-    APP_STATE.currentPlayerIndex = randInt(APP_STATE.players.length); // random first player
+    APP_STATE.currentPlayerIndex = 0; // player 1 starts, then one after the other
     resetTurnState();
     renderPlayersList(); drawBoard(); updateTurnUI();
 }
@@ -49,7 +49,7 @@ function startSoloGame() {
     G.solo = true;
     APP_STATE.settings = readSettingsForm();
     setTrackerNumber(APP_STATE.settings.market);
-    changePlayerCount(APP_STATE.activePlayersCount); // new wallets + random first player
+    changePlayerCount(APP_STATE.activePlayersCount); // new wallets, player 1 starts
     updateMarketTrackerUI(); drawBoard();
     syncEffects(true);
 }
@@ -245,7 +245,7 @@ function renderPlayersList() {
 
     APP_STATE.players.forEach((p, idx) => {
         const isMe = MP.on && p.id === MP.id;
-        const offline = MP.on && MP.phase === 'playing' && !MP.members.some(m => m.id === p.id);
+        const offline = MP.on && MP.phase === 'playing' && !isPresent(p);
         const turn = idx === APP_STATE.currentPlayerIndex && isGameActive();
         const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
         const a = APP_STATE.anim && APP_STATE.anim.id === p.id ? APP_STATE.anim : null;
@@ -256,7 +256,7 @@ function renderPlayersList() {
         div.innerHTML = `
             <div class="flex items-center space-x-2">
                 <span class="avatar-chip" style="--pc:${color}">${avatarEmoji(p.avatar)}</span>
-                <span class="font-bold text-slate-200 text-xs">${escapeHtml(p.name)}${isMe ? ' <span class="text-emerald-400">(you)</span>' : ''}${offline ? ' <span class="text-red-400">(offline)</span>' : ''}</span>
+                <span class="font-bold text-slate-200 text-xs">${escapeHtml(p.name)}${p.bot ? ' <span class="text-amber-400">(test)</span>' : ''}${isMe ? ' <span class="text-emerald-400">(you)</span>' : ''}${offline ? ' <span class="text-red-400">(offline)</span>' : ''}</span>
             </div>
             <span class="font-mono text-emerald-400 font-bold text-xs">Space ${shownPos} / 100</span>
         `;
