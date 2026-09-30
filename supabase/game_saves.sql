@@ -18,5 +18,13 @@ create policy "game_saves read"   on public.game_saves for select to anon using 
 create policy "game_saves insert" on public.game_saves for insert to anon with check (true);
 create policy "game_saves update" on public.game_saves for update to anon using (true) with check (true);
 
--- Optional clean-up of games untouched for 30 days (run now and then):
--- delete from public.game_saves where updated_at < now() - interval '30 days';
+-- Saves last 24 hours after their last change.
+-- 1) The game never resumes an older save, and deletes expired rows itself (this policy lets it delete ONLY expired rows).
+drop policy if exists "game_saves delete expired" on public.game_saves;
+create policy "game_saves delete expired" on public.game_saves for delete to anon using (updated_at < now() - interval '24 hours');
+
+-- 2) Clean-up right now:
+delete from public.game_saves where updated_at < now() - interval '24 hours';
+
+-- 3) Optional, automatic every hour (needs the pg_cron extension: Database -> Extensions -> pg_cron -> enable):
+-- select cron.schedule('delete-old-game-saves', '0 * * * *', $$delete from public.game_saves where updated_at < now() - interval '24 hours'$$);

@@ -120,4 +120,4 @@ Turn flow: roll the dice -> Accept (pawn hops) -> the tile's number is added to 
 
 Guide: each new room asks once "Quick guide?"; steps already seen (stored in this browser) are not shown again. To teach a new feature add one entry to GUIDE_STEPS in js/guide.js; to glow a control during a phase add its id to FOCUS in js/game.js.
 
-Save / resume: the host saves the game after every step (browser + Supabase table). Run supabase/game_saves.sql once in Supabase (SQL Editor). Resume: start page -> same name + same room code -> "Resume a saved game"; the others join with the code and get their seats back by name.
+Save / resume (saves expire 24 hours after the last change): the host saves the game after every step (browser + Supabase table). Run supabase/game_saves.sql once in Supabase (SQL Editor). Resume: start page -> same name + same room code -> "Resume a saved game"; the others join with the code and get their seats back by name.

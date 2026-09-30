@@ -7,7 +7,8 @@
 
 const Save = (() => {
     const LS = code => 'cc_save_' + code;
-    let timer = null;
+    const TTL_MS = 24 * 60 * 60 * 1000; // a save lives for 24 hours after its last change
+    let timer = null, lastClean = 0;
     const remoteOn = () => !!(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY && window.supabase);
     const H = () => ({ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: 'Bearer ' + SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' });
 
@@ -15,12 +16,20 @@ const Save = (() => {
         const rec = { state, savedAt: Date.now() };
         try { localStorage.setItem(LS(code), JSON.stringify(rec)); } catch (_) {}
         if (!remoteOn()) return;
+        cleanup();
         try {
             await fetch(SUPABASE_URL + '/rest/v1/game_saves?on_conflict=room_code', {
                 method: 'POST', headers: { ...H(), Prefer: 'resolution=merge-duplicates,return=minimal' },
                 body: JSON.stringify({ room_code: code, state, updated_at: new Date().toISOString() })
             });
         } catch (_) { /* offline or table missing: the browser copy still exists */ }
+    }
+
+    // Delete saves older than 24 hours (the table policy only allows deleting expired rows). At most once a minute.
+    async function cleanup() {
+        if (Date.now() - lastClean < 60000) return;
+        lastClean = Date.now();
+        try { await fetch(SUPABASE_URL + '/rest/v1/game_saves?updated_at=lt.' + encodeURIComponent(new Date(Date.now() - TTL_MS).toISOString()), { method: 'DELETE', headers: { ...H(), Prefer: 'return=minimal' } }); } catch (_) {}
     }
 
     async function get(code) {
@@ -32,6 +41,7 @@ const Save = (() => {
             } catch (_) {}
         }
         try { const l = JSON.parse(localStorage.getItem(LS(code)) || 'null'); if (l && l.state && (!best || l.savedAt > best.savedAt)) best = l; } catch (_) {}
+        if (best && Date.now() - best.savedAt > TTL_MS) { try { localStorage.removeItem(LS(code)); } catch (_) {} best = null; } // expired
         return best ? best.state : null;
     }
 
