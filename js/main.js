@@ -6,6 +6,7 @@ window.onload = function() {
     changePlayerCount(4);
     renderEventsEditor();
     drawBoard();
+    if (typeof Lens !== 'undefined') Lens.init();
     renderPawnCutouts();
     initDock();
     mpInit();

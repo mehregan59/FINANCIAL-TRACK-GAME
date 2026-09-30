@@ -7,6 +7,7 @@ function drawBoard() {
 
     const cx = 500, cy = 500;
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute('id', 'boardGroup');
 
     if (APP_STATE.boardMode === 'single') {
         drawSinglePerimeterRing(group, cx, cy);
@@ -18,6 +19,7 @@ function drawBoard() {
     drawPlayerPawns(group, cx, cy);
 
     svg.appendChild(group);
+    const u = document.getElementById('lensUse'); if (u) { u.setAttribute('href', '#'); u.setAttribute('href', '#boardGroup'); }
 }
 
 function drawSinglePerimeterRing(group, cx, cy) {
@@ -63,7 +65,8 @@ function drawSinglePerimeterRing(group, cx, cy) {
         textElem.setAttribute("x", "0");
         textElem.setAttribute("y", "0");
         textElem.setAttribute("fill", "#ffffff");
-        textElem.setAttribute("font-size", "12.5");
+        const fs = Math.max(11, Math.min(16.5, 228 / ((tile.text.length + 4) * 0.58)));
+        textElem.setAttribute("font-size", fs.toFixed(1));
         textElem.setAttribute("font-weight", "800");
         textElem.setAttribute("dominant-baseline", "central");
         textElem.setAttribute("class", "text-stroke");
@@ -72,7 +75,7 @@ function drawSinglePerimeterRing(group, cx, cy) {
         numSpan.textContent = tile.number + " ";
         numSpan.setAttribute("fill", "#facc15");
         numSpan.setAttribute("font-weight", "900");
-        numSpan.setAttribute("font-size", "14");
+        numSpan.setAttribute("font-size", (fs + 3).toFixed(1));
 
         const textSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
         textSpan.textContent = tile.text;

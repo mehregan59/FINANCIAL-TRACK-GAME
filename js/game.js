@@ -281,13 +281,14 @@ function startPawnMove(m) {
     // Time-based (not frame-based) so it also completes correctly in background tabs.
     G.animTimer = setInterval(() => {
         const elapsed = performance.now() - t0;
-        if (elapsed >= steps * SM) { stopAnim(); Sound.arrive(); updateTurnUI(); return; }
+        if (elapsed >= steps * SM) { stopAnim(); Sound.arrive(); updateTurnUI(); Lens.autoDone(m.to); return; }
         const k = Math.floor(elapsed / SM), f = (elapsed - k * SM) / SM;
         const ease = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
         const a = APP_STATE.anim;
         a.pos = m.from + k + ease; a.lift = Math.sin(Math.PI * f); a.count = k + 1;
         if (k !== lastK) { lastK = k; Sound.step(k); renderPlayersList(); }
         renderPawnLayer();
+        Lens.autoFollow(a.pos);
     }, 16);
 }
 

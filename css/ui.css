@@ -298,3 +298,20 @@ body {
 .mode-btn:hover .mode-tip, .mode-btn:focus-visible .mode-tip { display: block; }
 .mode-btn:nth-child(1) .mode-tip { left: 0; transform: none; }
 .mode-btn:nth-child(4) .mode-tip { left: auto; right: 0; transform: none; }
+
+/* ---------- Board magnifier ---------- */
+.lens-btn {
+    align-self: flex-end; margin: 0 6px 4px; padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 14px;
+    color: #0b2a66; background: #fff; border: 2px solid #8fbcff; box-shadow: 0 2px 8px rgba(6, 18, 60, .25); cursor: pointer;
+}
+.lens-btn i { margin-right: 6px; }
+.lens-btn.active { background: #facc15; border-color: #b8830a; }
+.lens {
+    position: fixed; z-index: 60; display: none; border-radius: 22px; overflow: hidden; pointer-events: none;
+    border: 5px solid #facc15; box-shadow: 0 10px 32px rgba(0, 0, 0, .55), inset 0 0 0 2px #fff;
+    background: #0b1f4d;
+}
+.lens.on { display: block; }
+.lens svg { width: 100%; height: 100%; display: block; }
+#boardSvg { touch-action: auto; }
+.lens-btn.active ~ .board-container #boardSvg { touch-action: none; }
