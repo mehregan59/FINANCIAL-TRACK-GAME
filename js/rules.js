@@ -46,7 +46,7 @@ function tileAverage() {
     const n = APP_STATE.players.length, f = n <= 5 ? 1 : n <= 7 ? 0.85 : 0.75;
     return TILE_AVG[APP_STATE.settings.mode] * f;
 }
-const TILE_AVG = { long: 11, standard: 13, short: 20 };
+const TILE_AVG = { long: 12.5, standard: 15, short: 23 };   // before + and - are equalised (that lowers the real average by about 13%)
 const POOL_AVG = 2.35;   // average number in the built-in event sets; used to scale them to the wanted tile size
 
 // Fill all 100 tiles: every event gets a + or - number (except Skip). The numbers are scaled to the tile average of the game length,
@@ -63,6 +63,16 @@ function buildBalancedTiles() {
     while (order.length < 100) order = order.concat(shuffled(base.map((_, i) => i)));
     const picks = order.slice(0, 100).map(i => ({ ...base[i] }));
     if (!gentle) picks.forEach(p => { if (p.sign !== 0) p.mag = Math.max(1, Math.round(p.mag * k * (0.75 + Math.random() * 0.5))); });
+    // Make + and - add up to the same total, so the market has no built-in drift upwards or downwards.
+    const pl = picks.filter(p => p.sign > 0), mi = picks.filter(p => p.sign < 0), tot = a => a.reduce((x, p) => x + p.mag, 0);
+    if (pl.length && mi.length) {
+        const big = tot(pl) >= tot(mi) ? pl : mi, small = big === pl ? mi : pl, f = tot(small) / tot(big);
+        big.forEach(p => { p.mag = Math.max(1, Math.round(p.mag * f)); });
+        for (let guard = 0; guard < 2000 && tot(big) !== tot(small); guard++) {
+            const grow = tot(big) < tot(small), side = grow ? big : small.filter(p => p.mag > 1);
+            if (grow) { const c = side.filter(p => !gentle || p.mag < 3); if (!c.length) break; c[rnd(0, c.length - 1)].mag++; } else if (tot(big) > tot(small)) { const c = big.filter(p => p.mag > 1); if (!c.length) break; c[rnd(0, c.length - 1)].mag--; } else break;
+        }
+    }
     const cap = gentle ? 499 : Math.max(499, Math.round(avg * 52));
     [1, -1].forEach(sg => {
         const same = picks.filter(p => p.sign === sg), limit = sg > 0 ? cap : cap + 1;
