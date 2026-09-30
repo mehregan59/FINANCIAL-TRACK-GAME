@@ -143,6 +143,7 @@
                     <g fill="#fff" opacity=".95"><path d="M12 140 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/><path d="M304 132 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z"/></g>
                 </svg>
                 <div class="bank-title">BANK <span>trade shares</span></div>
+                <div class="bank-price">Share price <b id="bankPrice">500</b></div>
                 <div class="bank-actions">
                     <button type="button" class="bank-btn sell" onclick="bankAction('sell')"><i class="fa-solid fa-hand-holding-dollar"></i> SELL SHARE</button>
                     <button type="button" class="bank-btn buy" onclick="bankAction('buy')"><i class="fa-solid fa-cart-shopping"></i> BUY SHARE</button>
@@ -164,62 +165,23 @@
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-compass text-amber-400 text-lg"></i>
-                        <h2 class="font-bold text-amber-300 font-display text-sm tracking-wide">MARKET TRACKER DIALS</h2>
+                        <h2 class="font-bold text-amber-300 font-display text-sm tracking-wide">MARKET TRACKER VALUE</h2>
                     </div>
                     <span id="trackerValueBadge" class="font-mono font-black text-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 px-3 py-0.5 rounded-lg">000</span>
                 </div>
 
-                <p class="text-xs text-slate-400">Set the 3 center rings to track portfolio points, market index, or economic multipliers (000 - 999).</p>
+                
 
                 <!-- Direct Number Selector -->
                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
                     <label for="quickNumberInput" class="text-xs font-bold text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
-                        <i class="fa-solid fa-calculator text-amber-400"></i> Set Inside Ring Number:
+                        <i class="fa-solid fa-calculator text-amber-400"></i> Market value:
                     </label>
                     <input type="number" id="quickNumberInput" min="0" max="999" value="0" oninput="setDirectMarketTrackerValue(this.value)" placeholder="0-999" class="w-24 bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-1 text-amber-300 font-mono font-black text-center text-base outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
                 </div>
 
-                <!-- Ring Controls -->
-                <div class="space-y-2 text-xs">
-                    <!-- Hundreds Ring -->
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-amber-400"></span> Hundreds Ring
-                        </span>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="adjustRing(2, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold flex items-center justify-center text-sm">-</button>
-                            <span id="digitHundreds" class="font-mono text-base font-bold text-amber-300 w-5 text-center">0</span>
-                            <button onclick="adjustRing(2, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold flex items-center justify-center text-sm">+</button>
-                        </div>
-                    </div>
-
-                    <!-- Tens Ring -->
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Tens Ring
-                        </span>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="adjustRing(1, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-cyan-300 font-bold flex items-center justify-center text-sm">-</button>
-                            <span id="digitTens" class="font-mono text-base font-bold text-cyan-300 w-5 text-center">0</span>
-                            <button onclick="adjustRing(1, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-cyan-300 font-bold flex items-center justify-center text-sm">+</button>
-                        </div>
-                    </div>
-
-                    <!-- Units Ring -->
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Units Ring
-                        </span>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="adjustRing(0, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 font-bold flex items-center justify-center text-sm">-</button>
-                            <span id="digitUnits" class="font-mono text-base font-bold text-emerald-300 w-5 text-center">0</span>
-                            <button onclick="adjustRing(0, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 font-bold flex items-center justify-center text-sm">+</button>
-                        </div>
-                    </div>
-                </div>
-
                 <button onclick="resetMarketTracker()" class="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition">
-                    Reset Dials to 000
+                    Reset to 000
                 </button>
             </div>
 

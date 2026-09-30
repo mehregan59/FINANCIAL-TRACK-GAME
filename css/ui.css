@@ -167,8 +167,12 @@ body {
 /* Bigger, easier to read side panels */
 .left-rail > * { zoom: 1.14; width: calc(100% / 1.14); }
 #trackerPanel { zoom: 1.16; width: auto; align-self: stretch; }
+#bankCard { zoom: 1.12; width: auto; align-self: stretch; }
+#cardSlot { zoom: 1.05; width: auto; align-self: stretch; }
+.bank-price { text-align: center; background: #fff8e1; padding: 0 10px 6px; font: 800 14px/1 Inter, sans-serif; color: #6b5310; }
+.bank-price b { font: 900 20px/1 ui-monospace, Menlo, monospace; color: #1f3f86; margin-left: 4px; }
 .bank-title { font-size: 22px; }
-.bank-btn { font-size: 14px; padding: 14px 6px; }
+.bank-btn { font-size: 15px; padding: 16px 6px; }
 .card-soon span { font-size: 13px; } .card-soon small { font-size: 13px; }
 
 /* Rails stay on screen and scroll on their own when the window is short. */
@@ -177,3 +181,5 @@ body {
     .left-rail { max-height: calc(100vh - 76px); overflow-y: auto; scrollbar-width: thin; }
     .players-rows { max-height: none; overflow: visible; }
 }
+
+.bank-art { max-height: 190px; }

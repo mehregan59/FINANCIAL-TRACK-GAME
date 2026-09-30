@@ -144,160 +144,18 @@ function drawDoublePerimeterRing(group, cx, cy) {
 }
 
 function drawMarketTrackerRings(group, cx, cy) {
-    const ringConfigs = [
-        { id: 0, name: "Units", rOut: 100, rIn: 45, color: "#10b981" },
-        { id: 1, name: "Tens", rOut: 160, rIn: 105, color: "#06b6d4" },
-        { id: 2, name: "Hundreds", rOut: 220, rIn: 165, color: "#f59e0b" }
-    ];
-
-    let defs = group.querySelector("defs");
-    if (!defs) {
-        defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-        group.appendChild(defs);
-    }
-
-    // backing disc behind the dials (deep royal blue, not black)
-    const disc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    disc.setAttribute("cx", cx); disc.setAttribute("cy", cy); disc.setAttribute("r", 230); disc.setAttribute("fill", "#1b4796");
+    // Centre of the board: just the current market value (no dials).
+    const disc = svgEl("circle", { cx, cy, r: 230, fill: "#1b4796", stroke: "#8fbcff", "stroke-width": 2 });
     group.appendChild(disc);
-
-    ringConfigs.forEach((cfg) => {
-        const rMid = (cfg.rOut + cfg.rIn) / 2;
-        const windowY = cy - rMid;
-
-        // SVG Mask for cover shield
-        const maskId = `ringCoverMask_${cfg.id}`;
-        let mask = defs.querySelector(`#${maskId}`);
-        if (!mask) {
-            mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
-            mask.setAttribute("id", maskId);
-            mask.setAttribute("maskUnits", "userSpaceOnUse");
-            mask.setAttribute("maskContentUnits", "userSpaceOnUse");
-            
-            const whiteRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            whiteRect.setAttribute("x", "0");
-            whiteRect.setAttribute("y", "0");
-            whiteRect.setAttribute("width", "1000");
-            whiteRect.setAttribute("height", "1000");
-            whiteRect.setAttribute("fill", "#ffffff");
-            mask.appendChild(whiteRect);
-
-            const blackHole = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            blackHole.setAttribute("x", cx - 18);
-            blackHole.setAttribute("y", windowY - 18);
-            blackHole.setAttribute("width", "36");
-            blackHole.setAttribute("height", "36");
-            blackHole.setAttribute("rx", "8");
-            blackHole.setAttribute("fill", "#000000");
-            mask.appendChild(blackHole);
-
-            defs.appendChild(mask);
-        }
-
-        // Rotatable Dial Group
-        const ringGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                        ringGroup.setAttribute("id", `ringGroup_${cfg.id}`);
-        
-        const rotDeg = APP_STATE.ringRotations[cfg.id];
-        ringGroup.setAttribute("transform", `rotate(${rotDeg}, ${cx}, ${cy})`);
-
-        const ringBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        ringBg.setAttribute("cx", cx);
-        ringBg.setAttribute("cy", cy);
-        ringBg.setAttribute("r", rMid);
-        ringBg.setAttribute("stroke", "#12336f");
-        ringBg.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
-        ringBg.setAttribute("fill", "none");
-        ringGroup.appendChild(ringBg);
-
-        // Numbers 0 to 9 with Counter-Rotation to keep upright
-        for (let d = 0; d < 10; d++) {
-            const ang = (d * 36) * Math.PI / 180 - Math.PI / 2;
-            const nx = cx + rMid * Math.cos(ang);
-            const ny = cy + rMid * Math.sin(ang);
-
-            const numTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            numTxt.setAttribute("x", nx);
-            numTxt.setAttribute("y", ny);
-            numTxt.setAttribute("fill", cfg.color);
-            numTxt.setAttribute("font-size", "22");
-            numTxt.setAttribute("font-weight", "900");
-            numTxt.setAttribute("text-anchor", "middle");
-            numTxt.setAttribute("dominant-baseline", "central");
-            numTxt.setAttribute("transform", `rotate(${-rotDeg}, ${nx}, ${ny})`);
-            numTxt.textContent = d;
-            ringGroup.appendChild(numTxt);
-        }
-
-        group.appendChild(ringGroup);
-
-        // Opaque Cover Plate Ring
-        const coverRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        coverRing.setAttribute("cx", cx);
-        coverRing.setAttribute("cy", cy);
-        coverRing.setAttribute("r", rMid);
-        coverRing.setAttribute("stroke", "#12336f");
-        coverRing.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
-        coverRing.setAttribute("fill", "none");
-        coverRing.setAttribute("mask", `url(#${maskId})`);
-                        group.appendChild(coverRing);
-
-        // Trim Lines
-        const outerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        outerBorder.setAttribute("cx", cx); outerBorder.setAttribute("cy", cy);
-        outerBorder.setAttribute("r", cfg.rOut); outerBorder.setAttribute("stroke", "#8fbcff");
-        outerBorder.setAttribute("stroke-width", "1.5"); outerBorder.setAttribute("fill", "none");
-        group.appendChild(outerBorder);
-
-        const innerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        innerBorder.setAttribute("cx", cx); innerBorder.setAttribute("cy", cy);
-        innerBorder.setAttribute("r", cfg.rIn); innerBorder.setAttribute("stroke", "#8fbcff");
-        innerBorder.setAttribute("stroke-width", "1.5"); innerBorder.setAttribute("fill", "none");
-        group.appendChild(innerBorder);
-
-        // 12 o'clock Aperture Window
-        const aperture = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        aperture.setAttribute("x", cx - 18);
-        aperture.setAttribute("y", windowY - 18);
-        aperture.setAttribute("width", "36");
-        aperture.setAttribute("height", "36");
-        aperture.setAttribute("rx", "8");
-        aperture.setAttribute("fill", "none");
-        aperture.setAttribute("stroke", cfg.color);
-        aperture.setAttribute("stroke-width", "3");
-        aperture.setAttribute("filter", "drop-shadow(0 0 6px " + cfg.color + ")");
-                        group.appendChild(aperture);
-
-    });
-
-    // Center Hub Badge
-    const hubBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    hubBg.setAttribute("cx", cx); hubBg.setAttribute("cy", cy); hubBg.setAttribute("r", "42");
-    hubBg.setAttribute("fill", "#0d2a63"); hubBg.setAttribute("stroke", "#eab308");
-    hubBg.setAttribute("stroke-width", "3");
-    group.appendChild(hubBg);
-
-    const hubLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    hubLabel.setAttribute("x", cx); hubLabel.setAttribute("y", cy - 20);
-    hubLabel.setAttribute("fill", "#cbd5e1"); hubLabel.setAttribute("font-size", "10");
-    hubLabel.setAttribute("font-weight", "800"); hubLabel.setAttribute("text-anchor", "middle");
-    hubLabel.textContent = "MARKET";
-    group.appendChild(hubLabel);
-    const hubLabel2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    hubLabel2.setAttribute("x", cx); hubLabel2.setAttribute("y", cy - 8);
-    hubLabel2.setAttribute("fill", "#cbd5e1"); hubLabel2.setAttribute("font-size", "10");
-    hubLabel2.setAttribute("font-weight", "800"); hubLabel2.setAttribute("text-anchor", "middle");
-    hubLabel2.textContent = "TRACKER";
-    group.appendChild(hubLabel2);
-
-    const trackerValStr = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
-    const hubVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    hubVal.setAttribute("x", cx); hubVal.setAttribute("y", cy + 16);
-    hubVal.setAttribute("fill", "#facc15"); hubVal.setAttribute("font-size", "20");
-    hubVal.setAttribute("font-weight", "900"); hubLabel.setAttribute("text-anchor", "middle");
-    hubVal.setAttribute("text-anchor", "middle");
-    hubVal.textContent = trackerValStr;
-    group.appendChild(hubVal);
+    group.appendChild(svgEl("circle", { cx, cy, r: 205, fill: "#12336f", stroke: "#eab308", "stroke-width": 5 }));
+    const v = APP_STATE.marketTracker[2] * 100 + APP_STATE.marketTracker[1] * 10 + APP_STATE.marketTracker[0];
+    const t1 = svgEl("text", { x: cx, y: cy - 78, fill: "#cfe0ff", "font-size": 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
+    t1.textContent = "MARKET TRACKER";
+    const t2 = svgEl("text", { x: cx, y: cy - 40, fill: "#cfe0ff", "font-size": 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
+    t2.textContent = "VALUE";
+    const val = svgEl("text", { id: "centerValue", x: cx, y: cy + 82, fill: "#facc15", "font-size": 150, "font-weight": 900, "text-anchor": "middle" });
+    val.textContent = v;
+    group.appendChild(t1); group.appendChild(t2); group.appendChild(val);
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -426,12 +284,10 @@ function setDirectMarketTrackerValue(val) {
 }
 
 function updateMarketTrackerUI() {
-    document.getElementById('digitUnits').textContent = APP_STATE.marketTracker[0];
-    document.getElementById('digitTens').textContent = APP_STATE.marketTracker[1];
-    document.getElementById('digitHundreds').textContent = APP_STATE.marketTracker[2];
     
     const fullVal = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
     document.getElementById('trackerValueBadge').textContent = fullVal;
+    const bp = document.getElementById('bankPrice'); if (bp) bp.textContent = parseInt(fullVal, 10);
 
     if (typeof renderWallet === 'function') renderWallet();
     const quickInput = document.getElementById('quickNumberInput');
