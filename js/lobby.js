@@ -226,16 +226,4 @@ function hostStartGame() {
 // TEST BOTS: toggle two computer players (host only).
 function toggleBots() { if (!isHost()) return; MP.bots = MP.bots ? 0 : 2; renderLobby(); }
 
-// TEST BOTS: the host plays the bots' turns: roll, wait a moment, accept.
-const BOT = { key: '', due: 0 };
-function botLoop() {
-    if (!TEST_BOTS || !MP.on || !isHost() || MP.phase !== 'playing') return;
-    const c = curPlayer();
-    if (!c || !c.bot || APP_STATE.turnPhase === 'moving' || Dice.rolling || !G.diceReady) { BOT.key = ''; return; }
-    const key = APP_STATE.turnPhase + ':' + APP_STATE.evtSeq + ':' + c.id;
-    if (BOT.key !== key) { BOT.key = key; BOT.due = Date.now() + 1300; return; }
-    if (Date.now() < BOT.due) return;
-    BOT.key = '';
-    if (APP_STATE.turnPhase === 'roll') authRoll(c.id); else authAccept(c.id);
-}
-setInterval(botLoop, 300);
+// TEST BOTS: bots never act on their own; the host presses the dice and Accept for them (see isMyTurn in game.js).

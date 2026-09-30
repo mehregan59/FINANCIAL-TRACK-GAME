@@ -19,7 +19,8 @@ const G = {
 const curPlayer = () => APP_STATE.players[APP_STATE.currentPlayerIndex] || null;
 const isGameActive = () => (MP.on ? MP.phase === 'playing' : G.solo);
 // Online you act only for yourself; on one screen whoever's turn it is uses the shared dice.
-const isMyTurn = () => { const c = curPlayer(); return !!c && (MP.on ? c.id === MP.id : true); };
+// TEST BOTS: the host presses the dice and Accept for a test bot by hand (bots never play on their own).
+const isMyTurn = () => { const c = curPlayer(); return !!c && (MP.on ? (c.id === MP.id || (!!c.bot && isHost())) : true); };
 const nextEvt = () => ++APP_STATE.evtSeq;
 // True when the current player's last move came from a 6 (they roll again).
 const rolledSix = () => { const m = APP_STATE.lastMove, c = curPlayer(); return !!(m && c && m.n === 6 && m.by === c.id); };
@@ -205,7 +206,7 @@ function updateTurnUI() {
     if (!active) { document.title = 'Capital Clash'; return; }
     const cur = curPlayer(); if (!cur) return;
 
-    const mine = isMyTurn(), phase = APP_STATE.turnPhase, idx = APP_STATE.currentPlayerIndex;
+    const mine = isMyTurn(), own = MP.on && mine && !cur.bot, phase = APP_STATE.turnPhase, idx = APP_STATE.currentPlayerIndex;
     const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
     const online = MP.on;
 
@@ -213,8 +214,8 @@ function updateTurnUI() {
 
     let msg;
     const again = rolledSix();
-    if (phase === 'roll') msg = mine ? (again ? 'A 6! Roll again' : online ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : (again ? `${cur.name} rolled a 6 and goes again` : `${cur.name} is about to roll...`);
-    else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (mine && online ? `You rolled ${APP_STATE.pending}!` : `${cur.name} rolled ${APP_STATE.pending}`);
+    if (phase === 'roll') msg = mine ? (again ? (own || !online ? 'A 6! Roll again' : `${cur.name}: 6! roll again`) : own ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : (again ? `${cur.name} rolled a 6 and goes again` : `${cur.name} is about to roll...`);
+    else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (own ? `You rolled ${APP_STATE.pending}!` : `${cur.name} rolled ${APP_STATE.pending}`);
     else msg = `${cur.name} is moving...`;
     $('diceStatus').textContent = msg;
 
@@ -227,12 +228,12 @@ function updateTurnUI() {
 
     const banner = $('turnBanner');
     banner.style.setProperty('--pc', color);
-    banner.classList.toggle('mine', mine && online);
-    banner.innerHTML = `<span class="banner-avatar">${avatarEmoji(cur.avatar)}</span><span>${(mine && online ? 'Your turn!' : escapeHtml(cur.name) + "'s turn") + (again && phase === 'roll' ? ' (6: again!)' : '')}</span>`;
+    banner.classList.toggle('mine', own);
+    banner.innerHTML = `<span class="banner-avatar">${avatarEmoji(cur.avatar)}</span><span>${(own ? 'Your turn!' : escapeHtml(cur.name) + "'s turn") + (again && phase === 'roll' ? ' (6: again!)' : '')}</span>`;
 
-    if (online && mine && !G.prevMine) Sound.chime();
-    G.prevMine = online && mine;
-    document.title = online && mine ? '\u{1F3B2} Your turn - Capital Clash' : 'Capital Clash';
+    if (own && !G.prevMine) Sound.chime();
+    G.prevMine = own;
+    document.title = own ? '\u{1F3B2} Your turn - Capital Clash' : 'Capital Clash';
 
     if (online) {
         const can = canControlTracker(), panel = $('trackerPanel');

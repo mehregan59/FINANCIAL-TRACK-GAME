@@ -31,6 +31,11 @@ const Dice = (() => {
         Dice.show(1);
     }
 
+    // The face that lies on top (facing the player) gets red pips, all other faces black.
+    function markUp(n) {
+        document.querySelectorAll('#diceCube .dice-face').forEach(f => f.classList.toggle('up', Number(f.dataset.face) === n));
+    }
+
     function apply(ms) {
         const cube = $('diceCube');
         cube.style.transition = ms ? `transform ${ms}ms cubic-bezier(.16,.72,.24,1)` : 'none';
@@ -45,12 +50,12 @@ const Dice = (() => {
         show(n) {
             clearTimeout(timer); rolling = false;
             const scene = $('diceScene'); if (scene) scene.classList.remove('dice-hop');
-            value = n; [ax, ay] = FACE_ROT[n]; apply(0);
+            value = n; [ax, ay] = FACE_ROT[n]; apply(0); markUp(n);
         },
         // Tumble and land on face n, then call onDone.
         roll(n, onDone) {
             clearTimeout(timer);
-            value = n; rolling = true;
+            value = n; rolling = true; markUp(0);
             const [rx, ry] = FACE_ROT[n];
             ax = nextAngle(ax, rx, 2 + Math.floor(Math.random() * 2));
             ay = nextAngle(ay, ry, 2 + Math.floor(Math.random() * 2));
@@ -59,7 +64,7 @@ const Dice = (() => {
             apply(ROLL_MS);
             Sound.rattle(ROLL_MS - 100);
             timer = setTimeout(() => {
-                rolling = false; scene.classList.remove('dice-hop');
+                rolling = false; scene.classList.remove('dice-hop'); markUp(n);
                 Sound.thud();
                 if (onDone) onDone();
             }, ROLL_MS + 50);

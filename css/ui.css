@@ -24,12 +24,12 @@ body {
 .left-rail.dock-hidden { display: none; }
 .right-rail { width: 100%; display: flex; flex-direction: column; gap: 14px; flex: none; }
 @media (min-width: 1024px) {
-    .left-rail { width: 346px; position: sticky; top: 64px; }
+    .left-rail { width: 432px; position: sticky; top: 64px; }
     .right-rail { width: 408px; }
 }
 @media (min-width: 1024px) and (max-width: 1500px) {
-    .left-rail { width: 314px; }
-    .right-rail { width: 360px; }
+    .left-rail { width: 350px; }
+    .right-rail { width: 340px; }
 }
 .side-card, .right-rail > div[id="trackerPanel"] { box-shadow: 0 8px 22px rgba(8, 20, 60, 0.35); }
 
