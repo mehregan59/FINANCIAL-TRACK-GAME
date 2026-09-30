@@ -3,15 +3,17 @@
    - balanced tile numbers (+ and - never add up to more than +499 / -500 over the whole board)
    - reshuffling the tiles ahead of everyone, ranking by portfolio, Bull/Bear/Neutral market phases, end of game */
 
-// Dice x multiplier = spaces moved, so that the 100 spaces get used: Short ~10 turns each, Standard ~20, Long ~29.
+// The game length decides which die is used: the roll IS the number of spaces moved, so the 100 spaces get used.
+// Long: normal die 1-6 (about 29 turns each), Standard: die 1-9 (about 20), Short: die 1-18 (about 10).
 const MODES = {
-    short:    { label: 'Short',    mult: 3,   gentle: false, hint: 'Dice x3: about 10 turns each' },
-    standard: { label: 'Standard', mult: 1.5, gentle: false, hint: 'Dice x1.5: about 20 turns each' },
-    long:     { label: 'Long',     mult: 1,   gentle: false, hint: 'Dice x1: about 29 turns each' },
-    beginner: { label: 'Beginner', mult: 3,   gentle: true,  hint: 'Short game, gentle tiles (max +/-3, no Skip), guide on' }
+    short:    { label: 'Short',    sides: 18, gentle: false, tag: 'Die 1-18', hint: 'Short: die with numbers 1-18, about 10 turns each' },
+    standard: { label: 'Standard', sides: 9,  gentle: false, tag: 'Die 1-9',  hint: 'Standard: die with numbers 1-9, about 20 turns each' },
+    long:     { label: 'Long',     sides: 6,  gentle: false, tag: 'Die 1-6',  hint: 'Long: normal die 1-6, about 29 turns each. The full game.' },
+    beginner: { label: 'Beginner', sides: 18, gentle: true,  tag: 'Die 1-18', hint: 'Beginner: short game (die 1-18), gentle tiles (max +/-3, no Skip), guide on' }
 };
-const modeCfg = () => MODES[APP_STATE.settings.mode] || MODES.standard;
-const moveSteps = n => Math.max(1, Math.round(n * modeCfg().mult));
+const MODE_NOTE = 'In Short, Standard and Beginner the dice numbers change (bigger dice) so players can reach the end of the board.';
+const modeCfg = () => MODES[APP_STATE.settings.mode] || MODES.long;
+const diceSides = () => modeCfg().sides;
 // Hop speed: a long move (up to 18 spaces) must not take forever.
 const stepMsFor = steps => Math.max(110, Math.min(STEP_MS, 2400 / Math.max(1, steps)));
 

@@ -49,7 +49,7 @@ function readSettingsForm() {
     $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
     return s;
 }
-function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'standard'; }
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; }
 
 // Event set chosen under Settings ('classic' keeps the board as it is).
 const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
@@ -163,11 +163,11 @@ function renderModeGrid() {
     MODE_IDS.forEach(id => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'mode-btn' + (id === cur ? ' on' : ''); b.disabled = !host;
-        b.innerHTML = `<b>${MODES[id].label}</b><small>${id === 'beginner' ? 'gentle' : MODES[id].mult === 1 ? 'x1' : 'x' + MODES[id].mult}</small>`;
+        b.innerHTML = `<b>${MODES[id].label}</b><small>${MODES[id].tag}${id === 'beginner' ? ' gentle' : ''}</small>`;
         b.onclick = () => { APP_STATE.settings = { ...APP_STATE.settings, mode: id }; renderModeGrid(); };
         grid.appendChild(b);
     });
-    $('modeHint').textContent = host ? MODES[cur].hint : 'The host chooses the game length.';
+    $('modeHint').textContent = (host ? MODES[cur].hint : 'Game length chosen by the host: ' + MODES[cur].hint) + '. ' + MODE_NOTE;
 }
 
 // Avatar picker: taken avatars are greyed out and show who has them.

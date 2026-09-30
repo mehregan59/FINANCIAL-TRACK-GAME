@@ -141,13 +141,13 @@ function broadcastIfHost() { if (MP.on && isHost() && MP.phase === 'playing') br
 const int = (v, lo, hi) => { const n = parseInt(v, 10); return n >= lo && n <= hi ? n : null; };
 function cleanRoll(r) {
     if (!r || typeof r !== 'object') return null;
-    const n = int(r.n, 1, 6), seq = int(r.seq, 1, 1e9);
+    const n = int(r.n, 1, 20), seq = int(r.seq, 1, 1e9);
     return n && seq ? { n, by: String(r.by), seq } : null;
 }
 function cleanMove(m) {
     if (!m || typeof m !== 'object') return null;
     const from = int(m.from, 1, 100), to = int(m.to, 1, 100), seq = int(m.seq, 1, 1e9);
-    return from && to && seq ? { by: String(m.by), from, to, n: int(m.n, 0, 6) || 0, seq } : null;
+    return from && to && seq ? { by: String(m.by), from, to, n: int(m.n, 0, 20) || 0, seq } : null;
 }
 
 function cleanEffect(e) {

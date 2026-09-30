@@ -7,7 +7,7 @@
    (a new id) and, if it needs the player's attention during a turn, its element ids to FOCUS in game.js. */
 
 const GUIDE_STEPS = [
-    { id: 'dice', sel: '#diceScene', title: 'Roll the dice', text: 'On your turn, tap the dice. When it stops, press Accept to move your pawn. In Short and Beginner games your roll is multiplied so the whole board gets used.' },
+    { id: 'dice', sel: '#diceScene', title: 'Roll the dice', text: 'On your turn, tap the dice. When it stops, press Accept to move your pawn. The roll is the number of spaces you move. In Short, Standard and Beginner games the die has bigger numbers so everyone can reach the end of the board.' },
     { id: 'wallet', sel: '#playersCard', title: 'Players', text: 'Everyone’s space, shares, money and total. The glowing row is the player whose turn it is.' },
     { id: 'board', sel: '#boardSvg', title: 'The board', text: 'Your pawn stands next to your space. Landing on a + space raises the Market Tracker, a − space lowers it.' },
     { id: 'bank', sel: '#bankCard', title: 'The bank', text: 'After you move, the bank opens (it glows). Buy or sell shares at the Market Tracker price, then press End turn.' },

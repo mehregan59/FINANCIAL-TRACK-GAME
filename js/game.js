@@ -104,7 +104,7 @@ function publish() {
 function authRoll(fromId) {
     const cur = curPlayer();
     if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'roll') return;
-    const n = rollD6();
+    const n = rollDie(diceSides());
     APP_STATE.pending = n;
     APP_STATE.turnPhase = 'accept';
     APP_STATE.lastRoll = { n, by: cur.id, seq: nextEvt() };
@@ -114,7 +114,7 @@ function authRoll(fromId) {
 function authAccept(fromId) {
     const cur = curPlayer();
     if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'accept' || !APP_STATE.pending) return;
-    const from = cur.position, to = Math.min(100, from + moveSteps(APP_STATE.pending));
+    const from = cur.position, to = Math.min(100, from + APP_STATE.pending);
     const rolled = APP_STATE.pending;
     cur.position = to;
     APP_STATE.pending = null;
@@ -298,11 +298,11 @@ function updateTurnUI() {
     const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
     const online = MP.on;
 
+    Dice.setSides(diceSides());
     $('diceBtn').disabled = !(mine && phase === 'roll' && !G.rollPending && !Dice.rolling);
 
     let msg;
-    const mult = modeCfg().mult, steps = APP_STATE.pending ? moveSteps(APP_STATE.pending) : 0;
-    const rolledTxt = APP_STATE.pending ? (mult === 1 ? String(APP_STATE.pending) : `${APP_STATE.pending} \u00D7 ${mult} = ${steps}`) : '';
+    const steps = APP_STATE.pending || 0, rolledTxt = steps ? String(steps) : '';
     if (phase === 'over') msg = 'Game over';
     else if (phase === 'roll') msg = mine ? (own ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : `${cur.name} is about to roll...`;
     else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (own ? `You rolled ${rolledTxt}!` : `${cur.name} rolled ${rolledTxt}`);
@@ -499,7 +499,7 @@ function renderPhaseBar() {
     const ph = PHASES[APP_STATE.marketPhase] || PHASES.neutral, m = modeCfg();
     bar.className = 'phase-bar ' + APP_STATE.marketPhase;
     bar.innerHTML = `<span class="pb-main"><span class="pb-emoji">${ph.emoji}</span><b>${ph.label} market</b><small>${ph.rule}</small></span>
-        <span class="pb-side"><span class="pb-chip">${m.label}${m.mult === 1 ? '' : ' \u00D7' + m.mult}</span>${APP_STATE.finalBy ? '<span class="pb-chip final">\u{1F3C1} Final round</span>' : ''}${APP_STATE.gameOver ? '<button type="button" class="pb-chip btn" onclick="showResults()">Results</button>' : ''}</span>`;
+        <span class="pb-side"><span class="pb-chip">${m.label} \u00B7 ${m.tag}</span>${APP_STATE.finalBy ? '<span class="pb-chip final">\u{1F3C1} Final round</span>' : ''}${APP_STATE.gameOver ? '<button type="button" class="pb-chip btn" onclick="showResults()">Results</button>' : ''}</span>`;
 }
 
 function showResults() {

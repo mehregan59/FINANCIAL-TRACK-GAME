@@ -143,3 +143,12 @@
 
 /* Keep the dice and buttons from being squashed. */
 .dice-dock > * { flex-shrink: 0; }
+
+/* 10/20-sided die (canvas) and the big number shown after it lands */
+.dice-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
+.dice-big {
+    position: absolute; right: -14px; bottom: -8px; min-width: 44px; padding: 0 8px; border-radius: 14px; text-align: center;
+    font: 900 34px/44px system-ui, sans-serif; color: #d10f0f; background: #fff; border: 2px solid #d10f0f;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .3); display: none; pointer-events: none;
+}
+.dice-big.on { display: block; }

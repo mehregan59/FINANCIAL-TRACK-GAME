@@ -22,7 +22,7 @@ function newRoomCode() {
     return [...b].map(x => CODE_ALPHABET[x % CODE_ALPHABET.length]).join('');
 }
 
-function rollD6() { if (window.__rolls && window.__rolls.length) return window.__rolls.shift(); /* test hook */ const b = new Uint32Array(1); let x; do { crypto.getRandomValues(b); x = b[0]; } while (x >= 4294967292); return (x % 6) + 1; }
+function rollDie(sides) { sides = sides || 6;  if (window.__rolls && window.__rolls.length) return window.__rolls.shift(); /* test hook */ const b = new Uint32Array(1); let x; do { crypto.getRandomValues(b); x = b[0]; } while (x >= 4294967296 - (4294967296 % sides)); return (x % sides) + 1; }
 
 function getClientId() {
     let id = null;

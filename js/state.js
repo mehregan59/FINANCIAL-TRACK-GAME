@@ -29,7 +29,7 @@ const APP_STATE = {
         "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
     ],
     // Starting values chosen on the landing page (host's choice is what the room uses).
-    settings: { market: 500, money: 5000, shares: 5, mode: 'standard' },
+    settings: { market: 500, money: 5000, shares: 5, mode: 'long' },
     players: [],
     activePlayersCount: 4,
     currentPlayerIndex: 0,
@@ -54,7 +54,7 @@ function cleanSettings(s) {
     s = s || {};
     const o = {};
     for (const k in SETTING_LIMITS) { const [lo, hi, def] = SETTING_LIMITS[k]; o[k] = clampInt(s[k], lo, hi, def); }
-    o.mode = MODE_IDS.includes(s.mode) ? s.mode : 'standard';
+    o.mode = MODE_IDS.includes(s.mode) ? s.mode : 'long';
     return o;
 }
 // Current Market Tracker value (0-999) as a number.
