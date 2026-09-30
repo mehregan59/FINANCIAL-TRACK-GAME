@@ -29,7 +29,7 @@ const APP_STATE = {
         "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
     ],
     // Starting values chosen on the landing page (host's choice is what the room uses).
-    settings: { market: 500, money: 5000, shares: 5, mode: 'long' },
+    settings: { market: 500, money: 5000, shares: 9, mode: 'long' },
     players: [],
     activePlayersCount: 4,
     currentPlayerIndex: 0,
@@ -49,7 +49,7 @@ const APP_STATE = {
     anim: null         // local only: { id, pos, lift, count } while an avatar is hopping
 };
 
-const SETTING_LIMITS = { market: [0, 999, 500], money: [0, 1000000, 5000], shares: [0, 1000, 5] };
+const SETTING_LIMITS = { market: [0, 999, 500], money: [0, 1000000, 5000], shares: [0, 1000, 9] };
 const MODE_IDS = ['long', 'standard', 'short', 'beginner'];
 function cleanSettings(s) {
     s = s || {};

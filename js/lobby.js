@@ -49,7 +49,7 @@ function readSettingsForm() {
     $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
     return s;
 }
-function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; renderLandMode(); }
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 9; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; renderLandMode(); }
 
 // Event set chosen under Settings ('classic' keeps the board as it is).
 const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
