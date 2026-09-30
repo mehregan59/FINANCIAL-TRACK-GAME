@@ -40,9 +40,10 @@ const APP_STATE = {
     lastMove: null,    // { by, from, to, seq }
     // Market phase (bull / bear / neutral) changes at random turns; rank = player ids from richest to poorest (updated when a turn ends).
     marketPhase: 'neutral', phaseLeft: 0, phaseSeq: 0, rank: [],
+    phaseTotal: 0, phaseSteps: [], phaseFlipAt: -1, phaseFlipTo: '', phaseNote: '',   // forecast plan: one market step per finished turn
     finalBy: '', finalSeq: 0,   // id of the player who reached the finish first: everyone else then gets one last turn
     gameOver: null,             // { seq, ranking: [{ id, name, total, money, shares }] } once the game has ended
-    lastEffect: null,  // { kind: 'tile'|'reset', by, text, delta, before, after, seq }  Market Tracker change
+    lastEffect: null,  // { kind: 'tile'|'reset'|'phase', by, text, delta, before, after, seq }  Market Tracker change
     lastTrade: null,   // { by, kind: 'buy'|'sell', qty, price, seq }
     evtSeq: 0,
     anim: null         // local only: { id, pos, lift, count } while an avatar is hopping

@@ -129,7 +129,7 @@ function snapshot() {
         currentPlayerIndex: APP_STATE.currentPlayerIndex,
         turnPhase: APP_STATE.turnPhase, pending: APP_STATE.pending, evtSeq: APP_STATE.evtSeq,
         lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove, lastEffect: APP_STATE.lastEffect, lastTrade: APP_STATE.lastTrade,
-        marketPhase: APP_STATE.marketPhase, phaseLeft: APP_STATE.phaseLeft, phaseSeq: APP_STATE.phaseSeq, rank: [...APP_STATE.rank],
+        marketPhase: APP_STATE.marketPhase, phaseLeft: APP_STATE.phaseLeft, phaseSeq: APP_STATE.phaseSeq, phaseTotal: APP_STATE.phaseTotal, phaseSteps: [...APP_STATE.phaseSteps], phaseFlipAt: APP_STATE.phaseFlipAt, phaseFlipTo: APP_STATE.phaseFlipTo, phaseNote: APP_STATE.phaseNote, rank: [...APP_STATE.rank],
         finalBy: APP_STATE.finalBy, finalSeq: APP_STATE.finalSeq, gameOver: APP_STATE.gameOver
     };
 }
@@ -153,7 +153,7 @@ function cleanMove(m) {
 function cleanEffect(e) {
     if (!e || typeof e !== 'object') return null;
     const seq = int(e.seq, 1, 1e9); if (!seq) return null;
-    return { kind: e.kind === 'reset' ? 'reset' : 'tile', by: String(e.by || ''), text: String(e.text || '').slice(0, 80), delta: clampInt(e.delta, -999, 999, 0), before: clampInt(e.before, 0, 999, 0), after: clampInt(e.after, 0, 999, 0), seq };
+    return { kind: e.kind === 'reset' ? 'reset' : e.kind === 'phase' ? 'phase' : 'tile', by: String(e.by || ''), text: String(e.text || '').slice(0, 80), delta: clampInt(e.delta, -999, 999, 0), before: clampInt(e.before, 0, 999, 0), after: clampInt(e.after, 0, 999, 0), seq };
 }
 function cleanTrade(t) {
     if (!t || typeof t !== 'object') return null;
@@ -188,7 +188,7 @@ function applyState(s) {
         APP_STATE.activePlayersCount = APP_STATE.players.length;
         APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));
         APP_STATE.turnPhase = ['roll', 'accept', 'moving', 'trade', 'over'].includes(s.turnPhase) ? s.turnPhase : 'roll';
-        APP_STATE.pending = int(s.pending, 1, 6);
+        APP_STATE.pending = int(s.pending, 1, 20);
         APP_STATE.evtSeq = int(s.evtSeq, 0, 1e9) || 0;
         APP_STATE.lastRoll = cleanRoll(s.lastRoll);
         APP_STATE.lastMove = cleanMove(s.lastMove);
@@ -196,6 +196,11 @@ function applyState(s) {
         APP_STATE.lastTrade = cleanTrade(s.lastTrade);
         APP_STATE.marketPhase = ['bull', 'bear', 'neutral'].includes(s.marketPhase) ? s.marketPhase : 'neutral';
         APP_STATE.phaseLeft = clampInt(s.phaseLeft, 0, 1000, 0); APP_STATE.phaseSeq = int(s.phaseSeq, 0, 1e9) || 0;
+        APP_STATE.phaseTotal = clampInt(s.phaseTotal, 0, 1000, 0);
+        APP_STATE.phaseSteps = Array.isArray(s.phaseSteps) ? s.phaseSteps.slice(0, 200).map(x => clampInt(x, -999, 999, 0)) : [];
+        APP_STATE.phaseFlipAt = clampInt(s.phaseFlipAt, -1, 1000, -1);
+        APP_STATE.phaseFlipTo = ['bull', 'bear', 'neutral'].includes(s.phaseFlipTo) ? s.phaseFlipTo : '';
+        APP_STATE.phaseNote = ['start', 'reverse', 'calm', 'swing'].includes(s.phaseNote) ? s.phaseNote : '';
         APP_STATE.rank = Array.isArray(s.rank) ? s.rank.slice(0, MAX_PLAYERS).map(String) : [];
         APP_STATE.finalBy = String(s.finalBy || ''); APP_STATE.finalSeq = int(s.finalSeq, 0, 1e9) || 0;
         APP_STATE.gameOver = cleanOver(s.gameOver);

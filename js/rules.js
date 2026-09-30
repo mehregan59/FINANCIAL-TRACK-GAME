@@ -18,9 +18,9 @@ const diceSides = () => modeCfg().sides;
 const stepMsFor = steps => Math.max(110, Math.min(STEP_MS, 2400 / Math.max(1, steps)));
 
 const PHASES = {
-    neutral: { label: 'Neutral', emoji: '⚖️', text: 'The market is moving through NEUTRAL', rule: 'No bonus' },
-    bull:    { label: 'Bull',    emoji: '\u{1F402}',   text: 'The market is moving toward BULL',     rule: 'Every + tile counts 1 extra' },
-    bear:    { label: 'Bear',    emoji: '\u{1F43B}',   text: 'The market is moving toward BEAR',     rule: 'Every − tile counts 1 extra' }
+    neutral: { label: 'Neutral', emoji: '⚖️', text: 'Forecast: a calm market (NEUTRAL)',           rule: 'No bonus' },
+    bull:    { label: 'Bull',    emoji: '\u{1F402}',   text: 'Forecast: the market looks set to rise (BULL)', rule: 'Plus tiles count 1 extra' },
+    bear:    { label: 'Bear',    emoji: '\u{1F43B}',   text: 'Forecast: the market looks set to fall (BEAR)', rule: 'Minus tiles count 1 extra' }
 };
 const phaseBonus = delta => { const p = APP_STATE.marketPhase; return p === 'bull' && delta > 0 ? 1 : p === 'bear' && delta < 0 ? -1 : 0; };
 
@@ -39,10 +39,20 @@ function parseEvent(text) {
 }
 const fmtTile = (name, d) => name + ' (' + (d === 0 ? 'Skip' : d > 0 ? '+' + d : String(d)) + ')';
 
-// Fill all 100 tiles: every event gets a + or - number (except Skip), and all + tiles together add up to at most +499
-// and all - tiles to at least -500, so the Market Tracker can stay between 1 and 999 over a whole lap.
+// Average size of a tile number: bigger in shorter games (fewer landings) and smaller with many players (more landings).
+// Beginner keeps its gentle tiles (max +/-3).
+function tileAverage() {
+    const m = modeCfg(); if (m.gentle) return 3;
+    const n = APP_STATE.players.length, f = n <= 5 ? 1 : n <= 7 ? 0.85 : 0.75;
+    return TILE_AVG[APP_STATE.settings.mode] * f;
+}
+const TILE_AVG = { long: 11, standard: 13, short: 20 };
+const POOL_AVG = 2.35;   // average number in the built-in event sets; used to scale them to the wanted tile size
+
+// Fill all 100 tiles: every event gets a + or - number (except Skip). The numbers are scaled to the tile average of the game length,
+// and all + tiles together stay under a cap (and all - tiles over its negative) so the Market Tracker can stay inside 0 - 999.
 function buildBalancedTiles() {
-    const gentle = modeCfg().gentle;
+    const gentle = modeCfg().gentle, avg = tileAverage(), k = avg / POOL_AVG;
     let flip = Math.random() < 0.5 ? 1 : -1;
     const base = APP_STATE.eventPool.map(parseEvent).map(e => {
         if (e.sign === null) { e.sign = flip; flip = -flip; e.mag = rnd(1, 3); }
@@ -52,8 +62,10 @@ function buildBalancedTiles() {
     let order = [];
     while (order.length < 100) order = order.concat(shuffled(base.map((_, i) => i)));
     const picks = order.slice(0, 100).map(i => ({ ...base[i] }));
+    if (!gentle) picks.forEach(p => { if (p.sign !== 0) p.mag = Math.max(1, Math.round(p.mag * k * (0.75 + Math.random() * 0.5))); });
+    const cap = gentle ? 499 : Math.max(499, Math.round(avg * 52));
     [1, -1].forEach(sg => {
-        const same = picks.filter(p => p.sign === sg), limit = sg > 0 ? 499 : 500;
+        const same = picks.filter(p => p.sign === sg), limit = sg > 0 ? cap : cap + 1;
         let sum = same.reduce((a, p) => a + p.mag, 0);
         while (sum > limit) { const big = same.reduce((a, p) => (p.mag > a.mag ? p : a), same[0]); big.mag--; sum--; if (big.mag < 1) big.mag = 1; }
     });
@@ -81,14 +93,65 @@ function rankOrder() {
 
 /* ---------- Market phases (host decides, everyone sees the popup) ---------- */
 
-function startPhase() { APP_STATE.marketPhase = 'neutral'; APP_STATE.phaseLeft = APP_STATE.players.length * rnd(1, 2); APP_STATE.phaseSeq = 0; }
+// A phase is a FORECAST, not a promise. Bull / Bear deliver a random total (5-20% of the market value when the phase starts; Beginner 3-10%)
+// in small uneven steps, one per finished turn. In 30% of the phases the forecast changes after the first real step: the rest of the phase
+// goes the other way (70%) or stops (30%, Neutral). A Neutral phase can also turn into Bull or Bear (30%), with a fresh total.
+// Steps never push the market outside the soft band (50 - 950).
+const SOFT_LO = 50, SOFT_HI = 950, FLIP_CHANCE = 0.3, FLIP_REVERSE = 0.7;
+const STEP_WEIGHTS = [0, 0, 1, 1, 2, 4];
+const otherPhases = k => ['bull', 'bear', 'neutral'].filter(p => p !== k);
+
+function planPhase(kind) {
+    const S = APP_STATE, L = S.players.length * (kind === 'neutral' ? rnd(1, 2) : rnd(2, 4)), steps = new Array(L).fill(0);
+    S.phaseLeft = S.phaseTotal = L; S.phaseFlipAt = -1; S.phaseFlipTo = '';
+    if (kind === 'neutral') {
+        if (L >= 2 && Math.random() < FLIP_CHANCE) { S.phaseFlipAt = rnd(1, L - 1); S.phaseFlipTo = Math.random() < 0.5 ? 'bull' : 'bear'; }
+    } else {
+        const pct = (modeCfg().gentle ? rnd(30, 100) : rnd(50, 200)) / 1000, sign = kind === 'bull' ? 1 : -1;
+        const total = Math.max(2, Math.round(marketValue() * pct));
+        const w = steps.map(() => STEP_WEIGHTS[rnd(0, STEP_WEIGHTS.length - 1)]);
+        if (!w.some(x => x > 0)) w[rnd(0, L - 1)] = 1;
+        const sw = w.reduce((a, b) => a + b, 0); let given = 0, last = 0;
+        w.forEach((x, i) => { steps[i] = Math.floor(total * x / sw); given += steps[i]; if (x > 0) last = i; });
+        steps[last] += total - given;
+        steps.forEach((x, i) => { steps[i] = x * sign; });
+        const first = steps.findIndex(x => x !== 0);
+        if (first + 1 <= L - 1 && Math.random() < FLIP_CHANCE) {
+            const at = rnd(first + 1, L - 1), reverse = Math.random() < FLIP_REVERSE;
+            S.phaseFlipAt = at; S.phaseFlipTo = reverse ? (kind === 'bull' ? 'bear' : 'bull') : 'neutral';
+            for (let j = at; j < L; j++) steps[j] = reverse ? -steps[j] : 0;
+        }
+    }
+    S.phaseSteps = steps;
+}
+
+function startPhase() { const S = APP_STATE; S.marketPhase = 'neutral'; planPhase('neutral'); S.phaseSeq = 0; S.phaseNote = ''; }
+
+// Called when a turn ends: maybe the forecast changes, then this turn's step moves the market, then maybe a new phase starts.
 function advancePhase() {
-    APP_STATE.phaseLeft--;
-    if (APP_STATE.phaseLeft > 0) return;
-    const others = ['bull', 'bear', 'neutral'].filter(p => p !== APP_STATE.marketPhase);
-    APP_STATE.marketPhase = others[rnd(0, 1)];
-    APP_STATE.phaseLeft = APP_STATE.players.length * rnd(2, 4);
-    APP_STATE.phaseSeq = nextEvt();
+    const S = APP_STATE;
+    const i0 = S.phaseTotal - S.phaseLeft;
+    if (S.phaseFlipAt === i0 && S.phaseFlipTo) {
+        const to = S.phaseFlipTo, wasNeutral = S.marketPhase === 'neutral';
+        S.phaseFlipAt = -1; S.phaseFlipTo = '';
+        if (wasNeutral) { S.marketPhase = to; planPhase(to); S.phaseNote = 'swing'; }
+        else { S.marketPhase = to; S.phaseNote = to === 'neutral' ? 'calm' : 'reverse'; }
+        S.phaseSeq = nextEvt();
+    }
+    const i = S.phaseTotal - S.phaseLeft, step = S.phaseSteps[i] || 0;
+    if (step) {
+        const v = marketValue();
+        let nv = v + step;
+        if (step > 0) nv = Math.min(nv, Math.max(v, SOFT_HI)); else nv = Math.max(nv, Math.min(v, SOFT_LO));
+        if (nv !== v) {
+            setTrackerNumber(nv);
+            S.lastEffect = { kind: 'phase', by: '', text: PHASES[S.marketPhase].label, delta: nv - v, before: v, after: nv, seq: nextEvt() };
+        }
+    }
+    S.phaseLeft--;
+    if (S.phaseLeft > 0) return;
+    const next = otherPhases(S.marketPhase)[rnd(0, 1)];
+    S.marketPhase = next; planPhase(next); S.phaseNote = 'start'; S.phaseSeq = nextEvt();
 }
 
 /* ---------- End of game ---------- */

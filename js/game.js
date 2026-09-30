@@ -151,7 +151,7 @@ function authEndTurn(fromId) {
     if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'trade') return;
     const from = APP_STATE.currentPlayerIndex;
     if (cur.position >= 100 && !APP_STATE.finalBy) { APP_STATE.finalBy = cur.id; APP_STATE.finalSeq = nextEvt(); } // last round starts
-    APP_STATE.rank = rankedIds();
+    APP_STATE.rank = rankedIds();   // (also set again below, after this turn's market step)
     const next = nextPlayerIndex(from);
     if (APP_STATE.finalBy && next <= from) { // the round is complete: everybody had the same number of turns
         APP_STATE.gameOver = makeResults(); APP_STATE.turnPhase = 'over'; APP_STATE.pending = null;
@@ -159,6 +159,8 @@ function authEndTurn(fromId) {
     }
     APP_STATE.currentPlayerIndex = next;
     advancePhase();
+    APP_STATE.rank = rankedIds();
+    updateMarketTrackerUI();
     reshuffleAhead();
     // A player who already stands on the finish has nothing to roll for: straight to the bank.
     APP_STATE.turnPhase = APP_STATE.players[next] && APP_STATE.players[next].position >= 100 ? 'trade' : 'roll';
@@ -233,7 +235,7 @@ function syncEffects(fresh) {
         const ef = APP_STATE.lastEffect, tr = APP_STATE.lastTrade;
         if (ef && ef.seq > G.seenEffect) { G.seenEffect = ef.seq; announceEffect(ef); }
         if (tr && tr.seq > G.seenTrade) { G.seenTrade = tr.seq; announceTrade(tr); }
-        if (APP_STATE.phaseSeq > G.seenPhase) { G.seenPhase = APP_STATE.phaseSeq; bigPopup(PHASES[APP_STATE.marketPhase].emoji, PHASES[APP_STATE.marketPhase].text, PHASES[APP_STATE.marketPhase].rule, APP_STATE.marketPhase); }
+        if (APP_STATE.phaseSeq > G.seenPhase) { G.seenPhase = APP_STATE.phaseSeq; bigPopup(...phasePopup()); }
         if (APP_STATE.finalSeq > G.seenFinal) { G.seenFinal = APP_STATE.finalSeq; bigPopup('\u{1F3C1}', 'FINAL ROUND', playerName(APP_STATE.finalBy) + ' reached the finish. Everyone else gets one last turn.', 'final'); }
         if (APP_STATE.gameOver && APP_STATE.gameOver.seq > G.seenOver) { G.seenOver = APP_STATE.gameOver.seq; showResults(); }
     }
@@ -242,7 +244,18 @@ function syncEffects(fresh) {
 
 const playerName = id => { const p = APP_STATE.players.find(x => x.id === id); return p ? p.name : 'Someone'; };
 
+// Big pop-up for a new phase or a sudden change of the forecast: [emoji, title, sub, kind].
+function phasePopup() {
+    const k = APP_STATE.marketPhase, ph = PHASES[k] || PHASES.neutral, n = APP_STATE.phaseNote;
+    const note = ' This is a forecast, not a promise: markets can turn suddenly.';
+    if (n === 'reverse') return [ph.emoji, 'SUDDEN CHANGE', 'The forecast has reversed: the market now looks set to ' + (k === 'bull' ? 'rise (BULL)' : 'fall (BEAR)') + '.', k];
+    if (n === 'calm') return [ph.emoji, 'SUDDEN CHANGE', 'The market has calmed down. The forecast adds no more movement.', k];
+    if (n === 'swing') return [ph.emoji, 'SUDDEN CHANGE', 'The calm is over. ' + ph.text + '.', k];
+    return [ph.emoji, ph.text, ph.rule + '.' + note, k];
+}
+
 function announceEffect(ef) {
+    if (ef.kind === 'phase') { showToast('Forecast step (' + ef.text + '): market ' + ef.before + ' \u2192 ' + ef.after + ' (' + (ef.delta > 0 ? '+' : '') + ef.delta + ')'); return; }
     if (ef.kind === 'reset') { showToast('Game reset: market ' + ef.after + ', everyone back on Space 1'); return; }
     const d = ef.delta ? (ef.delta > 0 ? '+' + ef.delta : String(ef.delta)) : 'no change';
     showToast(playerName(ef.by) + ' landed on ' + ef.text + ': market ' + ef.before + ' \u2192 ' + ef.after + ' (' + d + (ef.bonus ? ', ' + (ef.bonus > 0 ? 'Bull' : 'Bear') + ' phase bonus included' : '') + ')');
@@ -498,7 +511,7 @@ function renderPhaseBar() {
     const bar = $('phaseBar'); if (!bar) return;
     const ph = PHASES[APP_STATE.marketPhase] || PHASES.neutral, m = modeCfg();
     bar.className = 'phase-bar ' + APP_STATE.marketPhase;
-    bar.innerHTML = `<span class="pb-main"><span class="pb-emoji">${ph.emoji}</span><b>${ph.label} market</b><small>${ph.rule}</small></span>
+    bar.innerHTML = `<span class="pb-main"><span class="pb-emoji">${ph.emoji}</span><b>${ph.label} forecast</b><small>${ph.rule}</small></span>
         <span class="pb-side"><span class="pb-chip">${m.label} \u00B7 ${m.tag}</span>${APP_STATE.finalBy ? '<span class="pb-chip final">\u{1F3C1} Final round</span>' : ''}${APP_STATE.gameOver ? '<button type="button" class="pb-chip btn" onclick="showResults()">Results</button>' : ''}</span>`;
 }
 
