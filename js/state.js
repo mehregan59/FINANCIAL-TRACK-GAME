@@ -33,11 +33,13 @@ const APP_STATE = {
     players: [],
     activePlayersCount: 4,
     currentPlayerIndex: 0,
-    // Turn flow: 'roll' (waiting for the dice) -> 'accept' (dice shown, waiting for Accept) -> 'moving' (avatar hops).
+    // Turn flow: 'roll' (waiting for the dice) -> 'accept' (dice shown, waiting for Accept) -> 'moving' (avatar hops) -> 'trade' (bank open, then End turn).
     turnPhase: 'roll',
     pending: null,     // dice value waiting to be accepted
     lastRoll: null,    // { n, by, seq }  (seq lets every client play each roll exactly once)
     lastMove: null,    // { by, from, to, seq }
+    lastEffect: null,  // { kind: 'tile'|'reset', by, text, delta, before, after, seq }  Market Tracker change
+    lastTrade: null,   // { by, kind: 'buy'|'sell', qty, price, seq }
     evtSeq: 0,
     anim: null         // local only: { id, pos, lift, count } while an avatar is hopping
 };

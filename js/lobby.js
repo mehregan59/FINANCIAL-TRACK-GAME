@@ -209,7 +209,7 @@ function hostStartGame() {
     }
     APP_STATE.activePlayersCount = APP_STATE.players.length;
     APP_STATE.currentPlayerIndex = 0; // the host (player 1) starts, then one after the other
-    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, evtSeq: 0 });
+    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastEffect: null, lastTrade: null, evtSeq: 0 });
     setTrackerNumber(APP_STATE.settings.market);
     applyChosenPreset(SETUP_PRESET);
     MP.phase = 'playing';

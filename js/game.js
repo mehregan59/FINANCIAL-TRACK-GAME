@@ -13,7 +13,8 @@ const G = {
     seenRoll: 0, seenMove: 0, // last dice / move animation this client has already played
     diceReady: true,        // false while the dice are still tumbling
     rollPending: false, acceptPending: false, // request sent to the host, waiting for its answer
-    finishTimer: null, animTimer: null, prevMine: false
+    finishTimer: null, animTimer: null, prevMine: false,
+    seenEffect: 0, seenTrade: 0, popKey: ''
 };
 
 const curPlayer = () => APP_STATE.players[APP_STATE.currentPlayerIndex] || null;
@@ -29,8 +30,8 @@ const rolledSix = () => { const m = APP_STATE.lastMove, c = curPlayer(); return 
 
 function resetTurnState() {
     clearTimeout(G.finishTimer); stopAnim();
-    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null });
-    G.seenRoll = G.seenMove = APP_STATE.evtSeq;
+    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastEffect: null, lastTrade: null });
+    G.seenRoll = G.seenMove = G.seenEffect = G.seenTrade = APP_STATE.evtSeq; G.popKey = '';
     G.rollPending = G.acceptPending = false; G.diceReady = true;
 }
 
@@ -124,16 +125,66 @@ function authAccept(fromId) {
     scheduleFinish((to - from) * STEP_MS + 500);
 }
 
-function scheduleFinish(ms) { clearTimeout(G.finishTimer); G.finishTimer = setTimeout(authFinishTurn, ms); }
+function scheduleFinish(ms) { clearTimeout(G.finishTimer); G.finishTimer = setTimeout(authFinishMove, ms); }
 
-// After the hop has finished on every screen, pass the turn on.
-function authFinishTurn() {
+// The number in a tile's name, e.g. "Crypto Rally (+5)" -> 5, "Bear Market (-2)" -> -2. "(Skip)" and anything else -> 0.
+function tileDelta(text) { const m = /\(([+-]\d+)\)/.exec(String(text || '')); return m ? parseInt(m[1], 10) : 0; }
+
+// After the hop has finished on every screen: the tile's number moves the Market Tracker, then the bank opens for this player.
+function authFinishMove() {
     if (APP_STATE.turnPhase !== 'moving' || (MP.on && !isHost())) return;
-    // A 6 earns another roll; any other number passes the turn on, one player after the other.
+    const cur = curPlayer(), m = APP_STATE.lastMove;
+    if (cur && m && m.by === cur.id && m.to > m.from) {
+        const tile = APP_STATE.tiles[m.to - 1], delta = tileDelta(tile && tile.text);
+        const before = marketValue(), after = Math.max(0, Math.min(999, before + delta));
+        setTrackerNumber(after);
+        APP_STATE.lastEffect = { kind: 'tile', by: cur.id, text: tile ? tile.text : '', delta, before, after, seq: nextEvt() };
+    }
+    APP_STATE.turnPhase = 'trade';
+    publish();
+}
+
+// The player is done at the bank: a 6 earns another roll; any other number passes the turn on, one player after the other.
+function authEndTurn(fromId) {
+    const cur = curPlayer();
+    if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'trade') return;
     if (!rolledSix()) APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
     APP_STATE.turnPhase = 'roll';
     publish();
     watchCurrentPlayer();
+}
+
+// Buy or sell shares at the current Market Tracker value (only the player whose turn it is, only after moving).
+function authTrade(fromId, kind, qty) {
+    const cur = curPlayer();
+    qty = parseInt(qty, 10);
+    if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'trade' || !(qty >= 1 && qty <= 100000)) return false;
+    const price = marketValue();
+    if (kind === 'buy') { if (qty * price > cur.money) return false; cur.money -= qty * price; cur.shares += qty; }
+    else if (kind === 'sell') { if (qty > cur.shares) return false; cur.money += qty * price; cur.shares -= qty; }
+    else return false;
+    APP_STATE.lastTrade = { by: cur.id, kind, qty, price, seq: nextEvt() };
+    publish();
+    return true;
+}
+
+// Start over: Market Tracker back to the starting value, every player back on Space 1 with the starting money and shares.
+function authReset() {
+    if (MP.on && !isHost()) return;
+    clearTimeout(G.finishTimer); stopAnim();
+    const s = APP_STATE.settings;
+    setTrackerNumber(s.market);
+    APP_STATE.players.forEach(p => { p.position = 1; p.money = s.money; p.shares = s.shares; });
+    Object.assign(APP_STATE, { currentPlayerIndex: 0, turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastTrade: null });
+    APP_STATE.lastEffect = { kind: 'reset', by: '', text: '', delta: 0, before: 0, after: s.market, seq: nextEvt() };
+    publish();
+    watchCurrentPlayer();
+}
+
+function requestReset() {
+    if (MP.on && !isHost()) { showToast('Only the host can reset the game'); return; }
+    if (!window.confirm('Reset the game? The Market Tracker goes back to ' + APP_STATE.settings.market + ' and every player goes back to Space 1 with the starting money and shares.')) return;
+    authReset();
 }
 
 // A new host that inherits a move in progress finishes it.
@@ -152,17 +203,35 @@ function authSkipTurn() {
 
 // fresh = we just joined / refreshed: show the current dice, do not replay old animations.
 function syncEffects(fresh) {
+    G.endPending = false;
     const r = APP_STATE.lastRoll, m = APP_STATE.lastMove;
     if (fresh) {
         stopAnim();
         G.seenRoll = r ? r.seq : 0; G.seenMove = m ? m.seq : 0;
+        G.seenEffect = APP_STATE.lastEffect ? APP_STATE.lastEffect.seq : 0; G.seenTrade = APP_STATE.lastTrade ? APP_STATE.lastTrade.seq : 0;
         G.diceReady = true; G.rollPending = G.acceptPending = false;
         Dice.show(APP_STATE.pending || (r ? r.n : 1));
     } else {
         if (r && r.seq > G.seenRoll) { G.seenRoll = r.seq; startDiceRoll(r); }
         if (m && m.seq > G.seenMove) { G.seenMove = m.seq; startPawnMove(m); }
+        const ef = APP_STATE.lastEffect, tr = APP_STATE.lastTrade;
+        if (ef && ef.seq > G.seenEffect) { G.seenEffect = ef.seq; announceEffect(ef); }
+        if (tr && tr.seq > G.seenTrade) { G.seenTrade = tr.seq; announceTrade(tr); }
     }
     updateTurnUI();
+}
+
+const playerName = id => { const p = APP_STATE.players.find(x => x.id === id); return p ? p.name : 'Someone'; };
+
+function announceEffect(ef) {
+    if (ef.kind === 'reset') { showToast('Game reset: market ' + ef.after + ', everyone back on Space 1'); return; }
+    const d = ef.delta ? (ef.delta > 0 ? '+' + ef.delta : String(ef.delta)) : 'no change';
+    showToast(playerName(ef.by) + ' landed on ' + ef.text + ': market ' + ef.before + ' \u2192 ' + ef.after + (ef.delta ? ' (' + d + ')' : ' (' + d + ')'));
+}
+
+function announceTrade(tr) {
+    if (tr.kind === 'buy') Sound.buy(); else Sound.sell();
+    showToast(playerName(tr.by) + (tr.kind === 'buy' ? ' bought ' : ' sold ') + tr.qty + ' share' + (tr.qty > 1 ? 's' : '') + ' at ' + tr.price);
 }
 
 function startDiceRoll(r) {
@@ -235,10 +304,16 @@ function updateTurnUI() {
     G.prevMine = own;
     document.title = own ? '\u{1F3B2} Your turn - Capital Clash' : 'Capital Clash';
 
-    if (online) {
-        const can = canControlTracker(), panel = $('trackerPanel');
-        panel.classList.toggle('opacity-60', !can); panel.classList.toggle('pointer-events-none', !can);
-    }
+    // Trading and ending the turn belong to the player whose turn it is, after the move.
+    const trading = mine && phase === 'trade';
+    document.querySelectorAll('.bank-btn').forEach(b => { b.disabled = !trading; b.classList.toggle('locked', !trading); });
+    const eb = $('endBtn'); eb.classList.toggle('hidden', !trading); eb.disabled = !!G.endPending;
+    $('bankHint').textContent = trading ? 'Buy or sell, then press End turn' : (phase === 'trade' ? cur.name + ' is at the bank' : 'Opens after you move');
+    const rb = $('resetTrackerBtn'); if (rb) rb.classList.toggle('opacity-50', MP.on && !isHost());
+
+    if (!trading) closeTrade(); else if (!$('tradeModal').classList.contains('hidden')) renderTrade();
+    updateFocus(own || (mine && !online), phase);
+    showTurnPopup(cur, phase, own || (mine && !online));
     renderPlayersList(); renderWallet(); renderPawnLayer();
 }
 
@@ -286,13 +361,99 @@ function renderWallet() {
     }
 }
 
-// Bank buttons: only the sounds for now (trading gets wired later).
+/* ---------- Focus glow + turn popup ----------
+   ONE table says which control glows in which phase. Every new feature that needs the player's attention
+   adds its element ids here (and, if it should be taught, a step in js/guide.js). */
+const FOCUS = { roll: ['diceScene'], accept: ['acceptBtn'], trade: ['bankCard', 'endBtn'] };
+const FOCUS_ALL = ['diceScene', 'acceptBtn', 'bankCard', 'endBtn'];
+
+function updateFocus(mine, phase) {
+    const on = mine && !(phase === 'accept' && !G.diceReady) ? (FOCUS[phase] || []) : [];
+    FOCUS_ALL.forEach(id => { const e = $(id); if (e) e.classList.toggle('focus-glow', on.includes(id)); });
+}
+
+// What every screen shows when a new step of the game starts.
+const TURN_TEXT = {
+    roll: (name, mine) => mine ? 'Your turn: roll the dice' : name + "'s turn: rolling the dice",
+    trade: (name, mine) => mine ? 'Buy or sell shares, then end your turn' : name + ' is at the bank'
+};
+function showTurnPopup(cur, phase, mine) {
+    if (!TURN_TEXT[phase]) return;
+    const lm = APP_STATE.lastMove, key = [APP_STATE.currentPlayerIndex, phase, lm ? lm.seq : 0, APP_STATE.lastEffect && APP_STATE.lastEffect.kind === 'reset' ? APP_STATE.lastEffect.seq : 0].join('|');
+    if (G.popKey === key) return;
+    G.popKey = key;
+    const pop = $('turnPopup'), color = PLAYER_COLORS[APP_STATE.currentPlayerIndex % PLAYER_COLORS.length];
+    pop.style.setProperty('--pc', color);
+    pop.innerHTML = `<span class="tp-avatar">${avatarEmoji(cur.avatar)}</span><span><b>${escapeHtml(cur.name)}${mine && MP.on ? ' (you)' : ''}</b><small>${TURN_TEXT[phase](escapeHtml(cur.name), mine)}</small></span>`;
+    pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+    clearTimeout(G.popTimer); G.popTimer = setTimeout(() => pop.classList.remove('show'), 2600);
+}
+
+/* ---------- Bank: buy / sell window ---------- */
+
+const TRADE = { kind: 'buy' };
+
 function bankAction(kind) {
     Sound.unlock();
-    if (kind === 'buy') Sound.buy(); else Sound.sell();
     const b = document.querySelector('.bank-btn.' + kind);
     if (b) { b.classList.add('pressed'); setTimeout(() => b.classList.remove('pressed'), 160); }
-    showToast(kind === 'buy' ? 'Bank: buying shares is coming soon' : 'Bank: selling shares is coming soon');
+    if (!(isMyTurn() && APP_STATE.turnPhase === 'trade')) { showToast('The bank opens for you after you move'); return; }
+    TRADE.kind = kind;
+    $('tradeTitle').textContent = kind === 'buy' ? 'Buy shares' : 'Sell shares';
+    $('tradeModal').dataset.kind = kind;
+    $('tradeQty').value = 1;
+    $('tradeModal').classList.remove('hidden');
+    renderTrade();
+    setTimeout(() => { try { $('tradeQty').focus(); $('tradeQty').select(); } catch (_) {} }, 30);
+}
+
+function tradeMax() {
+    const cur = curPlayer(), price = marketValue();
+    if (!cur) return 0;
+    return TRADE.kind === 'buy' ? (price > 0 ? Math.floor(cur.money / price) : 1000) : cur.shares;
+}
+
+function tradeStep(d) { $('tradeQty').value = Math.max(0, (parseInt($('tradeQty').value, 10) || 0) + d); renderTrade(); }
+function tradeSetMax() { $('tradeQty').value = tradeMax(); renderTrade(); }
+
+function renderTrade() {
+    const cur = curPlayer(); if (!cur) return;
+    const price = marketValue(), q = parseInt($('tradeQty').value, 10) || 0, total = q * price, buy = TRADE.kind === 'buy';
+    $('tradePrice').textContent = fmtNum(price);
+    $('tradeMoney').textContent = fmtNum(cur.money); $('tradeShares').textContent = fmtNum(cur.shares);
+    $('tradeTotal').textContent = fmtNum(total);
+    $('tradeAfterMoney').textContent = fmtNum(cur.money + (buy ? -total : total));
+    $('tradeAfterShares').textContent = fmtNum(cur.shares + (buy ? q : -q));
+    let err = '';
+    if (q < 1) err = 'Enter how many shares';
+    else if (buy && total > cur.money) err = 'Not enough money (you can afford ' + tradeMax() + ')';
+    else if (!buy && q > cur.shares) err = 'You only have ' + cur.shares + ' shares';
+    $('tradeErr').textContent = err;
+    $('tradeOk').disabled = !!err;
+    $('tradeOk').textContent = (buy ? 'Buy ' : 'Sell ') + (q > 0 ? q + ' share' + (q > 1 ? 's' : '') : '');
+}
+
+function closeTrade() { $('tradeModal').classList.add('hidden'); }
+
+function confirmTrade() {
+    const q = parseInt($('tradeQty').value, 10) || 0;
+    if ($('tradeOk').disabled || q < 1) return;
+    closeTrade();
+    if (MP.on && !isHost()) { MP.t.send('trade', { from: MP.id, kind: TRADE.kind, qty: q }); return; }
+    authTrade(curPlayer().id, TRADE.kind, q);
+}
+
+function onEndClick() {
+    Sound.unlock();
+    if ($('endBtn').disabled) return;
+    closeTrade();
+    if (MP.on && !isHost()) {
+        G.endPending = true; updateTurnUI();
+        setTimeout(() => { if (G.endPending) { G.endPending = false; updateTurnUI(); } }, 3000);
+        MP.t.send('endturn', { from: MP.id });
+        return;
+    }
+    authEndTurn(curPlayer().id);
 }
 
 function toggleMenu() {

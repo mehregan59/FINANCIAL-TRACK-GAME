@@ -246,42 +246,8 @@ function renderPawnLayer() {
     fillPawnLayer(layer);
 }
 
-function adjustRing(ringIdx, step) {
-    if (!canControlTracker()) return;
-    APP_STATE.marketTracker[ringIdx] = (APP_STATE.marketTracker[ringIdx] + step + 10) % 10;
-    APP_STATE.ringRotations[ringIdx] = -APP_STATE.marketTracker[ringIdx] * 36;
-    updateMarketTrackerUI();
-    drawBoard();
-    syncTracker();
-}
-
-function resetMarketTracker() {
-    if (!canControlTracker()) return;
-    APP_STATE.marketTracker = [0, 0, 0];
-    APP_STATE.ringRotations = [0, 0, 0];
-    updateMarketTrackerUI();
-    drawBoard();
-    syncTracker();
-}
-
-function setDirectMarketTrackerValue(val) {
-    if (!canControlTracker()) return;
-    let num = parseInt(val, 10);
-    if (isNaN(num)) num = 0;
-    if (num < 0) num = 0;
-    if (num > 999) num = 999;
-
-    const h = Math.floor(num / 100);
-    const t = Math.floor((num % 100) / 10);
-    const u = num % 10;
-
-    APP_STATE.marketTracker = [u, t, h];
-    APP_STATE.ringRotations = [-u * 36, -t * 36, -h * 36];
-
-    updateMarketTrackerUI();
-    drawBoard();
-    syncTracker();
-}
+// The Market Tracker is locked for players: tile effects and the host's Reset (requestReset in game.js) are the only ways it changes.
+function resetMarketTracker() { requestReset(); }
 
 function updateMarketTrackerUI() {
     
@@ -290,6 +256,7 @@ function updateMarketTrackerUI() {
     const bp = document.getElementById('bankPrice'); if (bp) bp.textContent = parseInt(fullVal, 10);
 
     if (typeof renderWallet === 'function') renderWallet();
+    if (typeof renderTrade === 'function' && !document.getElementById('tradeModal').classList.contains('hidden')) renderTrade();
     const quickInput = document.getElementById('quickNumberInput');
     if (quickInput && document.activeElement !== quickInput) {
         quickInput.value = parseInt(fullVal, 10);

@@ -127,7 +127,7 @@ function snapshot() {
         players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar, money: p.money, shares: p.shares, bot: !!p.bot })),
         currentPlayerIndex: APP_STATE.currentPlayerIndex,
         turnPhase: APP_STATE.turnPhase, pending: APP_STATE.pending, evtSeq: APP_STATE.evtSeq,
-        lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove
+        lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove, lastEffect: APP_STATE.lastEffect, lastTrade: APP_STATE.lastTrade
     };
 }
 
@@ -145,6 +145,17 @@ function cleanMove(m) {
     if (!m || typeof m !== 'object') return null;
     const from = int(m.from, 1, 100), to = int(m.to, 1, 100), seq = int(m.seq, 1, 1e9);
     return from && to && seq ? { by: String(m.by), from, to, n: int(m.n, 0, 6) || 0, seq } : null;
+}
+
+function cleanEffect(e) {
+    if (!e || typeof e !== 'object') return null;
+    const seq = int(e.seq, 1, 1e9); if (!seq) return null;
+    return { kind: e.kind === 'reset' ? 'reset' : 'tile', by: String(e.by || ''), text: String(e.text || '').slice(0, 80), delta: clampInt(e.delta, -999, 999, 0), before: clampInt(e.before, 0, 999, 0), after: clampInt(e.after, 0, 999, 0), seq };
+}
+function cleanTrade(t) {
+    if (!t || typeof t !== 'object') return null;
+    const seq = int(t.seq, 1, 1e9), qty = int(t.qty, 1, 1e6); if (!seq || !qty) return null;
+    return { by: String(t.by), kind: t.kind === 'sell' ? 'sell' : 'buy', qty, price: clampInt(t.price, 0, 999, 0), seq };
 }
 
 function applyState(s) {
@@ -167,11 +178,13 @@ function applyState(s) {
         }));
         APP_STATE.activePlayersCount = APP_STATE.players.length;
         APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));
-        APP_STATE.turnPhase = ['roll', 'accept', 'moving'].includes(s.turnPhase) ? s.turnPhase : 'roll';
+        APP_STATE.turnPhase = ['roll', 'accept', 'moving', 'trade'].includes(s.turnPhase) ? s.turnPhase : 'roll';
         APP_STATE.pending = int(s.pending, 1, 6);
         APP_STATE.evtSeq = int(s.evtSeq, 0, 1e9) || 0;
         APP_STATE.lastRoll = cleanRoll(s.lastRoll);
         APP_STATE.lastMove = cleanMove(s.lastMove);
+        APP_STATE.lastEffect = cleanEffect(s.lastEffect);
+        APP_STATE.lastTrade = cleanTrade(s.lastTrade);
         paintModeButtons(APP_STATE.boardMode);
         const first = was !== 'playing';
         if (first) enterGameView();
@@ -190,26 +203,17 @@ function onMpMessage(e, d) {
         if (isHost() && MP.phase === 'playing') authRoll(String(d.from));
     } else if (e === 'accept') {
         if (isHost() && MP.phase === 'playing') authAccept(String(d.from));
-    } else if (e === 'tracker') {
-        if (MP.phase !== 'playing' || !trackerSenderAllowed(String(d.from)) || !Array.isArray(d.m) || !Array.isArray(d.r)) return;
-        APP_STATE.marketTracker = [0, 1, 2].map(i => digit(d.m[i]));
-        APP_STATE.ringRotations = [0, 1, 2].map(i => Number(d.r[i]) || 0);
-        updateMarketTrackerUI(); drawBoard();
+    } else if (e === 'trade') {
+        if (isHost() && MP.phase === 'playing') authTrade(String(d.from), d.kind, d.qty);
+    } else if (e === 'endturn') {
+        if (isHost() && MP.phase === 'playing') authEndTurn(String(d.from));
     }
+    // The Market Tracker can no longer be changed by players: only tile effects and the host's Reset move it.
 }
 
 /* ---------- Permissions ---------- */
 
-function trackerSenderAllowed(from) {
-    const cur = APP_STATE.players[APP_STATE.currentPlayerIndex];
-    return from === MP.hostId || (!!cur && cur.id === from);
-}
-
-function canControlTracker() {
-    if (!MP.on) return true;
-    if (MP.phase !== 'playing') return false;
-    return trackerSenderAllowed(MP.id);
-}
+function canControlTracker() { return false; } // locked during the game
 
 function applyRoleUI() {
     const restrict = MP.on && !isHost();
