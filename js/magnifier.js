@@ -84,7 +84,8 @@ const Lens = (() => {
         if (!svg) return;
         ['pointerdown', 'pointermove'].forEach(t => svg.addEventListener(t, onPointer));
         svg.addEventListener('pointerleave', ev => { if (on && !auto && ev.pointerType === 'mouse') hide(); });
-        const b = $('btnLens'); if (b) b.addEventListener('click', () => toggle());
+        // The button lives inside the forecast strip, which is redrawn often, so listen on the document.
+        document.addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('#btnLens')) toggle(); });
     }
     return { init, toggle, autoFollow, autoDone, hide, isOn: () => on };
 })();

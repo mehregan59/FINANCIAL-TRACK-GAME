@@ -513,7 +513,7 @@ function renderPhaseBar() {
     const ph = PHASES[APP_STATE.marketPhase] || PHASES.neutral, m = modeCfg();
     bar.className = 'phase-bar ' + APP_STATE.marketPhase;
     bar.innerHTML = `<span class="pb-main"><span class="pb-emoji">${ph.emoji}</span><b>${ph.label} forecast</b><small>${ph.rule}</small></span>
-        <span class="pb-side"><span class="pb-chip">${m.label} \u00B7 ${m.tag}</span>${APP_STATE.finalBy ? '<span class="pb-chip final">\u{1F3C1} Final round</span>' : ''}${APP_STATE.gameOver ? '<button type="button" class="pb-chip btn" onclick="showResults()">Results</button>' : ''}</span>`;
+        <span class="pb-side"><button id="btnLens" type="button" class="lens-btn${Lens.isOn() ? ' active' : ''}" aria-pressed="${Lens.isOn()}" title="Magnifier: move your finger or mouse over the board to read it bigger"><i class="fa-solid fa-magnifying-glass-plus"></i> Magnifier</button><span class="pb-chip">${m.label} \u00B7 ${m.tag}</span>${APP_STATE.finalBy ? '<span class="pb-chip final">\u{1F3C1} Final round</span>' : ''}${APP_STATE.gameOver ? '<button type="button" class="pb-chip btn" onclick="showResults()">Results</button>' : ''}</span>`;
 }
 
 function showResults() {
