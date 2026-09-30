@@ -2,10 +2,7 @@
 
 function randomizeBoardTexts() {
     if (MP.on && !isHost()) return;
-    for (let i = 0; i < 100; i++) {
-        const randEvt = APP_STATE.eventPool[Math.floor(Math.random() * APP_STATE.eventPool.length)];
-        APP_STATE.tiles[i].text = randEvt;
-    }
+    buildBalancedTiles();
     drawBoard();
     broadcastIfHost();
 }

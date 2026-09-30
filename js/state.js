@@ -29,15 +29,19 @@ const APP_STATE = {
         "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
     ],
     // Starting values chosen on the landing page (host's choice is what the room uses).
-    settings: { market: 500, money: 5000, shares: 5 },
+    settings: { market: 500, money: 5000, shares: 5, mode: 'standard' },
     players: [],
     activePlayersCount: 4,
     currentPlayerIndex: 0,
-    // Turn flow: 'roll' (waiting for the dice) -> 'accept' (dice shown, waiting for Accept) -> 'moving' (avatar hops) -> 'trade' (bank open, then End turn).
+    // Turn flow: 'roll' (waiting for the dice) -> 'accept' (dice shown, waiting for Accept) -> 'moving' (avatar hops) -> 'trade' (bank open, then End turn); 'over' when the game has ended.
     turnPhase: 'roll',
     pending: null,     // dice value waiting to be accepted
     lastRoll: null,    // { n, by, seq }  (seq lets every client play each roll exactly once)
     lastMove: null,    // { by, from, to, seq }
+    // Market phase (bull / bear / neutral) changes at random turns; rank = player ids from richest to poorest (updated when a turn ends).
+    marketPhase: 'neutral', phaseLeft: 0, phaseSeq: 0, rank: [],
+    finalBy: '', finalSeq: 0,   // id of the player who reached the finish first: everyone else then gets one last turn
+    gameOver: null,             // { seq, ranking: [{ id, name, total, money, shares }] } once the game has ended
     lastEffect: null,  // { kind: 'tile'|'reset', by, text, delta, before, after, seq }  Market Tracker change
     lastTrade: null,   // { by, kind: 'buy'|'sell', qty, price, seq }
     evtSeq: 0,
@@ -45,10 +49,12 @@ const APP_STATE = {
 };
 
 const SETTING_LIMITS = { market: [0, 999, 500], money: [0, 1000000, 5000], shares: [0, 1000, 5] };
+const MODE_IDS = ['short', 'standard', 'long', 'beginner'];
 function cleanSettings(s) {
     s = s || {};
     const o = {};
     for (const k in SETTING_LIMITS) { const [lo, hi, def] = SETTING_LIMITS[k]; o[k] = clampInt(s[k], lo, hi, def); }
+    o.mode = MODE_IDS.includes(s.mode) ? s.mode : 'standard';
     return o;
 }
 // Current Market Tracker value (0-999) as a number.
@@ -60,14 +66,5 @@ function setTrackerNumber(num) {
     APP_STATE.marketTracker = [u, t, h]; APP_STATE.ringRotations = [-u * 36, -t * 36, -h * 36];
 }
 
-function initTiles() {
-    APP_STATE.tiles = [];
-    for (let i = 1; i <= 100; i++) {
-        const randEvt = APP_STATE.eventPool[(i - 1) % APP_STATE.eventPool.length];
-        APP_STATE.tiles.push({
-            number: i,
-            text: randEvt
-        });
-    }
-}
+function initTiles() { buildBalancedTiles(); }
 

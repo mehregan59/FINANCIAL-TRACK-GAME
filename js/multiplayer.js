@@ -128,7 +128,9 @@ function snapshot() {
         players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar, money: p.money, shares: p.shares, bot: !!p.bot })),
         currentPlayerIndex: APP_STATE.currentPlayerIndex,
         turnPhase: APP_STATE.turnPhase, pending: APP_STATE.pending, evtSeq: APP_STATE.evtSeq,
-        lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove, lastEffect: APP_STATE.lastEffect, lastTrade: APP_STATE.lastTrade
+        lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove, lastEffect: APP_STATE.lastEffect, lastTrade: APP_STATE.lastTrade,
+        marketPhase: APP_STATE.marketPhase, phaseLeft: APP_STATE.phaseLeft, phaseSeq: APP_STATE.phaseSeq, rank: [...APP_STATE.rank],
+        finalBy: APP_STATE.finalBy, finalSeq: APP_STATE.finalSeq, gameOver: APP_STATE.gameOver
     };
 }
 
@@ -159,6 +161,12 @@ function cleanTrade(t) {
     return { by: String(t.by), kind: t.kind === 'sell' ? 'sell' : 'buy', qty, price: clampInt(t.price, 0, 999, 0), seq };
 }
 
+function cleanOver(o) {
+    if (!o || typeof o !== 'object' || !Array.isArray(o.ranking)) return null;
+    const seq = int(o.seq, 1, 1e9); if (!seq) return null;
+    return { seq, ranking: o.ranking.slice(0, MAX_PLAYERS).map(x => ({ id: String(x.id), name: cleanName(x.name) || 'Investor', avatar: isAvatarId(x.avatar) ? x.avatar : '', money: clampInt(x.money, -1e9, 1e9, 0), shares: clampInt(x.shares, 0, 1e6, 0), total: clampInt(x.total, -1e9, 1e12, 0) })) };
+}
+
 function applyState(s) {
     MP.gotState = true; clearTimeout(MP.joinTimer);
     MP.hostId = String(s.hostId || MP.hostId);
@@ -179,13 +187,18 @@ function applyState(s) {
         }));
         APP_STATE.activePlayersCount = APP_STATE.players.length;
         APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));
-        APP_STATE.turnPhase = ['roll', 'accept', 'moving', 'trade'].includes(s.turnPhase) ? s.turnPhase : 'roll';
+        APP_STATE.turnPhase = ['roll', 'accept', 'moving', 'trade', 'over'].includes(s.turnPhase) ? s.turnPhase : 'roll';
         APP_STATE.pending = int(s.pending, 1, 6);
         APP_STATE.evtSeq = int(s.evtSeq, 0, 1e9) || 0;
         APP_STATE.lastRoll = cleanRoll(s.lastRoll);
         APP_STATE.lastMove = cleanMove(s.lastMove);
         APP_STATE.lastEffect = cleanEffect(s.lastEffect);
         APP_STATE.lastTrade = cleanTrade(s.lastTrade);
+        APP_STATE.marketPhase = ['bull', 'bear', 'neutral'].includes(s.marketPhase) ? s.marketPhase : 'neutral';
+        APP_STATE.phaseLeft = clampInt(s.phaseLeft, 0, 1000, 0); APP_STATE.phaseSeq = int(s.phaseSeq, 0, 1e9) || 0;
+        APP_STATE.rank = Array.isArray(s.rank) ? s.rank.slice(0, MAX_PLAYERS).map(String) : [];
+        APP_STATE.finalBy = String(s.finalBy || ''); APP_STATE.finalSeq = int(s.finalSeq, 0, 1e9) || 0;
+        APP_STATE.gameOver = cleanOver(s.gameOver);
         paintModeButtons(APP_STATE.boardMode);
         const first = was !== 'playing';
         if (first) enterGameView();

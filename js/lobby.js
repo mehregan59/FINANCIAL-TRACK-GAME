@@ -45,11 +45,11 @@ function readName() {
 
 // Landing page "Game settings": starting Market value, money and shares per player.
 function readSettingsForm() {
-    const s = cleanSettings({ market: $('setMarket').value, money: $('setMoney').value, shares: $('setShares').value });
+    const s = cleanSettings({ market: $('setMarket').value, money: $('setMoney').value, shares: $('setShares').value, mode: $('setMode').value });
     $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
     return s;
 }
-function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; }
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'standard'; }
 
 // Event set chosen under Settings ('classic' keeps the board as it is).
 const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
@@ -139,6 +139,7 @@ function renderLobby() {
     }
     const bb = $('botsBtn');
     if (bb) { bb.classList.toggle('hidden', !(TEST_BOTS && isHost())); bb.textContent = MP.bots ? 'Remove the 2 test players' : '+ Add 2 test players (temporary)'; }
+    renderModeGrid();
     renderAvatarGrid();
     const n = ordered.length, full = (n >= N && n >= MIN_PLAYERS) || (bots > 0 && n + bots >= MIN_PLAYERS);
     $('lobbyCount').textContent = `${n} of ${N} joined`;
@@ -152,6 +153,21 @@ function renderLobby() {
     $('lobbyHint').textContent = isHost()
         ? (full ? (bots ? 'Test players are ready. Start when you are ready.' : 'Everyone is here. Start when you are ready.') : `Waiting for ${Math.max(N - n, 0)} more player${N - n === 1 ? '' : 's'}. Share the room code or invite link.`)
         : 'Waiting for the host to start the game...';
+}
+
+// Game length: the host chooses (Short / Standard / Long / Beginner); the others see it when the game starts.
+function renderModeGrid() {
+    const grid = $('modeGrid'); if (!grid) return;
+    const cur = APP_STATE.settings.mode, host = isHost();
+    grid.innerHTML = '';
+    MODE_IDS.forEach(id => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'mode-btn' + (id === cur ? ' on' : ''); b.disabled = !host;
+        b.innerHTML = `<b>${MODES[id].label}</b><small>${id === 'beginner' ? 'gentle' : MODES[id].mult === 1 ? 'x1' : 'x' + MODES[id].mult}</small>`;
+        b.onclick = () => { APP_STATE.settings = { ...APP_STATE.settings, mode: id }; renderModeGrid(); };
+        grid.appendChild(b);
+    });
+    $('modeHint').textContent = host ? MODES[cur].hint : 'The host chooses the game length.';
 }
 
 // Avatar picker: taken avatars are greyed out and show who has them.
@@ -215,6 +231,8 @@ function hostStartGame() {
     Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastEffect: null, lastTrade: null, evtSeq: 0 });
     setTrackerNumber(APP_STATE.settings.market);
     applyChosenPreset(SETUP_PRESET);
+    APP_STATE.rank = []; APP_STATE.finalBy = ''; APP_STATE.finalSeq = 0; APP_STATE.gameOver = null;
+    buildBalancedTiles(); startPhase();
     MP.phase = 'playing';
     broadcastState();
     enterGameView();

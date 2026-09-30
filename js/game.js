@@ -14,7 +14,7 @@ const G = {
     diceReady: true,        // false while the dice are still tumbling
     rollPending: false, acceptPending: false, // request sent to the host, waiting for its answer
     finishTimer: null, animTimer: null, prevMine: false,
-    seenEffect: 0, seenTrade: 0, popKey: ''
+    seenEffect: 0, seenTrade: 0, seenPhase: 0, seenFinal: 0, seenOver: 0, popKey: ''
 };
 
 const curPlayer = () => APP_STATE.players[APP_STATE.currentPlayerIndex] || null;
@@ -23,15 +23,13 @@ const isGameActive = () => (MP.on ? MP.phase === 'playing' : G.solo);
 // TEST BOTS: the host presses the dice and Accept for a test bot by hand (bots never play on their own).
 const isMyTurn = () => { const c = curPlayer(); return !!c && (MP.on ? (c.id === MP.id || (!!c.bot && isHost())) : true); };
 const nextEvt = () => ++APP_STATE.evtSeq;
-// True when the current player's last move came from a 6 (they roll again).
-const rolledSix = () => { const m = APP_STATE.lastMove, c = curPlayer(); return !!(m && c && m.n === 6 && m.by === c.id); };
 
 /* ---------- Setup (solo) ---------- */
 
 function resetTurnState() {
     clearTimeout(G.finishTimer); stopAnim();
-    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastEffect: null, lastTrade: null });
-    G.seenRoll = G.seenMove = G.seenEffect = G.seenTrade = APP_STATE.evtSeq; G.popKey = '';
+    Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastEffect: null, lastTrade: null, finalBy: '', finalSeq: 0, gameOver: null, rank: [] });
+    G.seenRoll = G.seenMove = G.seenEffect = G.seenTrade = G.seenPhase = G.seenFinal = G.seenOver = APP_STATE.evtSeq; G.popKey = '';
     G.rollPending = G.acceptPending = false; G.diceReady = true;
 }
 
@@ -54,6 +52,7 @@ function startSoloGame() {
     APP_STATE.activePlayersCount = clampInt($('setSoloPlayers').value, 2, 10, 4);
     $('setSoloPlayers').value = APP_STATE.activePlayersCount;
     changePlayerCount(APP_STATE.activePlayersCount); // new wallets, player 1 starts
+    buildBalancedTiles(); startPhase(); APP_STATE.rank = [];
     updateMarketTrackerUI(); drawBoard();
     syncEffects(true);
 }
@@ -115,14 +114,14 @@ function authRoll(fromId) {
 function authAccept(fromId) {
     const cur = curPlayer();
     if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'accept' || !APP_STATE.pending) return;
-    const from = cur.position, to = Math.min(100, from + APP_STATE.pending);
+    const from = cur.position, to = Math.min(100, from + moveSteps(APP_STATE.pending));
     const rolled = APP_STATE.pending;
     cur.position = to;
     APP_STATE.pending = null;
     APP_STATE.turnPhase = 'moving';
     APP_STATE.lastMove = { by: cur.id, from, to, n: rolled, seq: nextEvt() };
     publish();
-    scheduleFinish((to - from) * STEP_MS + 500);
+    scheduleFinish((to - from) * stepMsFor(to - from) + 500);
 }
 
 function scheduleFinish(ms) { clearTimeout(G.finishTimer); G.finishTimer = setTimeout(authFinishMove, ms); }
@@ -135,22 +134,35 @@ function authFinishMove() {
     if (APP_STATE.turnPhase !== 'moving' || (MP.on && !isHost())) return;
     const cur = curPlayer(), m = APP_STATE.lastMove;
     if (cur && m && m.by === cur.id && m.to > m.from) {
-        const tile = APP_STATE.tiles[m.to - 1], delta = tileDelta(tile && tile.text);
+        const tile = APP_STATE.tiles[m.to - 1], base = tileDelta(tile && tile.text), bonus = phaseBonus(base), delta = base + bonus;
         const before = marketValue(), after = Math.max(0, Math.min(999, before + delta));
         setTrackerNumber(after);
-        APP_STATE.lastEffect = { kind: 'tile', by: cur.id, text: tile ? tile.text : '', delta, before, after, seq: nextEvt() };
+        APP_STATE.lastEffect = { kind: 'tile', by: cur.id, text: tile ? tile.text : '', delta, bonus, before, after, seq: nextEvt() };
         updateMarketTrackerUI(); drawBoard();
     }
     APP_STATE.turnPhase = 'trade';
     publish();
 }
 
-// The player is done at the bank: a 6 earns another roll; any other number passes the turn on, one player after the other.
+// The player is done at the bank: the turn passes on, one player after the other.
+// Then: ranking by portfolio, market phase countdown, tiles ahead reshuffled, and the end-of-game check.
 function authEndTurn(fromId) {
     const cur = curPlayer();
     if (!cur || cur.id !== fromId || APP_STATE.turnPhase !== 'trade') return;
-    if (!rolledSix()) APP_STATE.currentPlayerIndex = nextPlayerIndex(APP_STATE.currentPlayerIndex);
-    APP_STATE.turnPhase = 'roll';
+    const from = APP_STATE.currentPlayerIndex;
+    if (cur.position >= 100 && !APP_STATE.finalBy) { APP_STATE.finalBy = cur.id; APP_STATE.finalSeq = nextEvt(); } // last round starts
+    APP_STATE.rank = rankedIds();
+    const next = nextPlayerIndex(from);
+    if (APP_STATE.finalBy && next <= from) { // the round is complete: everybody had the same number of turns
+        APP_STATE.gameOver = makeResults(); APP_STATE.turnPhase = 'over'; APP_STATE.pending = null;
+        publish(); return;
+    }
+    APP_STATE.currentPlayerIndex = next;
+    advancePhase();
+    reshuffleAhead();
+    // A player who already stands on the finish has nothing to roll for: straight to the bank.
+    APP_STATE.turnPhase = APP_STATE.players[next] && APP_STATE.players[next].position >= 100 ? 'trade' : 'roll';
+    drawBoard();
     publish();
     watchCurrentPlayer();
 }
@@ -176,7 +188,8 @@ function authReset() {
     const s = APP_STATE.settings;
     setTrackerNumber(s.market);
     APP_STATE.players.forEach(p => { p.position = 1; p.money = s.money; p.shares = s.shares; });
-    Object.assign(APP_STATE, { currentPlayerIndex: 0, turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastTrade: null });
+    Object.assign(APP_STATE, { currentPlayerIndex: 0, turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastTrade: null, finalBy: '', gameOver: null, rank: [] });
+    buildBalancedTiles(); startPhase(); APP_STATE.phaseSeq = nextEvt();
     APP_STATE.lastEffect = { kind: 'reset', by: '', text: '', delta: 0, before: 0, after: s.market, seq: nextEvt() };
     updateMarketTrackerUI(); drawBoard();
     publish();
@@ -210,6 +223,7 @@ function syncEffects(fresh) {
     if (fresh) {
         stopAnim();
         G.seenRoll = r ? r.seq : 0; G.seenMove = m ? m.seq : 0;
+        G.seenPhase = APP_STATE.phaseSeq; G.seenFinal = APP_STATE.finalSeq; G.seenOver = APP_STATE.gameOver ? APP_STATE.gameOver.seq : 0;
         G.seenEffect = APP_STATE.lastEffect ? APP_STATE.lastEffect.seq : 0; G.seenTrade = APP_STATE.lastTrade ? APP_STATE.lastTrade.seq : 0;
         G.diceReady = true; G.rollPending = G.acceptPending = false;
         Dice.show(APP_STATE.pending || (r ? r.n : 1));
@@ -219,6 +233,9 @@ function syncEffects(fresh) {
         const ef = APP_STATE.lastEffect, tr = APP_STATE.lastTrade;
         if (ef && ef.seq > G.seenEffect) { G.seenEffect = ef.seq; announceEffect(ef); }
         if (tr && tr.seq > G.seenTrade) { G.seenTrade = tr.seq; announceTrade(tr); }
+        if (APP_STATE.phaseSeq > G.seenPhase) { G.seenPhase = APP_STATE.phaseSeq; bigPopup(PHASES[APP_STATE.marketPhase].emoji, PHASES[APP_STATE.marketPhase].text, PHASES[APP_STATE.marketPhase].rule, APP_STATE.marketPhase); }
+        if (APP_STATE.finalSeq > G.seenFinal) { G.seenFinal = APP_STATE.finalSeq; bigPopup('\u{1F3C1}', 'FINAL ROUND', playerName(APP_STATE.finalBy) + ' reached the finish. Everyone else gets one last turn.', 'final'); }
+        if (APP_STATE.gameOver && APP_STATE.gameOver.seq > G.seenOver) { G.seenOver = APP_STATE.gameOver.seq; showResults(); }
     }
     updateTurnUI();
 }
@@ -228,7 +245,7 @@ const playerName = id => { const p = APP_STATE.players.find(x => x.id === id); r
 function announceEffect(ef) {
     if (ef.kind === 'reset') { showToast('Game reset: market ' + ef.after + ', everyone back on Space 1'); return; }
     const d = ef.delta ? (ef.delta > 0 ? '+' + ef.delta : String(ef.delta)) : 'no change';
-    showToast(playerName(ef.by) + ' landed on ' + ef.text + ': market ' + ef.before + ' \u2192 ' + ef.after + (ef.delta ? ' (' + d + ')' : ' (' + d + ')'));
+    showToast(playerName(ef.by) + ' landed on ' + ef.text + ': market ' + ef.before + ' \u2192 ' + ef.after + ' (' + d + (ef.bonus ? ', ' + (ef.bonus > 0 ? 'Bull' : 'Bear') + ' phase bonus included' : '') + ')');
 }
 
 function announceTrade(tr) {
@@ -245,14 +262,14 @@ function startPawnMove(m) {
     G.acceptPending = false;
     stopAnim();
     if (!APP_STATE.players.some(p => p.id === m.by) || m.to <= m.from) return;
-    const steps = m.to - m.from, t0 = performance.now();
+    const steps = m.to - m.from, t0 = performance.now(), SM = stepMsFor(steps);
     let lastK = -1;
     APP_STATE.anim = { id: m.by, pos: m.from, lift: 0, count: 0 };
     // Time-based (not frame-based) so it also completes correctly in background tabs.
     G.animTimer = setInterval(() => {
         const elapsed = performance.now() - t0;
-        if (elapsed >= steps * STEP_MS) { stopAnim(); Sound.arrive(); updateTurnUI(); return; }
-        const k = Math.floor(elapsed / STEP_MS), f = (elapsed - k * STEP_MS) / STEP_MS;
+        if (elapsed >= steps * SM) { stopAnim(); Sound.arrive(); updateTurnUI(); return; }
+        const k = Math.floor(elapsed / SM), f = (elapsed - k * SM) / SM;
         const ease = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
         const a = APP_STATE.anim;
         a.pos = m.from + k + ease; a.lift = Math.sin(Math.PI * f); a.count = k + 1;
@@ -284,9 +301,11 @@ function updateTurnUI() {
     $('diceBtn').disabled = !(mine && phase === 'roll' && !G.rollPending && !Dice.rolling);
 
     let msg;
-    const again = rolledSix();
-    if (phase === 'roll') msg = mine ? (again ? (own || !online ? 'A 6! Roll again' : `${cur.name}: 6! roll again`) : own ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : (again ? `${cur.name} rolled a 6 and goes again` : `${cur.name} is about to roll...`);
-    else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (own ? `You rolled ${APP_STATE.pending}!` : `${cur.name} rolled ${APP_STATE.pending}`);
+    const mult = modeCfg().mult, steps = APP_STATE.pending ? moveSteps(APP_STATE.pending) : 0;
+    const rolledTxt = APP_STATE.pending ? (mult === 1 ? String(APP_STATE.pending) : `${APP_STATE.pending} \u00D7 ${mult} = ${steps}`) : '';
+    if (phase === 'over') msg = 'Game over';
+    else if (phase === 'roll') msg = mine ? (own ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : `${cur.name} is about to roll...`;
+    else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (own ? `You rolled ${rolledTxt}!` : `${cur.name} rolled ${rolledTxt}`);
     else if (phase === 'trade') msg = own || (mine && !online) ? `${cur.name}: buy/sell, then End turn` : `${cur.name} is at the bank`;
     else msg = `${cur.name} is moving...`;
     $('diceStatus').textContent = msg;
@@ -294,14 +313,14 @@ function updateTurnUI() {
     const ab = $('acceptBtn');
     ab.classList.toggle('hidden', !(mine && phase === 'accept' && G.diceReady));
     ab.disabled = G.acceptPending;
-    ab.textContent = `Accept: move ${APP_STATE.pending || ''}`;
+    ab.textContent = `Accept: move ${steps || ''}`;
 
     $('diceDock').classList.toggle('yourturn', mine && phase !== 'moving');
 
     const banner = $('turnBanner');
     banner.style.setProperty('--pc', color);
     banner.classList.toggle('mine', own);
-    banner.innerHTML = `<span class="banner-avatar">${avatarEmoji(cur.avatar)}</span><span>${(own ? 'Your turn!' : escapeHtml(cur.name) + "'s turn") + (again && phase === 'roll' ? ' (6: again!)' : '')}</span>`;
+    banner.innerHTML = `<span class="banner-avatar">${avatarEmoji(cur.avatar)}</span><span>${phase === 'over' ? 'Game over' : (own ? 'Your turn!' : escapeHtml(cur.name) + "'s turn")}</span>`;
 
     if (own && !G.prevMine) Sound.chime();
     G.prevMine = own;
@@ -315,6 +334,8 @@ function updateTurnUI() {
     const rb = $('resetTrackerBtn'); if (rb) rb.classList.toggle('opacity-50', MP.on && !isHost());
 
     if (!trading) closeTrade(); else if (!$('tradeModal').classList.contains('hidden')) renderTrade();
+    renderPhaseBar();
+    if (!APP_STATE.gameOver) closeResults();
     updateFocus(own || (mine && !online), phase);
     showTurnPopup(cur, phase, own || (mine && !online));
     renderPlayersList(); renderWallet(); renderPawnLayer();
@@ -334,7 +355,8 @@ function renderWallet() {
     $('walletMarket').textContent = mv;
     const keepScroll = box.scrollTop;
     box.innerHTML = '';
-    APP_STATE.players.forEach((p, idx) => {
+    rankOrder().forEach((idx, place) => {
+        const p = APP_STATE.players[idx];
         const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
         const turn = idx === APP_STATE.currentPlayerIndex && isGameActive();
         const isMe = MP.on && p.id === MP.id;
@@ -344,7 +366,9 @@ function renderWallet() {
         const row = document.createElement('div');
         row.className = 'wallet-row player-row' + (turn ? ' turn turn-glow' : '') + (offline ? ' offline' : '');
         row.style.setProperty('--pc', color);
+        row.dataset.idx = idx;
         row.innerHTML = `<div class="wallet-top">
+                <span class="rank-badge r${place + 1}" title="Rank by portfolio">#${place + 1}</span>
                 <span class="avatar-chip" style="--pc:${color}">${avatarEmoji(p.avatar)}</span>
                 <span class="wallet-name">${escapeHtml(p.name)}${isMe ? '<small style="color:#86f0b4">(you)</small>' : ''}${p.bot ? '<small style="color:#ffd54a">(test)</small>' : ''}${offline ? '<small style="color:#ff9b9b">(offline)</small>' : ''}</span>
                 <span class="wallet-space">Space ${shownPos}</span>
@@ -357,7 +381,7 @@ function renderWallet() {
         box.appendChild(row);
     });
     box.scrollTop = keepScroll;
-    const cur = box.children[APP_STATE.currentPlayerIndex];
+    const cur = box.querySelector(`[data-idx="${APP_STATE.currentPlayerIndex}"]`);
     if (cur && isGameActive() && G.lastScrolled !== APP_STATE.currentPlayerIndex) { // bring the active player into view
         G.lastScrolled = APP_STATE.currentPlayerIndex;
         if (cur.offsetTop < box.scrollTop || cur.offsetTop + cur.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = cur.offsetTop - 4;
@@ -458,6 +482,39 @@ function onEndClick() {
     }
     authEndTurn(curPlayer().id);
 }
+
+/* ---------- Big popup (market phase, final round), phase bar, results ---------- */
+
+function bigPopup(emoji, title, sub, kind) {
+    const el = $('bigPopup');
+    el.className = 'big-popup ' + (kind || '');
+    el.innerHTML = `<div class="bp-emoji">${emoji}</div><div class="bp-title">${escapeHtml(title)}</div><div class="bp-sub">${escapeHtml(sub || '')}</div>`;
+    void el.offsetWidth; el.classList.add('show');
+    clearTimeout(G.bigTimer); G.bigTimer = setTimeout(() => el.classList.remove('show'), 3400);
+}
+
+// Strip above the board: market phase, game mode, final round.
+function renderPhaseBar() {
+    const bar = $('phaseBar'); if (!bar) return;
+    const ph = PHASES[APP_STATE.marketPhase] || PHASES.neutral, m = modeCfg();
+    bar.className = 'phase-bar ' + APP_STATE.marketPhase;
+    bar.innerHTML = `<span class="pb-main"><span class="pb-emoji">${ph.emoji}</span><b>${ph.label} market</b><small>${ph.rule}</small></span>
+        <span class="pb-side"><span class="pb-chip">${m.label}${m.mult === 1 ? '' : ' \u00D7' + m.mult}</span>${APP_STATE.finalBy ? '<span class="pb-chip final">\u{1F3C1} Final round</span>' : ''}${APP_STATE.gameOver ? '<button type="button" class="pb-chip btn" onclick="showResults()">Results</button>' : ''}</span>`;
+}
+
+function showResults() {
+    const r = APP_STATE.gameOver; if (!r) return;
+    const top = r.ranking[0] ? r.ranking[0].total : 0;
+    const winners = r.ranking.filter(x => x.total === top);
+    $('overTitle').textContent = winners.length > 1 ? 'It is a tie!' : 'We have a winner!';
+    $('overSub').textContent = winners.map(w => w.name).join(' & ') + (winners.length > 1 ? ' share' : ' wins') + ' with a portfolio of ' + fmtNum(top);
+    $('overRows').innerHTML = r.ranking.map((x, i) => `<div class="over-row${x.total === top ? ' win' : ''}"><span class="o-rank">${x.total === top ? '\u{1F3C6}' : '#' + (i + 1)}</span><span class="o-av">${avatarEmoji(x.avatar)}</span><span class="o-name">${escapeHtml(x.name)}</span><span class="o-tot">${fmtNum(x.total)}<small>${fmtNum(x.shares)} sh + ${fmtNum(x.money)}</small></span></div>`).join('');
+    $('overAgain').classList.toggle('hidden', MP.on && !isHost());
+    $('overModal').classList.remove('hidden');
+    Sound.chime();
+}
+function closeResults() { $('overModal').classList.add('hidden'); }
+function playAgain() { closeResults(); authReset(); }
 
 function toggleMenu() {
     const bar = $('menuBar'); bar.classList.toggle('hidden');
