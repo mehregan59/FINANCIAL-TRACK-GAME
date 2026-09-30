@@ -49,7 +49,7 @@ function readSettingsForm() {
     $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
     return s;
 }
-function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; }
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 5; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; renderLandMode(); }
 
 // Event set chosen under Settings ('classic' keeps the board as it is).
 const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
@@ -163,7 +163,7 @@ function renderModeGrid() {
     MODE_IDS.forEach(id => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'mode-btn' + (id === cur ? ' on' : ''); b.disabled = !host;
-        b.innerHTML = `<b>${MODES[id].label}</b><small>${MODES[id].tag}${id === 'beginner' ? ' gentle' : ''}</small>`;
+        b.innerHTML = `<b>${MODES[id].label}</b><small>${MODES[id].tag}${id === 'beginner' ? ' gentle' : ''}</small><span class="mode-tip">${MODE_TIPS[id]}</span>`;
         b.onclick = () => { APP_STATE.settings = { ...APP_STATE.settings, mode: id }; renderModeGrid(); };
         grid.appendChild(b);
     });
@@ -248,3 +248,25 @@ function hostStartGame() {
 function toggleBots() { if (!isHost()) return; MP.bots = MP.bots ? 0 : 2; renderLobby(); }
 
 // TEST BOTS: bots never act on their own; the host presses the dice and Accept for them (see isMyTurn in game.js).
+
+// Game length on the start page: all four options are visible; hovering (or tapping) one explains it.
+const MODE_TIPS = {
+    long: 'The full game. A normal die (1-6), about 29 turns each. Best when you have time.',
+    standard: 'A shorter game. A 10-sided die with numbers 1-9, about 20 turns each. The dice numbers change so players can reach the end of the board.',
+    short: 'A quick game. A 20-sided die with numbers 1-18, about 10 turns each. The dice numbers change so players can reach the end of the board.',
+    beginner: 'For new players. The Short die (1-18), gentle tiles (at most +3 or -3, no Skip) and the guided tour always on.'
+};
+function renderLandMode() {
+    const grid = $('landMode'); if (!grid) return;
+    const cur = MODE_IDS.includes($('setMode').value) ? $('setMode').value : 'long';
+    grid.innerHTML = '';
+    MODE_IDS.forEach(id => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'mode-btn' + (id === cur ? ' on' : '');
+        b.innerHTML = `<b>${MODES[id].label}${id === 'long' ? ' \u2605' : ''}</b><small>${MODES[id].tag}</small><span class="mode-tip">${MODE_TIPS[id]}</span>`;
+        b.onclick = () => { $('setMode').value = id; renderLandMode(); };
+        grid.appendChild(b);
+    });
+    $('landModeHint').textContent = MODE_TIPS[cur] + ' (\u2605 = default)';
+}
+document.addEventListener('DOMContentLoaded', renderLandMode);

@@ -49,7 +49,7 @@ const APP_STATE = {
 };
 
 const SETTING_LIMITS = { market: [0, 999, 500], money: [0, 1000000, 5000], shares: [0, 1000, 5] };
-const MODE_IDS = ['short', 'standard', 'long', 'beginner'];
+const MODE_IDS = ['long', 'standard', 'short', 'beginner'];
 function cleanSettings(s) {
     s = s || {};
     const o = {};

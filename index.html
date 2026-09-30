@@ -406,6 +406,13 @@
                     </div>
                     <button id="resumeBtn" onclick="resumeRoom()" class="w-full py-2 rounded-xl border border-white/25 text-blue-100 text-xs font-bold hover:bg-white/10 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Resume a saved game (type its room code and your name)</button>
 
+                    <div class="space-y-1.5">
+                        <div class="text-[10px] text-blue-200 uppercase tracking-wider font-bold">Game length <span class="normal-case tracking-normal text-blue-300 font-semibold">(hover or tap an option to read what it means)</span></div>
+                        <input id="setMode" type="hidden" value="long">
+                        <div id="landMode" class="mode-grid"></div>
+                        <p id="landModeHint" class="text-[11px] text-blue-100 leading-snug"></p>
+                    </div>
+
                     <details class="bg-slate-950/70 border border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-300">
                         <summary class="cursor-pointer font-semibold text-blue-100"><i class="fa-solid fa-gear mr-1"></i> Settings: starting values, event set, one-screen players</summary>
                         <div class="grid grid-cols-3 gap-2 mt-3">
@@ -416,11 +423,6 @@
                             <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Shares each</span>
                                 <input id="setShares" type="number" min="0" max="1000" value="5" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-cyan-300 outline-none focus:border-cyan-400"></label>
                         </div>
-                        <label class="block mt-3 space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Game length</span>
-                            <select id="setMode" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-xs font-bold text-white outline-none focus:border-amber-400">
-                                <option value="long" selected>Long (full game): normal die 1-6, about 29 turns each</option><option value="standard">Standard: die 1-9, about 20 turns each</option><option value="short">Short: die 1-18, about 10 turns each</option><option value="beginner">Beginner: die 1-18, gentle tiles, guide on</option>
-                            </select>
-                            <span class="block text-[11px] text-blue-200 leading-snug">Long is the full game. In Short, Standard and Beginner the dice numbers change (bigger dice) so players can reach the end of the board. The host can also change this in the lobby.</span></label>
                         <div class="mt-3 grid grid-cols-2 gap-2">
                             <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Event set for the board</span>
                                 <select id="setPreset" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-xs font-bold text-white outline-none focus:border-amber-400">

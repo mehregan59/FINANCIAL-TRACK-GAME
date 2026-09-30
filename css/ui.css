@@ -287,3 +287,14 @@ body {
 .over-row.win { background: #fff1b8; border: 2px solid #f6d365; }
 .o-rank { width: 34px; font: 900 15px/1 Inter, sans-serif; } .o-av { font-size: 24px; } .o-name { flex: 1; font: 800 15px/1.2 Inter, sans-serif; }
 .o-tot { font: 900 17px/1.1 ui-monospace, Menlo, monospace; text-align: right; } .o-tot small { display: block; font: 700 11px/1.2 Inter, sans-serif; color: #5b74ad; }
+
+/* Game length tooltips (start page and lobby) */
+.mode-btn { position: relative; }
+.mode-tip {
+    display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 210px; z-index: 30;
+    padding: 8px 10px; border-radius: 10px; background: #fff; color: #1e293b; border: 2px solid #ffd54a; box-shadow: 0 8px 20px rgba(0,0,0,.4);
+    font: 600 11px/1.35 Inter, sans-serif; text-align: left; pointer-events: none;
+}
+.mode-btn:hover .mode-tip, .mode-btn:focus-visible .mode-tip { display: block; }
+.mode-btn:nth-child(1) .mode-tip { left: 0; transform: none; }
+.mode-btn:nth-child(4) .mode-tip { left: auto; right: 0; transform: none; }
