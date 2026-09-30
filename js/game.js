@@ -139,6 +139,7 @@ function authFinishMove() {
         const before = marketValue(), after = Math.max(0, Math.min(999, before + delta));
         setTrackerNumber(after);
         APP_STATE.lastEffect = { kind: 'tile', by: cur.id, text: tile ? tile.text : '', delta, before, after, seq: nextEvt() };
+        updateMarketTrackerUI(); drawBoard();
     }
     APP_STATE.turnPhase = 'trade';
     publish();
@@ -177,6 +178,7 @@ function authReset() {
     APP_STATE.players.forEach(p => { p.position = 1; p.money = s.money; p.shares = s.shares; });
     Object.assign(APP_STATE, { currentPlayerIndex: 0, turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastTrade: null });
     APP_STATE.lastEffect = { kind: 'reset', by: '', text: '', delta: 0, before: 0, after: s.market, seq: nextEvt() };
+    updateMarketTrackerUI(); drawBoard();
     publish();
     watchCurrentPlayer();
 }
@@ -285,6 +287,7 @@ function updateTurnUI() {
     const again = rolledSix();
     if (phase === 'roll') msg = mine ? (again ? (own || !online ? 'A 6! Roll again' : `${cur.name}: 6! roll again`) : own ? 'Your turn! Tap the dice' : `${cur.name}: tap the dice`) : (again ? `${cur.name} rolled a 6 and goes again` : `${cur.name} is about to roll...`);
     else if (phase === 'accept') msg = !G.diceReady ? 'Rolling...' : (own ? `You rolled ${APP_STATE.pending}!` : `${cur.name} rolled ${APP_STATE.pending}`);
+    else if (phase === 'trade') msg = own || (mine && !online) ? `${cur.name}: buy/sell, then End turn` : `${cur.name} is at the bank`;
     else msg = `${cur.name} is moving...`;
     $('diceStatus').textContent = msg;
 

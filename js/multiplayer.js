@@ -13,7 +13,7 @@ function myMeta() { return { id: MP.id, name: MP.name, creator: MP.creatorJoin &
 function resetMP() {
     try { MP.t && MP.t.leave(); } catch (_) {}
     ['hostTimer', 'skipTimer', 'joinTimer', 'trackerTimer'].forEach(k => { clearTimeout(MP[k]); MP[k] = null; });
-    Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', avatar: '', members: [], arrival: [], bots: 0 });
+    Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', avatar: '', members: [], arrival: [], bots: 0, resumeState: null, graceUntil: 0 });
 }
 
 // A player counts as present when it is me, a connected member, or a test bot (bots are run by the host).
@@ -64,7 +64,7 @@ function onMpPresence(list) {
     // First presence update that includes us = we are admitted; unblocks the one-time capacity check in enterRoom().
     if (!MP.admitted && MP.members.some(m => m.id === MP.id)) { MP.admitted = true; if (MP.admitResolve) MP.admitResolve(); }
     // New arrival while a game is running: host re-sends the full state.
-    if (isHost() && MP.phase === 'playing' && MP.members.some(m => !prev.has(m.id) && m.id !== MP.id)) setTimeout(broadcastState, 250);
+    if (isHost() && MP.phase === 'playing' && MP.members.some(m => !prev.has(m.id) && m.id !== MP.id)) { if (!claimSeats()) setTimeout(broadcastState, 250); }
 
     resolveAvatarConflicts();
     watchHost();
@@ -99,11 +99,12 @@ function watchCurrentPlayer() {
     clearTimeout(MP.skipTimer); MP.skipFor = cur.id;
     MP.skipTimer = setTimeout(() => {
         MP.skipTimer = null; MP.skipFor = null;
+        if (Date.now() < (MP.graceUntil || 0)) { watchCurrentPlayer(); return; } // resumed game: still waiting for players to come back
         const c2 = APP_STATE.players[APP_STATE.currentPlayerIndex];
         if (!isHost() || !c2 || c2.id !== cur.id || isPresent(c2)) return;
         authSkipTurn(); watchCurrentPlayer();
         showToast(c2.name + ' is offline: turn skipped');
-    }, 8000);
+    }, Math.max(8000, (MP.graceUntil || 0) - Date.now() + 500));
 }
 
 function nextPlayerIndex(cur) {
@@ -131,7 +132,7 @@ function snapshot() {
     };
 }
 
-function broadcastState() { if (!MP.on || !MP.t) return; MP.seq++; MP.t.send('state', { from: MP.id, state: snapshot() }); }
+function broadcastState() { if (!MP.on || !MP.t) return; MP.seq++; MP.t.send('state', { from: MP.id, state: snapshot() }); Save.queue(); }
 
 function broadcastIfHost() { if (MP.on && isHost() && MP.phase === 'playing') broadcastState(); }
 

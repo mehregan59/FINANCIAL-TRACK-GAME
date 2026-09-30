@@ -115,3 +115,9 @@ Fasten: Push a single brass split pin (paper fastener) through the center hole (
 
 
 Screen layout: left rail = dice on top, players wallet below; centre = board; right rail = Bank (Sell/Buy buttons with sounds, not wired yet), a "coming soon" card slot, and the Market Tracker dials. The toolbar (room code, shuffle, layout, board/events, craft kit, print) sits behind the Menu button. The "Start page" button returns to the landing page. Starting values, the event preset and the one-screen player count live in the landing page's Settings.
+
+Turn flow: roll the dice -> Accept (pawn hops) -> the tile's number is added to (or taken from) the Market Tracker ("(Skip)" = no change, limits 0-999) -> the bank opens for that player only (buy/sell any number of shares at the tracker price) -> End turn. A 6 means the same player rolls again. The Market Tracker is locked for players; only tiles and the host's "Reset game" (tracker back to the starting value, everyone on Space 1 with the starting money and shares) change it.
+
+Guide: each new room asks once "Quick guide?"; steps already seen (stored in this browser) are not shown again. To teach a new feature add one entry to GUIDE_STEPS in js/guide.js; to glow a control during a phase add its id to FOCUS in js/game.js.
+
+Save / resume: the host saves the game after every step (browser + Supabase table). Run supabase/game_saves.sql once in Supabase (SQL Editor). Resume: start page -> same name + same room code -> "Resume a saved game"; the others join with the code and get their seats back by name.

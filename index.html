@@ -39,6 +39,7 @@
                     <button onclick="copyInviteLink()" class="text-slate-400 hover:text-amber-300" title="Copy invite link"><i class="fa-solid fa-link"></i></button>
                     <button onclick="leaveRoom()" class="text-slate-400 hover:text-red-400" title="Leave room"><i class="fa-solid fa-right-from-bracket"></i></button>
                 </div>
+                <button onclick="Guide.replay()" class="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 text-xs font-semibold flex items-center gap-1.5 transition"><i class="fa-solid fa-circle-question"></i><span>Guide</span></button>
                 <button onclick="randomizeBoardTexts()" class="host-only px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
                     <i class="fa-solid fa-shuffle"></i>
                     <span>Shuffle 20 Events</span>
@@ -177,7 +178,7 @@
                 <!-- Direct Number Selector -->
                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
                     <label for="quickNumberInput" class="text-xs font-bold text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
-                        <i class="fa-solid fa-calculator text-amber-400"></i> Market value (locked):
+                        <i class="fa-solid fa-calculator text-amber-400"></i> Market value
                     </label>
                     <input type="number" id="quickNumberInput" value="500" readonly tabindex="-1" title="Locked during the game: tiles change it" class="w-24 bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-1 text-amber-300 font-mono font-black text-center text-base outline-none cursor-not-allowed">
                 </div>
@@ -402,6 +403,7 @@
                         <input id="roomCodeInput" type="text" maxlength="5" placeholder="ROOM CODE" autocapitalize="characters" class="flex-1 min-w-0 bg-slate-950 border border-slate-600 rounded-xl px-3 py-2.5 text-center text-lg font-mono font-black tracking-[0.3em] text-amber-300 uppercase focus:border-amber-400 outline-none" onkeydown="if(event.key==='Enter') joinRoom()">
                         <button id="joinRoomBtn" onclick="joinRoom()" class="px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm transition">JOIN</button>
                     </div>
+                    <button id="resumeBtn" onclick="resumeRoom()" class="w-full py-2 rounded-xl border border-white/25 text-blue-100 text-xs font-bold hover:bg-white/10 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Resume a saved game (type its room code and your name)</button>
 
                     <details class="bg-slate-950/70 border border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-300">
                         <summary class="cursor-pointer font-semibold text-blue-100"><i class="fa-solid fa-gear mr-1"></i> Settings: starting values, event set, one-screen players</summary>
@@ -521,6 +523,8 @@
     <script src="js/multiplayer.js"></script>
     <script src="js/lobby.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/save.js"></script>
+    <script src="js/guide.js"></script>
     <script src="js/main.js"></script>
 
 <!-- Turn popup: shown to everyone when a new step starts -->
@@ -545,6 +549,24 @@
         <div class="trade-row"><span>Shares after</span><b id="tradeAfterShares">0</b></div>
         <div id="tradeErr" class="trade-err"></div>
         <div class="trade-actions"><button type="button" class="cancel" onclick="closeTrade()">Cancel</button><button type="button" id="tradeOk" class="ok" onclick="confirmTrade()">Buy</button></div>
+    </div>
+</div>
+
+<!-- Guide: ask once per new room, then coach marks -->
+<div id="guidePrompt" class="trade-modal hidden no-print" role="dialog" aria-modal="true">
+    <div class="trade-card guide-ask">
+        <h3>Quick guide?</h3>
+        <p>Want a short tour of the screen? It shows what to do on your turn, with arrows and glowing spots. You will only see each step once.</p>
+        <div class="trade-actions"><button type="button" id="guideNo" class="cancel">No thanks</button><button type="button" id="guideYes" class="ok">Yes, show me</button></div>
+    </div>
+</div>
+<div id="guideLayer" class="guide-layer hidden no-print">
+    <div id="guideSpot" class="guide-spot"></div>
+    <div id="guideArrow" class="guide-arrow">&#9664;</div>
+    <div id="guidePop" class="guide-pop" role="dialog" aria-live="polite">
+        <div class="guide-head"><b id="guideTitle"></b><span id="guideCount"></span></div>
+        <p id="guideText"></p>
+        <div class="guide-actions"><button type="button" onclick="Guide.skip()">Skip guide</button><button type="button" id="guideNext" class="primary" onclick="Guide.next()">Next</button></div>
     </div>
 </div>
 </body>

@@ -34,7 +34,7 @@ function stepExpected(d) {
     $('expectedVal').textContent = EXPECTED_SETUP;
 }
 
-function playSolo() { $('landing').classList.add('hidden'); startSoloGame(); }
+async function playSolo() { await Guide.ask(); $('landing').classList.add('hidden'); startSoloGame(); Guide.start(); }
 
 function readName() {
     const n = cleanName($('playerNameInput').value);
@@ -62,12 +62,13 @@ function goHome() {
     if (window.confirm(msg)) leaveRoom();
 }
 
-async function createRoom() { const n = readName(); if (n) { APP_STATE.settings = readSettingsForm(); SETUP_PRESET = chosenPreset(); await enterRoom(newRoomCode(), n, true, EXPECTED_SETUP); } }
+async function createRoom() { const n = readName(); if (n) { await Guide.ask(); APP_STATE.settings = readSettingsForm(); SETUP_PRESET = chosenPreset(); await enterRoom(newRoomCode(), n, true, EXPECTED_SETUP); } }
 
 async function joinRoom() {
     const n = readName(); if (!n) return;
     const code = cleanCode($('roomCodeInput').value);
     if (code.length !== 5) { showLandingError('Room codes have 5 characters.'); return; }
+    await Guide.ask();
     await enterRoom(code, n, false);
 }
 
@@ -89,6 +90,7 @@ async function enterRoom(code, name, creator, expected) {
     if (!creator && MP.members.filter(m => m.id !== MP.id).length >= cap) { abortJoin('This room is full (' + cap + ' players).'); return; }
     try { history.replaceState(null, '', location.pathname + '?room=' + code); } catch (_) {}
     $('landing').classList.add('hidden');
+    if (MP.resumeState) { applyResume(); return; }
     if (MP.phase !== 'playing') showLobby(); // a running game may already have arrived while we waited
     if (!creator) {
         MP.joinTimer = setTimeout(() => {
@@ -181,6 +183,7 @@ function chooseAvatar(id) {
 /* ---------- Presence, host tracking ---------- */
 
 function enterGameView() {
+    Guide.start();
     $('lobby').classList.add('hidden'); $('landing').classList.add('hidden');
     $('roomPill').classList.remove('hidden'); $('roomPillCode').textContent = MP.code;
     if (!APP_STATE.players.some(p => p.id === MP.id)) showToast('This game already started: you are watching as a spectator');
