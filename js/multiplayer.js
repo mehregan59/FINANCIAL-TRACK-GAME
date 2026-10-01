@@ -177,7 +177,7 @@ function applyState(s) {
         APP_STATE.marketTracker = [0, 1, 2].map(i => digit(s.marketTracker && s.marketTracker[i]));
         APP_STATE.ringRotations = [0, 1, 2].map(i => Number(s.ringRotations && s.ringRotations[i]) || 0);
         APP_STATE.settings = cleanSettings(s.settings);
-        APP_STATE.eventPool = (s.eventPool || []).slice(0, 60).map(t => String(t).slice(0, 80));
+        APP_STATE.eventPool = (s.eventPool || []).slice(0, 150).map(t => String(t).slice(0, 80));
         if (!APP_STATE.eventPool.length) APP_STATE.eventPool = ['Reserve Vault'];
         APP_STATE.tiles = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, text: String((s.tiles || [])[i] || '').slice(0, 80) }));
         APP_STATE.players = (s.players || []).slice(0, MAX_PLAYERS).map((p, i) => ({

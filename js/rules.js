@@ -31,9 +31,10 @@ function shuffled(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { cons
 
 // "Crypto Rally (+5)" -> { name, sign: 1, mag: 5 };  "Supply Halt (Skip)" -> sign 0;  "Asset Swap" -> sign null (no number yet)
 function parseEvent(text) {
-    const m = /^(.*?)\s*\(([+-]\d+|Skip)\)\s*$/i.exec(String(text).trim());
+    const m = /^(.*?)\s*\(([+-]\d+|Skip|\u00b1\d+)\)\s*$/i.exec(String(text).trim());
     if (!m) return { name: String(text).trim(), sign: null, mag: 0 };
     if (/skip/i.test(m[2])) return { name: m[1], sign: 0, mag: 0 };
+    if (m[2][0] === '\u00b1') return { name: m[1], sign: null, mag: parseInt(m[2].slice(1), 10) };   // random sign, fixed size
     const v = parseInt(m[2], 10);
     return { name: m[1], sign: v < 0 ? -1 : 1, mag: Math.abs(v) };
 }
@@ -47,15 +48,18 @@ function tileAverage() {
     return TILE_AVG[APP_STATE.settings.mode] * f;
 }
 const TILE_AVG = { long: 12.5, standard: 15, short: 23 };   // before + and - are equalised (that lowers the real average by about 13%)
-const POOL_AVG = 2.35;   // average number in the built-in event sets; used to scale them to the wanted tile size
+// Average number of an event pool (events without a number count as 2): the pool is scaled so its average matches the game's tile size.
+// Only the SPREAD of a set survives: Wall Street stays steady (small spread), Crypto stays volatile (small and big swings).
+function poolAverage(events) { const v = events.filter(e => e.sign !== 0).map(e => e.mag || 2); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 2.35; }
 
 // Fill all 100 tiles: every event gets a + or - number (except Skip). The numbers are scaled to the tile average of the game length,
 // and all + tiles together stay under a cap (and all - tiles over its negative) so the Market Tracker can stay inside 0 - 999.
 function buildBalancedTiles() {
-    const gentle = modeCfg().gentle, avg = tileAverage(), k = avg / POOL_AVG;
+    const gentle = modeCfg().gentle, avg = tileAverage();
     let flip = Math.random() < 0.5 ? 1 : -1;
-    const base = APP_STATE.eventPool.map(parseEvent).map(e => {
-        if (e.sign === null) { e.sign = flip; flip = -flip; e.mag = rnd(1, 3); }
+    const parsed = APP_STATE.eventPool.map(parseEvent), k = avg / poolAverage(parsed);
+    const base = parsed.map(e => {
+        if (e.sign === null) { e.sign = flip; flip = -flip; if (!e.mag) e.mag = rnd(1, 3); }
         if (gentle) { if (e.sign === 0) { e.sign = flip; flip = -flip; e.mag = 1; } e.mag = Math.min(e.mag, 3); }
         return e;
     });
@@ -79,7 +83,12 @@ function buildBalancedTiles() {
         let sum = same.reduce((a, p) => a + p.mag, 0);
         while (sum > limit) { const big = same.reduce((a, p) => (p.mag > a.mag ? p : a), same[0]); big.mag--; sum--; if (big.mag < 1) big.mag = 1; }
     });
-    APP_STATE.tiles = picks.map((p, i) => ({ number: i + 1, text: fmtTile(p.name, p.sign * p.mag) }));
+    // Skip tiles are spread over the whole board (one at a random place in the middle of each equal part), never bunched together.
+    const skips = picks.filter(p => p.sign === 0), rest = picks.filter(p => p.sign !== 0), slots = new Set();
+    skips.forEach((_, i) => slots.add(Math.min(99, Math.floor((i + 0.2 + Math.random() * 0.6) * 100 / skips.length))));
+    const final = []; let ri = 0, si = 0;
+    for (let i = 0; i < picks.length; i++) final.push(slots.has(i) && si < skips.length ? skips[si++] : rest[ri++] || skips[si++]);
+    APP_STATE.tiles = final.map((p, i) => ({ number: i + 1, text: fmtTile(p.name, p.sign * p.mag) }));
 }
 
 // After every turn the tiles nobody has reached yet are shuffled, so the road ahead is never predictable.

@@ -9,23 +9,7 @@ function randomizeBoardTexts() {
 
 function loadFinancialPreset(type) {
     if (MP.on && !isHost()) return;
-    if (type === 'wallstreet') {
-        APP_STATE.eventPool = [
-            "Dividend Payout (+3)", "Bear Market (-2)", "Stock Split (+1)", "Tax Audit (-1)",
-            "Bull Run (+2)", "Asset Swap", "Market Crash (-3)", "Interest Earned (+1)",
-            "VC Investment (+4)", "Inflation Leak (-1)", "Portfolio Shield", "Crypto Rally (+5)",
-            "Supply Halt (Skip)", "Dividend Yield", "Recession Dip (-2)", "IPO Launch",
-            "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
-        ];
-    } else if (type === 'crypto') {
-        APP_STATE.eventPool = [
-            "Staking Reward (+3)", "Gas Fee (-1)", "Token Burn (+2)", "Rug Pull (-4)",
-            "Bull Flag (+2)", "Mainnet Swap", "Flash Crash (-3)", "Airdrop (+1)",
-            "VC Seed (+4)", "SEC Leak (-1)", "Cold Vault", "Moon Rally (+5)",
-            "Chain Halt (Skip)", "Yield Farming", "Bear Market (-2)", "DEX Listing",
-            "Exploit (-4)", "NFT Boom (+3)", "DAO Bonus (+2)", "Liquidity Pool"
-        ];
-    }
+    APP_STATE.eventPool = [...(EVENT_SETS[type] || EVENT_SETS.classic)];
     renderEventsEditor();
     randomizeBoardTexts();
 }

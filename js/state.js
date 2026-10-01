@@ -21,13 +21,7 @@ const APP_STATE = {
     draggedRingIndex: null,
     dragStartAngle: 0,
     tiles: [],
-    eventPool: [
-        "Dividend Payout (+3)", "Bear Market (-2)", "Stock Split (+1)", "Tax Audit (-1)",
-        "Bull Run (+2)", "Asset Swap", "Market Crash (-3)", "Interest Earned (+1)",
-        "VC Investment (+4)", "Inflation Leak (-1)", "Portfolio Shield", "Crypto Rally (+5)",
-        "Supply Halt (Skip)", "Dividend Yield", "Recession Dip (-2)", "IPO Launch",
-        "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
-    ],
+    eventPool: [...EVENT_SETS.classic],   // 100 different events, see js/event-sets.js
     // Starting values chosen on the landing page (host's choice is what the room uses).
     settings: { market: 500, money: 5000, shares: 9, mode: 'long' },
     players: [],

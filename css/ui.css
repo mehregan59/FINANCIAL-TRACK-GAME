@@ -320,25 +320,41 @@ body:has(.lens-btn.active) #boardSvg { touch-action: none; }
 .how-open-btn { padding: 10px 18px; border-radius: 999px; font-weight: 800; font-size: 14px; color: #0b2a66; background: #ffd54a; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
 .how-open-btn.alt { background: #fff; border: 2px solid #8fbcff; }
 .how-open-btn i { margin-right: 6px; }
-.how-modal { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(8, 20, 60, .65); }
+.how-modal { position: fixed; inset: 0; z-index: 95; display: flex; background: #f3f7ff; }
 .how-modal.hidden { display: none; }
-.how-card { width: min(1100px, 100%); height: min(860px, 100%); display: flex; flex-direction: column; background: #f3f7ff; color: #10204a; border: 3px solid #8fbcff; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,.55); }
+.how-card { width: 100%; height: 100%; display: flex; flex-direction: column; background: #f3f7ff; color: #10204a; overflow: hidden; }
 .how-head { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #1c3f9e; color: #fff; flex: none; }
 .how-title { font: 700 20px 'Space Grotesk', Inter, sans-serif; }
-.how-tabs { display: flex; gap: 6px; margin-left: auto; background: rgba(255,255,255,.14); padding: 4px; border-radius: 999px; }
+.how-tabs { display: flex; gap: 6px; background: rgba(255,255,255,.14); padding: 4px; border-radius: 999px; }
 .how-tabs button { padding: 6px 16px; border-radius: 999px; font-weight: 800; font-size: 13px; color: #dbe7ff; }
 .how-tabs button.on { background: #ffd54a; color: #3b2a00; }
 .how-close { font-size: 28px; line-height: 1; padding: 0 8px; color: #fff; }
-.how-summary { overflow-y: auto; padding: 18px 20px 22px; flex: 1; }
+.how-summary { overflow-y: auto; padding: 22px clamp(14px, 4vw, 48px) 40px; flex: 1; }
+.how-summary-in { max-width: 1280px; margin: 0 auto; }
 .how-summary.hidden, .how-details.hidden { display: none; }
-.how-lead { font-size: 16px; line-height: 1.5; max-width: 80ch; margin-bottom: 14px; }
+.how-lead { font-size: 18px; line-height: 1.5; max-width: 80ch; margin-bottom: 14px; }
 .how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .how-box { background: #fff; border: 2px solid #cfdcf7; border-radius: 16px; padding: 14px 16px; }
 .how-box h4 { font: 700 17px 'Space Grotesk', Inter, sans-serif; color: #1c3f9e; margin-bottom: 6px; }
-.how-box ul, .how-box ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.5; color: #2c3d66; }
+.how-box ul, .how-box ol { margin: 0; padding-left: 22px; font-size: 16px; line-height: 1.5; color: #2c3d66; }
 .how-box li { margin: 3px 0; }
 .how-foot { text-align: center; margin-top: 16px; }
 .how-details { flex: 1; min-height: 0; }
 .how-details iframe { width: 100%; height: 100%; border: 0; background: #e9f1ff; }
 body.how-open { overflow: hidden; }
 .how-box ul { list-style: disc; } .how-box ol { list-style: decimal; }
+
+.how-head { flex-wrap: wrap; }
+.how-size { display: flex; align-items: center; gap: 2px; margin-left: auto; background: rgba(255,255,255,.14); padding: 4px; border-radius: 999px; color: #fff; font-weight: 800; font-size: 12px; }
+.how-size button { min-width: 44px; padding: 6px 10px; border-radius: 999px; font-weight: 900; font-size: 15px; color: #fff; background: rgba(255,255,255,.18); }
+.how-size button:hover { background: rgba(255,255,255,.34); }
+.how-size span { min-width: 46px; text-align: center; }
+.how-head-btn { background: #ffd54a !important; color: #3b2a00 !important; font-weight: 800; border-color: transparent !important; }
+.landing-how-nav { padding: 10px 18px; border-radius: 999px; font-weight: 900; font-size: 16px; color: #3b2a00; background: #ffd54a; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+.landing-how-nav i { margin-right: 6px; }
+.landing-how-cta { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 520px; padding: 14px 18px; border-radius: 20px; text-align: left; color: #10204a; background: #fff; border: 3px solid #ffd54a; box-shadow: 0 6px 0 rgba(0,0,0,.22); transition: transform .12s; }
+.landing-how-cta:hover { transform: translateY(-2px); }
+.landing-how-cta b { display: block; font: 800 22px 'Space Grotesk', Inter, sans-serif; }
+.landing-how-cta small { display: block; font-size: 14px; color: #3f5a92; margin-top: 2px; }
+.landing-how-cta > i.fa-chevron-right { margin-left: auto; color: #1c3f9e; font-size: 20px; }
+.landing-how-ico { flex: none; width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; background: #ffd54a; color: #3b2a00; }

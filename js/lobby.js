@@ -53,7 +53,7 @@ function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value =
 
 // Event set chosen under Settings ('classic' keeps the board as it is).
 const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
-function applyChosenPreset(p) { if (p && p !== 'classic') loadFinancialPreset(p); }
+function applyChosenPreset(p) { loadFinancialPreset(p || 'classic'); }
 let SETUP_PRESET = 'classic';
 
 // Back to the start page (leaves the room / resets the one-screen game).
