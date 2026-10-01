@@ -345,6 +345,7 @@ function updateTurnUI() {
     document.querySelectorAll('.bank-btn').forEach(b => { b.disabled = !trading; b.classList.toggle('locked', !trading); });
     const eb = $('endBtn'); eb.classList.toggle('hidden', !trading); eb.disabled = !!G.endPending;
     $('bankHint').textContent = trading ? 'Buy or sell, then press End turn' : (phase === 'trade' ? cur.name + ' is at the bank' : 'Opens after you move');
+    const bph = $('bpHint'); if (bph) bph.textContent = $('bankHint').textContent;
     const rb = $('resetTrackerBtn'); if (rb) rb.classList.toggle('opacity-50', MP.on && !isHost());
 
     if (!trading) closeTrade(); else if (!$('tradeModal').classList.contains('hidden')) renderTrade();

@@ -177,7 +177,7 @@
                 
 
                 <!-- Direct Number Selector -->
-                <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
+                <div class="tp-direct bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
                     <label for="quickNumberInput" class="text-xs font-bold text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
                         <i class="fa-solid fa-calculator text-amber-400"></i> Market value
                     </label>
@@ -413,6 +413,13 @@
                         <p id="landModeHint" class="text-[11px] text-blue-100 leading-snug"></p>
                     </div>
 
+                    <div class="space-y-1.5">
+                        <div class="text-[10px] text-blue-200 uppercase tracking-wider font-bold">Board theme <span class="normal-case tracking-normal text-blue-300 font-semibold">(host chooses, everyone sees it)</span></div>
+                        <input id="setTheme" type="hidden" value="classic">
+                        <div id="landTheme" class="mode-grid"></div>
+                        <p id="landThemeHint" class="text-[11px] text-blue-100 leading-snug"></p>
+                    </div>
+
                     <details class="bg-slate-950/70 border border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-300">
                         <summary class="cursor-pointer font-semibold text-blue-100"><i class="fa-solid fa-gear mr-1"></i> Settings: starting values, event set, one-screen players</summary>
                         <div class="grid grid-cols-3 gap-2 mt-3">
@@ -493,6 +500,12 @@
                     <div id="avatarGrid" class="avatar-grid"></div>
                 </div>
 
+                <div id="themeCard" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2 shadow-xl">
+                    <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide border-b border-slate-800 pb-2">BOARD THEME</h2>
+                    <div id="themeGrid" class="mode-grid"></div>
+                    <p id="themeHint" class="text-xs text-slate-400 text-center"></p>
+                </div>
+
                 <div id="modeCard" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2 shadow-xl">
                     <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide border-b border-slate-800 pb-2">GAME LENGTH</h2>
                     <div id="modeGrid" class="mode-grid"></div>
@@ -532,6 +545,7 @@
     <script src="js/dice.js"></script>
     <script src="js/rules.js"></script>
     <script src="js/board.js"></script>
+    <script src="js/city.js"></script>
     <script src="js/magnifier.js"></script>
     <script src="js/events-editor.js"></script>
     <script src="js/craftkit.js"></script>
@@ -587,6 +601,18 @@
 </div>
 
 <!-- Big popup in the middle of the screen: market phase, final round -->
+<div id="bankPop" class="bank-pop hidden no-print" onclick="if (event.target === this) closeBankPop()">
+    <div class="bank-pop-card" role="dialog" aria-label="Capital Bank">
+        <div class="bpop-title">🏦 CAPITAL BANK</div>
+        <div class="bpop-price">Share price <b id="bpPrice">500</b></div>
+        <div id="bpHint" class="bpop-hint"></div>
+        <div class="bpop-actions">
+            <button type="button" class="bank-btn sell locked" disabled onclick="bankPopChoose('sell')"><i class="fa-solid fa-hand-holding-dollar"></i> SELL SHARE</button>
+            <button type="button" class="bank-btn buy locked" disabled onclick="bankPopChoose('buy')"><i class="fa-solid fa-cart-shopping"></i> BUY SHARE</button>
+        </div>
+        <button type="button" class="bpop-close" onclick="closeBankPop()">Close</button>
+    </div>
+</div>
 <div id="bigPopup" class="big-popup no-print" aria-live="polite"></div>
 
 <!-- Results -->

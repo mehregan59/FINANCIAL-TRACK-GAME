@@ -7,19 +7,24 @@ function drawBoard() {
     const svg = document.getElementById('boardSvg');
     if (!svg) return;
     svg.innerHTML = '';
+    if (typeof applyTheme === 'function') applyTheme();
 
     const cx = 500, cy = 500;
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
     group.setAttribute('id', 'boardGroup');
 
-    if (APP_STATE.boardMode === 'single') {
-        drawSinglePerimeterRing(group, cx, cy);
+    if (typeof isCity === 'function' && isCity()) {
+        drawCityBoard(group);
+        drawPlayerPawns(group);
     } else {
-        drawDoublePerimeterRing(group, cx, cy);
+        if (APP_STATE.boardMode === 'single') {
+            drawSinglePerimeterRing(group, cx, cy);
+        } else {
+            drawDoublePerimeterRing(group, cx, cy);
+        }
+        drawMarketTrackerRings(group, cx, cy);
+        drawPlayerPawns(group, cx, cy);
     }
-
-    drawMarketTrackerRings(group, cx, cy);
-    drawPlayerPawns(group, cx, cy);
 
     svg.appendChild(group);
     const u = document.getElementById('lensUse'); if (u) { u.setAttribute('href', '#'); u.setAttribute('href', '#boardGroup'); }
@@ -187,6 +192,7 @@ function pawnSpots() {
 }
 
 function fillPawnLayer(layer) {
+    if (typeof isCity === 'function' && isCity()) return fillCityPawns(layer);
     const cur = APP_STATE.currentPlayerIndex, spots = pawnSpots();
     // The player whose turn it is is drawn last, so they sit on top.
     const order = APP_STATE.players.map((_, i) => i).sort((a, b) => (a === cur) - (b === cur));
@@ -247,6 +253,7 @@ function updateMarketTrackerUI() {
     document.getElementById('trackerValueBadge').textContent = fullVal;
     const bp = document.getElementById('bankPrice'); if (bp) bp.textContent = parseInt(fullVal, 10);
 
+    if (typeof cityOnMarket === 'function') cityOnMarket();
     if (typeof renderWallet === 'function') renderWallet();
     if (typeof renderTrade === 'function' && !document.getElementById('tradeModal').classList.contains('hidden')) renderTrade();
     const quickInput = document.getElementById('quickNumberInput');

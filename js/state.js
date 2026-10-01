@@ -29,7 +29,7 @@ const APP_STATE = {
         "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
     ],
     // Starting values chosen on the landing page (host's choice is what the room uses).
-    settings: { market: 500, money: 5000, shares: 9, mode: 'long' },
+    settings: { market: 500, money: 5000, shares: 9, mode: 'long', theme: 'classic' },
     players: [],
     activePlayersCount: 4,
     currentPlayerIndex: 0,
@@ -51,11 +51,18 @@ const APP_STATE = {
 
 const SETTING_LIMITS = { market: [0, 999, 500], money: [0, 1000000, 5000], shares: [0, 1000, 9] };
 const MODE_IDS = ['long', 'standard', 'short', 'beginner'];
+// Board themes: the host picks one, everybody sees it. 'meadow' (blocks around a pond) comes later.
+const THEME_IDS = ['classic', 'city'];
+const THEMES = {
+    classic: { label: 'Standard wheel', tag: 'The round board', tip: 'The classic Capital Clash wheel: 100 spaces around the Market value. Bank and market card sit on the right.' },
+    city: { label: 'City path', tag: 'Winding town road', tip: 'A winding road through a little town. Players, dice and Market value are on the left; the Bank and the Market are buildings on the board. Click a building to use it.' }
+};
 function cleanSettings(s) {
     s = s || {};
     const o = {};
     for (const k in SETTING_LIMITS) { const [lo, hi, def] = SETTING_LIMITS[k]; o[k] = clampInt(s[k], lo, hi, def); }
     o.mode = MODE_IDS.includes(s.mode) ? s.mode : 'long';
+    o.theme = THEME_IDS.includes(s.theme) ? s.theme : 'classic';
     return o;
 }
 // Current Market Tracker value (0-999) as a number.
