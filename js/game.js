@@ -351,7 +351,7 @@ function updateTurnUI() {
             clearInterval(G.endTick); G.endTick = setInterval(() => { refreshEnd(); if (!endLocked()) clearInterval(G.endTick); }, 250);
         }
     } else { G.endKey = ''; clearInterval(G.endTick); }
-    G.focusMine = own || (mine && !online);
+    G.focusMine = mine;
     refreshEnd();
     $('bankHint').textContent = trading ? 'Buy or sell, then press End turn' : (phase === 'trade' ? cur.name + ' is at the bank' : 'Opens after you move');
     const rb = $('resetTrackerBtn'); if (rb) rb.classList.toggle('opacity-50', MP.on && !isHost());
@@ -359,7 +359,7 @@ function updateTurnUI() {
     if (!trading) closeTrade(); else if (!$('tradeModal').classList.contains('hidden')) renderTrade();
     renderPhaseBar();
     if (!APP_STATE.gameOver) closeResults();
-    updateFocus(own || (mine && !online), phase);
+    updateFocus(mine, phase);
     showTurnPopup(cur, phase, own || (mine && !online));
     renderPlayersList(); renderWallet(); renderPawnLayer();
 }
