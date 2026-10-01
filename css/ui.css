@@ -358,3 +358,11 @@ body.how-open { overflow: hidden; }
 .landing-how-cta small { display: block; font-size: 14px; color: #3f5a92; margin-top: 2px; }
 .landing-how-cta > i.fa-chevron-right { margin-left: auto; color: #1c3f9e; font-size: 20px; }
 .landing-how-ico { flex: none; width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; background: #ffd54a; color: #3b2a00; }
+
+.how-ico { font-size: 44px; line-height: 1; margin-bottom: 6px; }
+.how-box { text-align: left; border-radius: 22px; padding: 18px 20px; }
+.how-box h4 { font-size: 22px; }
+.how-box li { margin: 5px 0; }
+.how-box .pl { color: #0f9d72; font-weight: 800; } .how-box .mi { color: #d8453f; font-weight: 800; }
+.how-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.how-lead { font-size: 20px; max-width: none; background: #fff; border: 2px solid #cfdcf7; border-radius: 18px; padding: 14px 18px; }
