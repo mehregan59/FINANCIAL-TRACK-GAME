@@ -45,11 +45,11 @@ function readName() {
 
 // Landing page "Game settings": starting Market value, money and shares per player.
 function readSettingsForm() {
-    const s = cleanSettings({ market: $('setMarket').value, money: $('setMoney').value, shares: $('setShares').value, mode: $('setMode').value, theme: $('setTheme') ? $('setTheme').value : 'classic' });
+    const s = cleanSettings({ market: $('setMarket').value, money: $('setMoney').value, shares: $('setShares').value, mode: $('setMode').value });
     $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
     return s;
 }
-function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 9; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; if ($('setTheme')) $('setTheme').value = 'classic'; renderLandMode(); renderLandTheme(); }
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 9; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; renderLandMode(); }
 
 // Event set chosen under Settings ('classic' keeps the board as it is).
 const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
@@ -139,7 +139,7 @@ function renderLobby() {
     }
     const bb = $('botsBtn');
     if (bb) { bb.classList.toggle('hidden', !(TEST_BOTS && isHost())); bb.textContent = MP.bots ? 'Remove the 2 test players' : '+ Add 2 test players (temporary)'; }
-    renderModeGrid(); renderThemeGrid();
+    renderModeGrid();
     renderAvatarGrid();
     const n = ordered.length, full = (n >= N && n >= MIN_PLAYERS) || (bots > 0 && n + bots >= MIN_PLAYERS);
     $('lobbyCount').textContent = `${n} of ${N} joined`;
@@ -168,21 +168,6 @@ function renderModeGrid() {
         grid.appendChild(b);
     });
     $('modeHint').textContent = (host ? MODES[cur].hint : 'Game length chosen by the host: ' + MODES[cur].hint) + '. ' + MODE_NOTE;
-}
-
-// Board theme: the host chooses; guests see it when the game starts.
-function renderThemeGrid() {
-    const grid = $('themeGrid'); if (!grid) return;
-    const cur = APP_STATE.settings.theme, host = isHost();
-    grid.innerHTML = '';
-    THEME_IDS.forEach(id => {
-        const b = document.createElement('button');
-        b.type = 'button'; b.className = 'mode-btn' + (id === cur ? ' on' : ''); b.disabled = !host;
-        b.innerHTML = `<b>${THEMES[id].label}</b><small>${THEMES[id].tag}</small><span class="mode-tip">${THEMES[id].tip}</span>`;
-        b.onclick = () => { APP_STATE.settings = { ...APP_STATE.settings, theme: id }; renderThemeGrid(); };
-        grid.appendChild(b);
-    });
-    $('themeHint').textContent = (host ? '' : 'Board theme chosen by the host: ') + THEMES[cur].tip;
 }
 
 // Avatar picker: taken avatars are greyed out and show who has them.
@@ -284,17 +269,4 @@ function renderLandMode() {
     });
     $('landModeHint').textContent = MODE_TIPS[cur] + ' (\u2605 = default)';
 }
-function renderLandTheme() {
-    const grid = $('landTheme'); if (!grid) return;
-    const cur = THEME_IDS.includes($('setTheme').value) ? $('setTheme').value : 'classic';
-    grid.innerHTML = '';
-    THEME_IDS.forEach(id => {
-        const b = document.createElement('button');
-        b.type = 'button'; b.className = 'mode-btn' + (id === cur ? ' on' : '');
-        b.innerHTML = `<b>${THEMES[id].label}</b><small>${THEMES[id].tag}</small><span class="mode-tip">${THEMES[id].tip}</span>`;
-        b.onclick = () => { $('setTheme').value = id; renderLandTheme(); };
-        grid.appendChild(b);
-    });
-    $('landThemeHint').textContent = THEMES[cur].tip;
-}
-document.addEventListener('DOMContentLoaded', () => { renderLandMode(); renderLandTheme(); });
+document.addEventListener('DOMContentLoaded', renderLandMode);

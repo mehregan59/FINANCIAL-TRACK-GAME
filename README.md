@@ -125,6 +125,3 @@ Guide: each new room asks once "Quick guide?"; steps already seen (stored in thi
 Save / resume (saves expire 24 hours after the last change): the host saves the game after every step (browser + Supabase table). Run supabase/game_saves.sql once in Supabase (SQL Editor). Resume: start page -> same name + same room code -> "Resume a saved game"; the others join with the code and get their seats back by name.
 
 Magnifier: the round "Magnifier" button above the board turns on a lens that follows your finger or mouse and shows the spot about 2.5x bigger, turned so the tile text reads left to right (it only changes your own screen). While an avatar hops, every screen automatically zooms on it and holds the landing tile for about 3.5 seconds.
-
-Board themes: the host picks one on the start page (or in the lobby) and everybody sees it. "Standard wheel" is the round board. "City path" is a winding road of 100 paving blocks with a little town: Market value, dice and players are on the left, the Bank and the Market are buildings on the board. Click the Bank to choose Sell or Buy (it unlocks after you move, like the old bank buttons); click the Market to see that event cards are coming soon. The Magnifier works on the city path too. A third theme (blocks around a pond) is planned. Theme code: js/city.js; the choice travels in the game settings (`settings.theme`).
-

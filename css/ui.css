@@ -315,23 +315,3 @@ body {
 .lens svg { width: 100%; height: 100%; display: block; }
 #boardSvg { touch-action: auto; }
 body:has(.lens-btn.active) #boardSvg { touch-action: none; }
-
-/* ---------- City path theme ---------- */
-body[data-theme="city"] .right-rail { display: none; }
-body[data-theme="city"] .board-container { max-width: min(100%, calc((100vh - 150px) * 1.31)) !important; aspect-ratio: 1000 / 760; }
-body[data-theme="city"] #trackerPanel .tp-direct { display: none; }
-body[data-theme="city"] #trackerPanel { padding: 10px 14px; gap: 6px; }
-.city-chart { display: none; }
-body[data-theme="city"] .city-chart { display: block; height: 54px; }
-.city-chart svg { width: 100%; height: 100%; display: block; }
-.bld { cursor: pointer; }
-.bld:hover .bld-art, .bld:focus-visible .bld-art { filter: brightness(1.1) drop-shadow(0 0 6px #facc15); }
-.bld:focus { outline: none; }
-.bank-pop { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; background: rgba(8, 20, 60, .55); }
-.bank-pop.hidden { display: none; }
-.bank-pop-card { width: min(420px, 92vw); background: linear-gradient(180deg, #fffaf0, #f5e8c8); border: 4px solid #f0b72a; border-radius: 22px; padding: 20px; text-align: center; box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
-.bpop-title { font: 900 22px Georgia, serif; letter-spacing: 3px; color: #173d86; }
-.bpop-price { margin-top: 6px; font-weight: 800; color: #5a4a1c; } .bpop-price b { font-size: 26px; color: #173d86; margin-left: 6px; }
-.bpop-hint { margin: 6px 0 14px; font-weight: 700; color: #7a6a3a; font-size: 13px; }
-.bpop-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.bpop-close { margin-top: 14px; padding: 6px 18px; border-radius: 999px; background: #e7dcc0; color: #5a4a1c; font-weight: 800; }

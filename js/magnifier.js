@@ -16,13 +16,6 @@ const Lens = (() => {
     function aim(x, y) {
         const l = el(), u = $('lensUse'), v = $('lensSvg');
         if (!l || !u || !v) return;
-        const bg = v.firstElementChild; if (bg) bg.setAttribute('fill', typeof isCity === 'function' && isCity() ? '#cfe9a9' : '#0b1f4d');
-        if (typeof isCity === 'function' && isCity()) { // city path: no turning, show a wide patch of road
-            u.setAttribute('transform', '');
-            const w = 300, h = Math.round(w * VH / VW);
-            v.setAttribute('viewBox', (x - w / 2) + ' ' + (y - h / 2) + ' ' + w + ' ' + h);
-            return;
-        }
         const dx = x - 500, dy = y - 500, r = Math.hypot(dx, dy);
         let phi = 0;
         if (r > 150) phi = 180 - Math.atan2(dy, dx) * 180 / Math.PI; // tile on the left, text then runs to the right
@@ -73,12 +66,11 @@ const Lens = (() => {
 
     // Follow a (possibly fractional) space number. hold = ms to keep the lens after the last call.
     function follow(pos, hold) {
-        const city = typeof isCity === 'function' && isCity();
         const ang = (pos - 0.5) * (2 * Math.PI / 100) - Math.PI / 2, r = 445;
-        if (city) { const pt = cityPoint(pos); aim(pt.x, pt.y - 8); } else aim(500 + r * Math.cos(ang), 500 + r * Math.sin(ang));
+        aim(500 + r * Math.cos(ang), 500 + r * Math.sin(ang));
         // Auto position: over the half of the board away from the avatar, so the avatar stays visible.
         const box = document.querySelector('.board-container'), rc = box ? box.getBoundingClientRect() : { left: 10, top: 10, width: 600, height: 600 }, s = size();
-        const pawnTop = city ? cityPoint(pos).y < CITY.H / 2 : Math.sin(ang) < 0;
+        const pawnTop = Math.sin(ang) < 0;
         show(rc.left + (rc.width - s.w) / 2, pawnTop ? rc.top + rc.height - s.h - 12 : rc.top + 12);
         clearTimeout(hideT);
         if (hold) hideT = setTimeout(() => { auto = false; if (!on) hide(); else toggle(true); }, hold);
