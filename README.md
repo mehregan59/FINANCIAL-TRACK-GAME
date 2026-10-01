@@ -125,3 +125,5 @@ Guide: each new room asks once "Quick guide?"; steps already seen (stored in thi
 Save / resume (saves expire 24 hours after the last change): the host saves the game after every step (browser + Supabase table). Run supabase/game_saves.sql once in Supabase (SQL Editor). Resume: start page -> same name + same room code -> "Resume a saved game"; the others join with the code and get their seats back by name.
 
 Magnifier: the round "Magnifier" button above the board turns on a lens that follows your finger or mouse and shows the spot about 2.5x bigger, turned so the tile text reads left to right (it only changes your own screen). While an avatar hops, every screen automatically zooms on it and holds the landing tile for about 3.5 seconds.
+
+End turn safety: after your move the Bank glows and End turn is locked for 5 seconds (it shows a countdown), so you cannot end the turn by mistake. Buying or selling unlocks it at once; when it unlocks, End turn glows instead of the Bank.

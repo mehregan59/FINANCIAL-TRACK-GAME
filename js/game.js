@@ -343,7 +343,16 @@ function updateTurnUI() {
     // Trading and ending the turn belong to the player whose turn it is, after the move.
     const trading = mine && phase === 'trade';
     document.querySelectorAll('.bank-btn').forEach(b => { b.disabled = !trading; b.classList.toggle('locked', !trading); });
-    const eb = $('endBtn'); eb.classList.toggle('hidden', !trading); eb.disabled = !!G.endPending;
+    const eb = $('endBtn'); eb.classList.toggle('hidden', !trading);
+    const lm = APP_STATE.lastMove, ekey = APP_STATE.currentPlayerIndex + '|' + (lm ? lm.seq : 0);
+    if (trading) {
+        if (G.endKey !== ekey) { // a new trading step: start the 5 second wait
+            G.endKey = ekey; G.endLockUntil = performance.now() + (typeof window.__endLockMs === "number" ? window.__endLockMs : END_LOCK_MS); G.endTradeSeq = APP_STATE.lastTrade ? APP_STATE.lastTrade.seq : 0;
+            clearInterval(G.endTick); G.endTick = setInterval(() => { refreshEnd(); if (!endLocked()) clearInterval(G.endTick); }, 250);
+        }
+    } else { G.endKey = ''; clearInterval(G.endTick); }
+    G.focusMine = own || (mine && !online);
+    refreshEnd();
     $('bankHint').textContent = trading ? 'Buy or sell, then press End turn' : (phase === 'trade' ? cur.name + ' is at the bank' : 'Opens after you move');
     const rb = $('resetTrackerBtn'); if (rb) rb.classList.toggle('opacity-50', MP.on && !isHost());
 
@@ -408,8 +417,21 @@ function renderWallet() {
 const FOCUS = { roll: ['diceScene'], accept: ['acceptBtn'], trade: ['bankCard', 'endBtn'] };
 const FOCUS_ALL = ['diceScene', 'acceptBtn', 'bankCard', 'endBtn'];
 
+// After the move the End turn button waits 5 seconds (the Bank glows meanwhile) so nobody ends the turn by mistake before
+// using the bank. Buying or selling unlocks it at once. When it unlocks, End turn glows instead of the Bank.
+const END_LOCK_MS = 5000;
+function endLocked() { return !!G.endKey && performance.now() < G.endLockUntil && !(APP_STATE.lastTrade && APP_STATE.lastTrade.seq > G.endTradeSeq); }
+function refreshEnd() {
+    const eb = $('endBtn'); if (!eb || eb.classList.contains('hidden')) return;
+    const lock = endLocked(), left = Math.max(1, Math.ceil((G.endLockUntil - performance.now()) / 1000));
+    eb.disabled = !!G.endPending || lock;
+    eb.textContent = lock ? 'End turn (' + left + ')' : 'End turn';
+    updateFocus(G.focusMine, APP_STATE.turnPhase);
+}
+
 function updateFocus(mine, phase) {
-    const on = mine && !(phase === 'accept' && !G.diceReady) ? (FOCUS[phase] || []) : [];
+    let on = mine && !(phase === 'accept' && !G.diceReady) ? (FOCUS[phase] || []) : [];
+    if (phase === 'trade') on = on.filter(id => endLocked() ? id !== 'endBtn' : id !== 'bankCard');
     FOCUS_ALL.forEach(id => { const e = $(id); if (e) e.classList.toggle('focus-glow', on.includes(id)); });
 }
 
