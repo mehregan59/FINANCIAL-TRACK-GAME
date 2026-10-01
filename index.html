@@ -39,6 +39,7 @@
                     <button onclick="copyInviteLink()" class="text-slate-400 hover:text-amber-300" title="Copy invite link"><i class="fa-solid fa-link"></i></button>
                     <button onclick="leaveRoom()" class="text-slate-400 hover:text-red-400" title="Leave room"><i class="fa-solid fa-right-from-bracket"></i></button>
                 </div>
+                <button onclick="Howto.open()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 text-xs font-semibold flex items-center gap-1.5 transition"><i class="fa-solid fa-book-open"></i><span>How to play</span></button>
                 <button onclick="Guide.replay()" class="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 text-xs font-semibold flex items-center gap-1.5 transition"><i class="fa-solid fa-circle-question"></i><span>Guide</span></button>
                 <button onclick="randomizeBoardTexts()" class="host-only px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
                     <i class="fa-solid fa-shuffle"></i>
@@ -342,7 +343,7 @@
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-emerald-400 flex items-center justify-center text-slate-950 text-xl shadow-lg"><i class="fa-solid fa-chart-line"></i></div>
                     <span class="font-display font-black tracking-wide text-white text-lg">CAPITAL CLASH</span>
                 </div>
-                <a href="#howto" class="text-xs font-bold text-blue-100 hover:text-white underline underline-offset-4">How it works</a>
+                <a href="#howto" onclick="Howto.open(); return false;" class="text-xs font-bold text-blue-100 hover:text-white underline underline-offset-4">How it works</a>
             </nav>
 
             <!-- Hero + the join / create card -->
@@ -449,10 +450,14 @@
                     <p class="text-blue-100 max-w-2xl mx-auto">The same rhythm as real investing: the market moves, events hit, you decide, you check your wealth.</p>
                 </div>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="step-card"><div class="step-num">1</div><div class="step-icon">&#x1F3B2;</div><h3>Roll &amp; move</h3><p>Tap the dice, press Accept and your avatar hops space by space around the market board. Roll a 6 and you go again.</p></div>
+                    <div class="step-card"><div class="step-num">1</div><div class="step-icon">&#x1F3B2;</div><h3>Roll &amp; move</h3><p>Tap the dice, press Accept and your avatar hops space by space around the market board. The number you roll is the number of spaces you move.</p></div>
                     <div class="step-card"><div class="step-num">2</div><div class="step-icon">&#x1F4F0;</div><h3>Read the market</h3><p>Every space carries a market event. Bull runs, crashes and dividends push the Market Tracker up or down.</p></div>
                     <div class="step-card"><div class="step-num">3</div><div class="step-icon">&#x1F3E6;</div><h3>Buy, hold or sell</h3><p>Buy shares when prices are low, sell to lock in gains, or hold your nerve through the dip.</p></div>
                     <div class="step-card"><div class="step-num">4</div><div class="step-icon">&#x1F4CA;</div><h3>Check your wealth</h3><p>Money plus shares at the current price is your total. Watch it climb and fall with the market.</p></div>
+                </div>
+                <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button type="button" onclick="Howto.open('summary')" class="how-open-btn"><i class="fa-solid fa-list-check"></i> Read the summary</button>
+                    <button type="button" onclick="Howto.open('details')" class="how-open-btn alt"><i class="fa-solid fa-book-open"></i> Read the full guide</button>
                 </div>
             </section>
 
@@ -532,6 +537,7 @@
     <script src="js/dice.js"></script>
     <script src="js/rules.js"></script>
     <script src="js/board.js"></script>
+    <script src="js/howto.js"></script>
     <script src="js/magnifier.js"></script>
     <script src="js/events-editor.js"></script>
     <script src="js/craftkit.js"></script>
@@ -587,6 +593,31 @@
 </div>
 
 <!-- Big popup in the middle of the screen: market phase, final round -->
+<div id="howModal" class="how-modal hidden no-print" onclick="if (event.target === this) Howto.close()">
+    <div class="how-card" role="dialog" aria-label="How to play Capital Clash">
+        <div class="how-head">
+            <div class="how-title">How to play</div>
+            <div class="how-tabs" role="tablist">
+                <button type="button" id="howTabSummary" class="on" role="tab" onclick="Howto.show('summary')">Summary</button>
+                <button type="button" id="howTabDetails" role="tab" onclick="Howto.show('details')">Full guide</button>
+            </div>
+            <button type="button" id="howClose" class="how-close" onclick="Howto.close()" aria-label="Close">&times;</button>
+        </div>
+        <div id="howSummary" class="how-summary">
+            <p class="how-lead">Finish with the most money. Your total is <b>money + shares &times; Market Tracker value</b>. Everyone starts with Market 500, 5,000 money and 9 shares (the host can change this).</p>
+            <div class="how-grid">
+                <div class="how-box"><h4>1. Your turn</h4><ol><li><b>Roll</b> the dice (tap it).</li><li><b>Accept</b> to move. The number rolled is the number of spaces.</li><li>Your avatar hops. The tile you land on changes the Market Tracker.</li><li><b>Bank:</b> buy or sell shares at the new price (it glows).</li><li><b>End turn.</b> It unlocks after 5 seconds so you cannot end by mistake; a trade unlocks it at once.</li></ol></div>
+                <div class="how-box"><h4>2. The market</h4><ul><li>Plus tile: adds to the Market Tracker. Minus tile: subtracts. Skip: no change.</li><li>The value always stays between 0 and 999.</li><li>Players cannot change it by hand. Only tiles and the forecast move it.</li><li>Buy when you expect it to rise, sell when you expect it to fall.</li></ul></div>
+                <div class="how-box"><h4>3. Forecast</h4><ul><li>The bar above the board shows <b>Bull</b> (rising), <b>Bear</b> (falling) or <b>Neutral</b>.</li><li>A forecast is not a promise: about 3 in 10 phases change course suddenly.</li><li>Bull makes plus tiles count 1 extra, Bear makes minus tiles count 1 extra.</li></ul></div>
+                <div class="how-box"><h4>4. Game length</h4><ul><li><b>Long:</b> dice 1 to 6, about 29 turns each.</li><li><b>Standard:</b> dice 1 to 9, about 20 turns.</li><li><b>Short:</b> dice 1 to 18, about 10 turns.</li><li><b>Beginner:</b> like Short, with gentle tiles (at most 3) and the guided tour.</li></ul></div>
+                <div class="how-box"><h4>5. Reading the board</h4><ul><li>Each bar shows its number, name and the effect in bold.</li><li>Press <b>Magnifier</b> above the board and move your finger or mouse over it for a close-up.</li><li>While a pawn hops, every screen zooms on it automatically.</li><li>Tiles ahead of the pawns are reshuffled after each turn.</li></ul></div>
+                <div class="how-box"><h4>6. The end</h4><ul><li>When a pawn reaches space 100, everyone who has not yet played this round gets one last turn.</li><li>Highest total value wins. Exact ties share the win.</li><li>The game is saved for 24 hours, so you can come back.</li></ul></div>
+            </div>
+            <div class="how-foot"><button type="button" class="how-open-btn alt" onclick="Howto.show('details')"><i class="fa-solid fa-book-open"></i> Read the full guide</button></div>
+        </div>
+        <div id="howDetails" class="how-details hidden"><iframe id="howFrame" title="Capital Clash full player guide" loading="lazy"></iframe></div>
+    </div>
+</div>
 <div id="bigPopup" class="big-popup no-print" aria-live="polite"></div>
 
 <!-- Results -->

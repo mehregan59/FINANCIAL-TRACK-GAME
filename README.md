@@ -127,3 +127,5 @@ Save / resume (saves expire 24 hours after the last change): the host saves the 
 Magnifier: the round "Magnifier" button above the board turns on a lens that follows your finger or mouse and shows the spot about 2.5x bigger, turned so the tile text reads left to right (it only changes your own screen). While an avatar hops, every screen automatically zooms on it and holds the landing tile for about 3.5 seconds.
 
 End turn safety: after your move the Bank glows and End turn is locked for 5 seconds (it shows a countdown), so you cannot end the turn by mistake. Buying or selling unlocks it at once; when it unlocks, End turn glows instead of the Bank.
+
+How to play window: a "How it works" link on the start page, the "Read the summary / Read the full guide" buttons and the Menu entry "How to play" open a window with two tabs: Summary (short rules, in js/howto.js and index.html) and Full guide (how-to-play.html, the same designed document as the published player guide, shown in a frame; remembers the last tab). When rules change, update both the Summary text and how-to-play.html.

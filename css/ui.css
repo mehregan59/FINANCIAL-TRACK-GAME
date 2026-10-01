@@ -315,3 +315,30 @@ body {
 .lens svg { width: 100%; height: 100%; display: block; }
 #boardSvg { touch-action: auto; }
 body:has(.lens-btn.active) #boardSvg { touch-action: none; }
+
+/* ---------- How to play window: Summary / Full guide ---------- */
+.how-open-btn { padding: 10px 18px; border-radius: 999px; font-weight: 800; font-size: 14px; color: #0b2a66; background: #ffd54a; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+.how-open-btn.alt { background: #fff; border: 2px solid #8fbcff; }
+.how-open-btn i { margin-right: 6px; }
+.how-modal { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(8, 20, 60, .65); }
+.how-modal.hidden { display: none; }
+.how-card { width: min(1100px, 100%); height: min(860px, 100%); display: flex; flex-direction: column; background: #f3f7ff; color: #10204a; border: 3px solid #8fbcff; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,.55); }
+.how-head { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #1c3f9e; color: #fff; flex: none; }
+.how-title { font: 700 20px 'Space Grotesk', Inter, sans-serif; }
+.how-tabs { display: flex; gap: 6px; margin-left: auto; background: rgba(255,255,255,.14); padding: 4px; border-radius: 999px; }
+.how-tabs button { padding: 6px 16px; border-radius: 999px; font-weight: 800; font-size: 13px; color: #dbe7ff; }
+.how-tabs button.on { background: #ffd54a; color: #3b2a00; }
+.how-close { font-size: 28px; line-height: 1; padding: 0 8px; color: #fff; }
+.how-summary { overflow-y: auto; padding: 18px 20px 22px; flex: 1; }
+.how-summary.hidden, .how-details.hidden { display: none; }
+.how-lead { font-size: 16px; line-height: 1.5; max-width: 80ch; margin-bottom: 14px; }
+.how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.how-box { background: #fff; border: 2px solid #cfdcf7; border-radius: 16px; padding: 14px 16px; }
+.how-box h4 { font: 700 17px 'Space Grotesk', Inter, sans-serif; color: #1c3f9e; margin-bottom: 6px; }
+.how-box ul, .how-box ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.5; color: #2c3d66; }
+.how-box li { margin: 3px 0; }
+.how-foot { text-align: center; margin-top: 16px; }
+.how-details { flex: 1; min-height: 0; }
+.how-details iframe { width: 100%; height: 100%; border: 0; background: #e9f1ff; }
+body.how-open { overflow: hidden; }
+.how-box ul { list-style: disc; } .how-box ol { list-style: decimal; }
