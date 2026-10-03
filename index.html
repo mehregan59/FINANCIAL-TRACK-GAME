@@ -3,136 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Track 100 - 50cm Board</title>
+    <title>Capital Clash</title>
+    <!-- Supabase Realtime client (used only for online rooms) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        gold: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04' },
-                        emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669' },
-                        navy: { 800: '#0f172a', 900: '#020617' }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        display: ['Space Grotesk', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0b0f19;
-            color: #f1f5f9;
-            overflow-x: hidden;
-        }
-        .text-stroke {
-            paint-order: stroke fill;
-            stroke: #000000;
-            stroke-width: 2.5px;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-        .board-container {
-            position: relative;
-            width: 100%;
-            max-width: 820px;
-            margin: 0 auto;
-            aspect-ratio: 1 / 1;
-        }
-        .ring-interactive {
-            cursor: grab;
-            transition: transform 0.15s cubic-bezier(0.1, 0.9, 0.2, 1);
-        }
-        .ring-interactive:active {
-            cursor: grabbing;
-        }
-
-        /* Single-Page PDF & Print Calibrated CSS */
-        @media print {
-            @page {
-                size: auto;
-                margin: 0;
-            }
-            html, body { 
-                background: white !important; 
-                color: black !important; 
-                padding: 0 !important; 
-                margin: 0 !important; 
-                width: 100% !important;
-                height: 100% !important;
-                overflow: hidden !important;
-            }
-            .no-print, header, section:not(#boardSection), #editorTab, .pawn-element { 
-                display: none !important; 
-            }
-            #boardSection { 
-                width: 100vw !important; 
-                height: 100vh !important; 
-                max-width: 100vw !important; 
-                margin: 0 auto !important; 
-                padding: 0 !important; 
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-            .board-container { 
-                max-width: 96vh !important; 
-                max-height: 96vh !important; 
-                width: 96vh !important; 
-                height: 96vh !important; 
-                page-break-inside: avoid !important; 
-                break-inside: avoid !important; 
-                border: none !important; 
-                background: transparent !important; 
-                box-shadow: none !important; 
-            }
-            svg { 
-                width: 100% !important; 
-                height: 100% !important; 
-            }
-        }
-    </style>
+    <script src="js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/ui.css">
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
 
-    <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur sticky top-0 z-40 px-4 py-3 no-print">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+    <header class="app-header sticky top-0 z-40 px-4 py-2 no-print">
+        <div class="max-w-[1900px] mx-auto flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center text-slate-950 font-extrabold text-xl shadow-lg">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 to-emerald-400 flex items-center justify-center text-slate-950 font-extrabold text-lg shadow-lg">
                     <i class="fa-solid fa-chart-line"></i>
                 </div>
-                <div>
-                    <h1 class="text-xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-                        FINANCIAL TRACK 100
-                    </h1>
-                    <p class="text-xs text-slate-400 flex items-center gap-2">
-                        <span><i class="fa-solid fa-circle-dot text-emerald-400 text-[10px]"></i> 50 cm Board Scale</span>
-                        <span>•</span>
-                        <span>2 to 10 Players</span>
-                    </p>
-                </div>
+                <h1 class="text-xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-200 via-emerald-200 to-cyan-200 bg-clip-text text-transparent">CAPITAL CLASH</h1>
             </div>
-
-            <!-- Controls & Mode Switches -->
-            <div class="flex items-center flex-wrap gap-2">
-                <button onclick="randomizeBoardTexts()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+            <div id="turnBanner" class="turn-banner hidden no-print" aria-live="polite"></div>
+            <div class="flex items-center gap-2">
+                <button id="howBtn" onclick="Howto.open()" class="menu-btn how-head-btn" title="Read how to play during the game"><i class="fa-solid fa-book-open"></i> How to play</button>
+                <button id="homeBtn" onclick="goHome()" class="menu-btn" title="Back to the home page"><i class="fa-solid fa-house"></i> Home page</button>
+                <!-- The Menu button and its toolbar (room code, Guide, shuffle, layout, events, print) are hidden for now: remove style="display:none" from #menuBtn to bring them back. -->
+                <button id="menuBtn" onclick="toggleMenu()" class="menu-btn" style="display:none" aria-expanded="false" aria-controls="menuBar"><i class="fa-solid fa-bars"></i> Menu</button>
+            </div>
+            <!-- Menu toolbar (hidden until the Menu button is shown and pressed) -->
+            <div id="menuBar" class="menu-bar hidden flex items-center flex-wrap gap-2">
+                <div id="roomPill" class="hidden flex items-center gap-2 bg-slate-800 border border-emerald-500/40 rounded-lg px-2.5 py-1 text-xs">
+                    <i class="fa-solid fa-signal text-emerald-400"></i>
+                    <span class="text-slate-400">Room</span>
+                    <span id="roomPillCode" class="font-mono font-black text-emerald-300 tracking-widest"></span>
+                    <button onclick="copyInviteLink()" class="text-slate-400 hover:text-amber-300" title="Copy invite link"><i class="fa-solid fa-link"></i></button>
+                    <button onclick="leaveRoom()" class="text-slate-400 hover:text-red-400" title="Leave room"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+                <button onclick="Guide.replay()" class="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 text-xs font-semibold flex items-center gap-1.5 transition"><i class="fa-solid fa-circle-question"></i><span>Guide</span></button>
+                <button onclick="randomizeBoardTexts()" class="host-only px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
                     <i class="fa-solid fa-shuffle"></i>
-                    <span>Shuffle 20 Events</span>
+                    <span>Shuffle Events</span>
                 </button>
 
-                <div class="flex bg-slate-800 rounded-lg p-1 border border-slate-700 text-xs font-semibold">
+                <div class="host-only flex bg-slate-800 rounded-lg p-1 border border-slate-700 text-xs font-semibold">
                     <button id="btnSingleRing" onclick="setBoardMode('single')" class="px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition">100 Perimeter</button>
                     <button id="btnDoubleRing" onclick="setBoardMode('double')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition">50/50 Dual</button>
                 </div>
@@ -141,13 +58,13 @@
                     <button onclick="switchTab('board')" id="tabBtnBoard" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-100 text-xs font-semibold flex items-center gap-1 border border-slate-700">
                         <i class="fa-solid fa-chess-board"></i> Board
                     </button>
-                    <button onclick="switchTab('editor')" id="tabBtnEditor" class="px-3 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 text-xs font-semibold flex items-center gap-1">
+                    <button onclick="switchTab('editor')" id="tabBtnEditor" class="host-only px-3 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 text-xs font-semibold flex items-center gap-1">
                         <i class="fa-solid fa-pen-to-square"></i> Events (<span id="eventCountBadge">20</span>)
                     </button>
-                    <button onclick="openCraftKitModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-md">
+                    <button onclick="openCraftKitModal()" style="display:none" class="menu-print px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-md">
                         <i class="fa-solid fa-scissors"></i> Print 4-Sheet Craft Kit
                     </button>
-                    <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 transition shadow-md">
+                    <button onclick="window.print()" style="display:none" class="menu-print px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 transition shadow-md">
                         <i class="fa-solid fa-print"></i> Print 50cm
                     </button>
                 </div>
@@ -155,149 +72,131 @@
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        <!-- Board Visual Container -->
-        <section id="boardSection" class="lg:col-span-8 flex flex-col items-center justify-center">
-            <div class="w-full flex items-center justify-between mb-3 text-xs text-slate-400 px-2 no-print">
-                <span class="flex items-center gap-1"><i class="fa-solid fa-arrows-spin text-amber-400"></i> Drag center rings to dial Market Tracker (0-999)</span>
-                <span class="font-mono text-emerald-400 font-bold">Scale: 50.0 cm x 50.0 cm</span>
-            </div>
+    <main class="app-main flex-1 w-full max-w-[1900px] mx-auto p-3 flex flex-col lg:flex-row gap-4 items-start">
 
-            <!-- SVG Board Canvas -->
-            <div class="board-container bg-slate-900/80 rounded-3xl p-2 border border-slate-800 shadow-2xl overflow-hidden flex items-center justify-center">
-                <svg id="boardSvg" viewBox="0 0 1000 1000" class="w-full h-full drop-shadow-2xl select-none">
+        <!-- LEFT: dice (top) and players (below), shown during a game -->
+        <aside id="leftRail" class="left-rail dock-hidden no-print">
+    <div id="diceDock" class="dice-dock dock-hidden">
+        <button id="soundBtn" class="dice-sound" onclick="toggleSound()" title="Sound on/off" aria-label="Sound on or off"></button>
+        <button id="diceBtn" class="dice-scene" onclick="onDiceClick()" aria-label="Roll the dice" disabled>
+            <div id="diceScene" style="width:100%;height:100%;position:relative">
+                <div class="dice-tilt"><div id="diceCube" class="dice-cube"></div></div><canvas id="diceCanvas" class="dice-canvas" width="224" height="224"></canvas><div id="diceBig" class="dice-big"></div><div class="dice-shadow"></div>
+            </div>
+        </button>
+        <div id="diceStatus" class="dice-status"></div>
+        <button id="acceptBtn" class="dice-accept hidden" onclick="onAcceptClick()"></button>
+        <button id="endBtn" class="dice-accept end-turn hidden" onclick="onEndClick()">End turn</button>
+    </div>
+            <div id="playersCard" class="players-card" aria-label="Players: shares, money and total value">
+                <div class="card-title"><i class="fa-solid fa-users"></i> PLAYERS <span class="card-sub">Market value <b id="walletMarket">0</b></span></div>
+                <div id="walletRows" class="players-rows"></div>
+            </div>
+        </aside>
+
+        <!-- CENTER: the board -->
+        <section id="boardSection" class="board-section flex-1 min-w-0 flex flex-col items-center justify-start">
+            <div id="phaseBar" class="phase-bar neutral no-print"></div>
+            <div class="board-container p-1 flex items-center justify-center">
+                <svg id="boardSvg" viewBox="-55 -55 1110 1110" class="w-full h-full select-none" style="overflow:visible">
                     <!-- SVG Dynamic Content Generated by JavaScript -->
                 </svg>
             </div>
         </section>
 
-        <!-- Right Side Control Panels -->
-        <section class="lg:col-span-4 space-y-5 no-print">
-            
+        <!-- RIGHT: bank, card, market tracker -->
+        <aside class="right-rail no-print">
+            <!-- Bank: trading is wired later; the buttons already have their sounds -->
+            <div id="bankCard" class="bank-card">
+                <svg class="bank-art" viewBox="0 0 320 190" role="img" aria-label="Capital Bank building">
+                    <defs>
+                        <linearGradient id="bkSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cc6ff"/><stop offset="1" stop-color="#dff2ff"/></linearGradient>
+                        <linearGradient id="bkStone" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e9dcc0"/><stop offset=".5" stop-color="#fffaf0"/><stop offset="1" stop-color="#e2d3b3"/></linearGradient>
+                        <linearGradient id="bkGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe17a"/><stop offset="1" stop-color="#e0a416"/></linearGradient>
+                        <linearGradient id="bkRoof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f6fd6"/><stop offset="1" stop-color="#1f4fa8"/></linearGradient>
+                    </defs>
+                    <rect width="320" height="190" rx="16" fill="url(#bkSky)"/>
+                    <circle cx="272" cy="34" r="16" fill="#ffe680"/>
+                    <g fill="#fff" opacity=".9"><ellipse cx="52" cy="34" rx="24" ry="8"/><ellipse cx="70" cy="30" rx="16" ry="8"/><ellipse cx="238" cy="62" rx="20" ry="6"/></g>
+                    <!-- steps -->
+                    <rect x="22" y="160" width="276" height="10" rx="2" fill="#cdbf9f"/>
+                    <rect x="30" y="152" width="260" height="10" rx="2" fill="#ddd0b1"/>
+                    <rect x="38" y="144" width="244" height="10" rx="2" fill="#eadfc4"/>
+                    <!-- roof pediment -->
+                    <polygon points="30,66 160,16 290,66" fill="url(#bkRoof)" stroke="#173d86" stroke-width="3" stroke-linejoin="round"/>
+                    <polygon points="52,62 160,24 268,62" fill="none" stroke="#7fb0ff" stroke-width="2"/>
+                    <circle cx="160" cy="46" r="15" fill="url(#bkGold)" stroke="#b8830a" stroke-width="2"/>
+                    <text x="160" y="52" text-anchor="middle" font-size="18" font-weight="900" fill="#7a4d00" font-family="Georgia, serif">$</text>
+                    <!-- sign band -->
+                    <rect x="34" y="66" width="252" height="20" rx="3" fill="url(#bkGold)" stroke="#b8830a" stroke-width="2"/>
+                    <text x="160" y="80.5" text-anchor="middle" font-size="12.5" font-weight="900" letter-spacing="3" fill="#3b2a00" font-family="Georgia, serif">CAPITAL BANK</text>
+                    <!-- body -->
+                    <rect x="42" y="86" width="236" height="58" fill="url(#bkStone)" stroke="#b9a678" stroke-width="2"/>
+                    <!-- columns -->
+                    <g fill="url(#bkStone)" stroke="#b9a678" stroke-width="1.5">
+                        <rect x="50" y="88" width="14" height="54" rx="2"/><rect x="82" y="88" width="14" height="54" rx="2"/><rect x="114" y="88" width="14" height="54" rx="2"/>
+                        <rect x="192" y="88" width="14" height="54" rx="2"/><rect x="224" y="88" width="14" height="54" rx="2"/><rect x="256" y="88" width="14" height="54" rx="2"/>
+                    </g>
+                    <g fill="#d8c79c"><rect x="47" y="86" width="20" height="5" rx="1"/><rect x="79" y="86" width="20" height="5" rx="1"/><rect x="111" y="86" width="20" height="5" rx="1"/><rect x="189" y="86" width="20" height="5" rx="1"/><rect x="221" y="86" width="20" height="5" rx="1"/><rect x="253" y="86" width="20" height="5" rx="1"/></g>
+                    <!-- door -->
+                    <path d="M140 144 V108 a20 20 0 0 1 40 0 V144 Z" fill="#1f4fa8" stroke="#173d86" stroke-width="2"/>
+                    <path d="M160 90 V144" stroke="#7fb0ff" stroke-width="1.5"/>
+                    <circle cx="153" cy="126" r="2.5" fill="#ffd54a"/><circle cx="167" cy="126" r="2.5" fill="#ffd54a"/>
+                    <!-- coins -->
+                    <g stroke="#b8830a" stroke-width="1.5">
+                        <ellipse cx="22" cy="168" rx="14" ry="5" fill="url(#bkGold)"/><ellipse cx="22" cy="162" rx="14" ry="5" fill="url(#bkGold)"/><ellipse cx="22" cy="156" rx="14" ry="5" fill="url(#bkGold)"/>
+                        <ellipse cx="298" cy="168" rx="14" ry="5" fill="url(#bkGold)"/><ellipse cx="298" cy="162" rx="14" ry="5" fill="url(#bkGold)"/>
+                        <ellipse cx="298" cy="156" rx="14" ry="5" fill="url(#bkGold)"/><ellipse cx="298" cy="150" rx="14" ry="5" fill="url(#bkGold)"/>
+                    </g>
+                    <g fill="#fff" opacity=".95"><path d="M12 140 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/><path d="M304 132 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z"/></g>
+                </svg>
+                <div class="bank-title">BANK <span>trade shares</span></div>
+                <div class="bank-price">Share price <b id="bankPrice">500</b></div>
+                <div id="bankHint" class="bank-hint">Opens after you move</div>
+                <div class="bank-actions">
+                    <button type="button" class="bank-btn sell locked" disabled onclick="bankAction('sell')"><i class="fa-solid fa-hand-holding-dollar"></i> SELL SHARE</button>
+                    <button type="button" class="bank-btn buy locked" disabled onclick="bankAction('buy')"><i class="fa-solid fa-cart-shopping"></i> BUY SHARE</button>
+                </div>
+            </div>
+
+            <!-- Card slot: event cards are coming later -->
+            <div id="cardSlot" class="card-slot">
+                <div class="playing-card">
+                    <div class="pc-corner">?</div>
+                    <div class="pc-body"><i class="fa-solid fa-bolt"></i><b>EVENT CARD</b></div>
+                    <div class="pc-corner br">?</div>
+                </div>
+                <div class="card-soon"><span>COMING SOON</span><small>Market events will be drawn here</small></div>
+            </div>
+
             <!-- Market Tracker 3-Ring Controller Panel -->
-            <div class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-4">
+            <div id="trackerPanel" class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-compass text-amber-400 text-lg"></i>
-                        <h2 class="font-bold text-amber-300 font-display text-sm tracking-wide">MARKET TRACKER DIALS</h2>
+                        <h2 class="font-bold text-amber-300 font-display text-sm tracking-wide">MARKET TRACKER VALUE</h2>
                     </div>
-                    <span id="trackerValueBadge" class="font-mono font-black text-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 px-3 py-0.5 rounded-lg">000</span>
+                    <span id="trackerValueBadge" class="font-mono font-black text-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 px-3 py-0.5 rounded-lg">500</span>
                 </div>
 
-                <p class="text-xs text-slate-400">Set the 3 center rings to track portfolio points, market index, or economic multipliers (000 - 999).</p>
+                
 
                 <!-- Direct Number Selector -->
                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
                     <label for="quickNumberInput" class="text-xs font-bold text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
-                        <i class="fa-solid fa-calculator text-amber-400"></i> Set Inside Ring Number:
+                        <i class="fa-solid fa-calculator text-amber-400"></i> Market value
                     </label>
-                    <input type="number" id="quickNumberInput" min="0" max="999" value="0" oninput="setDirectMarketTrackerValue(this.value)" placeholder="0-999" class="w-24 bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-1 text-amber-300 font-mono font-black text-center text-base outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+                    <input type="number" id="quickNumberInput" value="500" readonly tabindex="-1" title="Locked during the game: tiles change it" class="w-24 bg-slate-950 border border-amber-500/50 rounded-lg px-2.5 py-1 text-amber-300 font-mono font-black text-center text-base outline-none cursor-not-allowed">
                 </div>
 
-                <!-- Ring Controls -->
-                <div class="space-y-2 text-xs">
-                    <!-- Hundreds Ring -->
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-amber-400"></span> Hundreds Ring
-                        </span>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="adjustRing(2, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold flex items-center justify-center text-sm">-</button>
-                            <span id="digitHundreds" class="font-mono text-base font-bold text-amber-300 w-5 text-center">0</span>
-                            <button onclick="adjustRing(2, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold flex items-center justify-center text-sm">+</button>
-                        </div>
-                    </div>
-
-                    <!-- Tens Ring -->
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Tens Ring
-                        </span>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="adjustRing(1, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-cyan-300 font-bold flex items-center justify-center text-sm">-</button>
-                            <span id="digitTens" class="font-mono text-base font-bold text-cyan-300 w-5 text-center">0</span>
-                            <button onclick="adjustRing(1, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-cyan-300 font-bold flex items-center justify-center text-sm">+</button>
-                        </div>
-                    </div>
-
-                    <!-- Units Ring -->
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-                        <span class="font-bold text-slate-300 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Units Ring
-                        </span>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="adjustRing(0, -1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 font-bold flex items-center justify-center text-sm">-</button>
-                            <span id="digitUnits" class="font-mono text-base font-bold text-emerald-300 w-5 text-center">0</span>
-                            <button onclick="adjustRing(0, 1)" class="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 font-bold flex items-center justify-center text-sm">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="resetMarketTracker()" class="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition">
-                    Reset Dials to 000
+                <button id="resetTrackerBtn" onclick="resetMarketTracker()" title="Host only: back to the start" class="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition">
+                    Reset game (host)
                 </button>
             </div>
 
-            <!-- Game Simulator Panel -->
-            <div id="gamePanel" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-gamepad text-emerald-400 text-lg"></i>
-                        <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide">INVESTOR GAME SIMULATOR</h2>
-                    </div>
-                </div>
-
                 <!-- Player Count Selection (2 to 10) -->
-                <div class="space-y-2">
-                    <label class="text-xs font-semibold text-slate-400 flex justify-between">
-                        <span>Active Investors:</span>
-                        <span id="playerCountVal" class="text-emerald-400 font-bold">4 Players</span>
-                    </label>
-                    <input type="range" id="playerCountSlider" min="2" max="10" value="4" oninput="changePlayerCount(this.value)" class="w-full accent-emerald-500 bg-slate-800 rounded-lg cursor-pointer h-2">
-                </div>
 
-                <!-- Dice Rolling Area -->
-                <div class="bg-slate-950/80 rounded-xl p-4 border border-slate-800 text-center space-y-3">
-                    <div class="text-xs text-slate-400 font-medium">Current Turn: <span id="turnPlayerName" class="font-bold text-amber-300">Investor 1</span></div>
-                    
-                    <div id="diceDisplay" class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-400 to-emerald-500 text-slate-950 text-3xl font-black flex items-center justify-center shadow-lg border-2 border-white/20">
-                        1
-                    </div>
 
-                    <button onclick="rollDice()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm tracking-wider shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-dice-five"></i> ROLL MARKET DICE
-                    </button>
-                </div>
-
-                <!-- Player Tokens Leaderboard -->
-                <div id="playersList" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <!-- Preset Financial Switcher -->
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-                <h3 class="font-bold text-xs text-slate-300 font-display tracking-wide uppercase">Financial Presets</h3>
-                <div class="grid grid-cols-1 gap-2 text-xs">
-                    <button onclick="loadFinancialPreset('wallstreet')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-left border border-slate-700 flex items-center justify-between transition">
-                        <div>
-                            <div class="font-bold text-amber-300">Wall Street Equities</div>
-                            <div class="text-[10px] text-slate-400">Bull runs, dividends, IPOs</div>
-                        </div>
-                        <i class="fa-solid fa-arrow-right text-slate-500 text-xs"></i>
-                    </button>
-                    <button onclick="loadFinancialPreset('crypto')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-left border border-slate-700 flex items-center justify-between transition">
-                        <div>
-                            <div class="font-bold text-cyan-300">Crypto & DeFi Ventures</div>
-                            <div class="text-[10px] text-slate-400">Rallies, gas fees, staking</div>
-                        </div>
-                        <i class="fa-solid fa-arrow-right text-slate-500 text-xs"></i>
-                    </button>
-                </div>
-            </div>
-
-        </section>
+            </aside>
     </main>
 
     <div id="editorTab" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur overflow-y-auto p-4 md:p-8 hidden">
@@ -424,16 +323,7 @@
 
                         <div class="border rounded-xl p-4 bg-slate-50 space-y-3">
                             <h3 class="font-extrabold text-sm text-slate-800 border-b pb-1">10 CUTOUT INVESTOR PAWNS:</h3>
-                            <div class="grid grid-cols-5 gap-2 text-center text-xs font-bold">
-                                <script>
-                                    for(let i=1; i<=10; i++) {
-                                        document.write(`<div class="border-2 border-dashed border-slate-400 p-2 rounded-lg bg-white">
-                                            <div class="w-6 h-6 mx-auto rounded-full bg-slate-800 text-white flex items-center justify-center font-black text-[10px] mb-1">P${i}</div>
-                                            <span class="text-[9px] text-slate-600 block">Fold Base</span>
-                                        </div>`);
-                                    }
-                                </script>
-                            </div>
+                            <div id="pawnCutouts" class="grid grid-cols-5 gap-2 text-center text-xs font-bold"></div>
                         </div>
                     </div>
                 </div>
@@ -441,793 +331,312 @@
         </div>
     </div>
 
-    <script>
-        const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#a855f7'];
+    <!-- ============ ONLINE MULTIPLAYER: LANDING PAGE ============ -->
+    <div id="landing" class="landing fixed inset-0 z-[60] overflow-y-auto no-print hidden">
+        <!-- floating decorations -->
+        <div class="landing-float" aria-hidden="true">
+            <span style="left:6%;top:14%;animation-delay:0s">&#x1FA99;</span><span style="left:90%;top:12%;animation-delay:1.2s">&#x1F4C8;</span>
+            <span style="left:3%;top:62%;animation-delay:2.1s">&#x1F3B2;</span><span style="left:94%;top:58%;animation-delay:.6s">&#x1F3E6;</span>
+            <span style="left:48%;top:4%;animation-delay:1.8s">&#x1F4B0;</span><span style="left:12%;top:88%;animation-delay:.9s">&#x1F4CA;</span><span style="left:84%;top:90%;animation-delay:2.7s">&#x1FA99;</span>
+        </div>
 
-        const APP_STATE = {
-            boardMode: 'single', // 'single' or 'double'
-            marketTracker: [0, 0, 0], // [Units, Tens, Hundreds]
-            ringRotations: [0, 0, 0], // [Units, Tens, Hundreds]
-            draggedRingIndex: null,
-            dragStartAngle: 0,
-            tiles: [],
-            eventPool: [
-                "Dividend Payout (+3)", "Bear Market (-2)", "Stock Split (+1)", "Tax Audit (-1)",
-                "Bull Run (+2)", "Asset Swap", "Market Crash (-3)", "Interest Earned (+1)",
-                "VC Investment (+4)", "Inflation Leak (-1)", "Portfolio Shield", "Crypto Rally (+5)",
-                "Supply Halt (Skip)", "Dividend Yield", "Recession Dip (-2)", "IPO Launch",
-                "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
-            ],
-            players: [],
-            activePlayersCount: 4,
-            currentPlayerIndex: 0
-        };
-
-        function initTiles() {
-            APP_STATE.tiles = [];
-            for (let i = 1; i <= 100; i++) {
-                const randEvt = APP_STATE.eventPool[(i - 1) % APP_STATE.eventPool.length];
-                APP_STATE.tiles.push({
-                    number: i,
-                    text: randEvt
-                });
-            }
-        }
-
-        function drawBoard() {
-            const svg = document.getElementById('boardSvg');
-            if (!svg) return;
-            svg.innerHTML = '';
-
-            const cx = 500, cy = 500;
-            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-
-            if (APP_STATE.boardMode === 'single') {
-                drawSinglePerimeterRing(group, cx, cy);
-            } else {
-                drawDoublePerimeterRing(group, cx, cy);
-            }
-
-            drawMarketTrackerRings(group, cx, cy);
-            drawPlayerPawns(group, cx, cy);
-
-            svg.appendChild(group);
-        }
-
-        function drawSinglePerimeterRing(group, cx, cy) {
-            const totalSectors = 100;
-            const R_out = 485;
-            const R_in = 230;
-            const stepAngle = (2 * Math.PI) / totalSectors;
-            const palette = ['#0284c7', '#059669', '#d97706', '#7c3aed', '#dc2626'];
-
-            for (let i = 0; i < totalSectors; i++) {
-                const tile = APP_STATE.tiles[i];
-                const A1 = i * stepAngle - Math.PI / 2;
-                const A2 = (i + 1) * stepAngle - Math.PI / 2;
-
-                const x1_out = cx + R_out * Math.cos(A1);
-                const y1_out = cy + R_out * Math.sin(A1);
-                const x2_out = cx + R_out * Math.cos(A2);
-                const y2_out = cy + R_out * Math.sin(A2);
-
-                const x2_in = cx + R_in * Math.cos(A2);
-                const y2_in = cy + R_in * Math.sin(A2);
-                const x1_in = cx + R_in * Math.cos(A1);
-                const y1_in = cy + R_in * Math.sin(A1);
-
-                const pathData = `M ${x1_out} ${y1_out} A ${R_out} ${R_out} 0 0 1 ${x2_out} ${y2_out} L ${x2_in} ${y2_in} A ${R_in} ${R_in} 0 0 0 ${x1_in} ${y1_in} Z`;
-
-                const sectorPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                sectorPath.setAttribute("d", pathData);
-                sectorPath.setAttribute("fill", palette[i % palette.length]);
-                sectorPath.setAttribute("stroke", "#020617");
-                sectorPath.setAttribute("stroke-width", "1.5");
-                group.appendChild(sectorPath);
-
-                const midA = (A1 + A2) / 2;
-                const textStartX = cx + (R_out - 12) * Math.cos(midA);
-                const textStartY = cy + (R_out - 12) * Math.sin(midA);
-                let textAngle = (midA * 180 / Math.PI) + 180;
-
-                const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                textGroup.setAttribute("transform", `translate(${textStartX}, ${textStartY}) rotate(${textAngle})`);
-
-                const textElem = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                textElem.setAttribute("x", "0");
-                textElem.setAttribute("y", "0");
-                textElem.setAttribute("fill", "#ffffff");
-                textElem.setAttribute("font-size", "12.5");
-                textElem.setAttribute("font-weight", "800");
-                textElem.setAttribute("dominant-baseline", "central");
-                textElem.setAttribute("class", "text-stroke");
-
-                const numSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-                numSpan.textContent = tile.number + " ";
-                numSpan.setAttribute("fill", "#facc15");
-                numSpan.setAttribute("font-weight", "900");
-                numSpan.setAttribute("font-size", "14");
-
-                const textSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-                textSpan.textContent = tile.text;
-                textSpan.setAttribute("fill", "#ffffff");
-
-                textElem.appendChild(numSpan);
-                textElem.appendChild(textSpan);
-                textGroup.appendChild(textElem);
-                group.appendChild(textGroup);
-            }
-        }
-
-        function drawDoublePerimeterRing(group, cx, cy) {
-            const R1_out = 485, R1_in = 360;
-            const R2_out = 355, R2_in = 230;
-            const palette = ['#0284c7', '#059669', '#d97706', '#7c3aed', '#dc2626'];
-
-            for (let i = 0; i < 100; i++) {
-                const isOuter = i < 50;
-                const ringIndex = isOuter ? i : i - 50;
-                const total = 50;
-                const step = (2 * Math.PI) / total;
-                const R_out = isOuter ? R1_out : R2_out;
-                const R_in = isOuter ? R1_in : R2_in;
-
-                const A1 = ringIndex * step - Math.PI / 2;
-                const A2 = (ringIndex + 1) * step - Math.PI / 2;
-
-                const pathData = `M ${cx + R_out * Math.cos(A1)} ${cy + R_out * Math.sin(A1)} ` +
-                                 `A ${R_out} ${R_out} 0 0 1 ${cx + R_out * Math.cos(A2)} ${cy + R_out * Math.sin(A2)} ` +
-                                 `L ${cx + R_in * Math.cos(A2)} ${cy + R_in * Math.sin(A2)} ` +
-                                 `A ${R_in} ${R_in} 0 0 0 ${cx + R_in * Math.cos(A1)} ${cy + R_in * Math.sin(A1)} Z`;
-
-                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                path.setAttribute("d", pathData);
-                path.setAttribute("fill", palette[i % palette.length]);
-                path.setAttribute("stroke", "#020617");
-                path.setAttribute("stroke-width", "1.5");
-                group.appendChild(path);
-
-                const midA = (A1 + A2) / 2;
-                const startX = cx + (R_out - 10) * Math.cos(midA);
-                const startY = cy + (R_out - 10) * Math.sin(midA);
-                const textAngle = (midA * 180 / Math.PI) + 180;
-
-                const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                textGroup.setAttribute("transform", `translate(${startX}, ${startY}) rotate(${textAngle})`);
-
-                const textElem = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                textElem.setAttribute("dominant-baseline", "central");
-                textElem.setAttribute("class", "text-stroke");
-
-                const numSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-                numSpan.textContent = (i + 1) + " ";
-                numSpan.setAttribute("fill", "#facc15");
-                numSpan.setAttribute("font-weight", "900");
-                numSpan.setAttribute("font-size", "15");
-
-                const labelSpan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-                labelSpan.textContent = APP_STATE.tiles[i].text;
-                labelSpan.setAttribute("fill", "#ffffff");
-                labelSpan.setAttribute("font-size", "13");
-
-                textElem.appendChild(numSpan);
-                textElem.appendChild(labelSpan);
-                textGroup.appendChild(textElem);
-                group.appendChild(textGroup);
-            }
-        }
-
-        function drawMarketTrackerRings(group, cx, cy) {
-            const ringConfigs = [
-                { id: 0, name: "Units", rOut: 100, rIn: 45, color: "#10b981" },
-                { id: 1, name: "Tens", rOut: 160, rIn: 105, color: "#06b6d4" },
-                { id: 2, name: "Hundreds", rOut: 220, rIn: 165, color: "#f59e0b" }
-            ];
-
-            let defs = group.querySelector("defs");
-            if (!defs) {
-                defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-                group.appendChild(defs);
-            }
-
-            ringConfigs.forEach((cfg) => {
-                const rMid = (cfg.rOut + cfg.rIn) / 2;
-                const windowY = cy - rMid;
-
-                // SVG Mask for cover shield
-                const maskId = `ringCoverMask_${cfg.id}`;
-                let mask = defs.querySelector(`#${maskId}`);
-                if (!mask) {
-                    mask = document.createElementNS("http://www.w3.org/2000/svg", "mask");
-                    mask.setAttribute("id", maskId);
-                    mask.setAttribute("maskUnits", "userSpaceOnUse");
-                    mask.setAttribute("maskContentUnits", "userSpaceOnUse");
-                    
-                    const whiteRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    whiteRect.setAttribute("x", "0");
-                    whiteRect.setAttribute("y", "0");
-                    whiteRect.setAttribute("width", "1000");
-                    whiteRect.setAttribute("height", "1000");
-                    whiteRect.setAttribute("fill", "#ffffff");
-                    mask.appendChild(whiteRect);
-
-                    const blackHole = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    blackHole.setAttribute("x", cx - 18);
-                    blackHole.setAttribute("y", windowY - 18);
-                    blackHole.setAttribute("width", "36");
-                    blackHole.setAttribute("height", "36");
-                    blackHole.setAttribute("rx", "8");
-                    blackHole.setAttribute("fill", "#000000");
-                    mask.appendChild(blackHole);
-
-                    defs.appendChild(mask);
-                }
-
-                // Rotatable Dial Group
-                const ringGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                ringGroup.setAttribute("class", "ring-interactive");
-                ringGroup.setAttribute("id", `ringGroup_${cfg.id}`);
+        <div class="relative max-w-6xl mx-auto px-4 pb-16">
+            <nav class="flex items-center justify-between py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-emerald-400 flex items-center justify-center text-slate-950 text-xl shadow-lg"><i class="fa-solid fa-chart-line"></i></div>
+                    <span class="font-display font-black tracking-wide text-white text-lg">CAPITAL CLASH</span>
+                </div>
                 
-                const rotDeg = APP_STATE.ringRotations[cfg.id];
-                ringGroup.setAttribute("transform", `rotate(${rotDeg}, ${cx}, ${cy})`);
+            </nav>
 
-                const ringBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                ringBg.setAttribute("cx", cx);
-                ringBg.setAttribute("cy", cy);
-                ringBg.setAttribute("r", rMid);
-                ringBg.setAttribute("stroke", "#090d16");
-                ringBg.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
-                ringBg.setAttribute("fill", "none");
-                ringGroup.appendChild(ringBg);
-
-                // Numbers 0 to 9 with Counter-Rotation to keep upright
-                for (let d = 0; d < 10; d++) {
-                    const ang = (d * 36) * Math.PI / 180 - Math.PI / 2;
-                    const nx = cx + rMid * Math.cos(ang);
-                    const ny = cy + rMid * Math.sin(ang);
-
-                    const numTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    numTxt.setAttribute("x", nx);
-                    numTxt.setAttribute("y", ny);
-                    numTxt.setAttribute("fill", cfg.color);
-                    numTxt.setAttribute("font-size", "22");
-                    numTxt.setAttribute("font-weight", "900");
-                    numTxt.setAttribute("text-anchor", "middle");
-                    numTxt.setAttribute("dominant-baseline", "central");
-                    numTxt.setAttribute("transform", `rotate(${-rotDeg}, ${nx}, ${ny})`);
-                    numTxt.textContent = d;
-                    ringGroup.appendChild(numTxt);
-                }
-
-                group.appendChild(ringGroup);
-
-                // Opaque Cover Plate Ring
-                const coverRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                coverRing.setAttribute("cx", cx);
-                coverRing.setAttribute("cy", cy);
-                coverRing.setAttribute("r", rMid);
-                coverRing.setAttribute("stroke", "#090d16");
-                coverRing.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
-                coverRing.setAttribute("fill", "none");
-                coverRing.setAttribute("mask", `url(#${maskId})`);
-                coverRing.setAttribute("class", "ring-interactive");
-                group.appendChild(coverRing);
-
-                // Trim Lines
-                const outerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                outerBorder.setAttribute("cx", cx); outerBorder.setAttribute("cy", cy);
-                outerBorder.setAttribute("r", cfg.rOut); outerBorder.setAttribute("stroke", "#1e293b");
-                outerBorder.setAttribute("stroke-width", "1.5"); outerBorder.setAttribute("fill", "none");
-                group.appendChild(outerBorder);
-
-                const innerBorder = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                innerBorder.setAttribute("cx", cx); innerBorder.setAttribute("cy", cy);
-                innerBorder.setAttribute("r", cfg.rIn); innerBorder.setAttribute("stroke", "#1e293b");
-                innerBorder.setAttribute("stroke-width", "1.5"); innerBorder.setAttribute("fill", "none");
-                group.appendChild(innerBorder);
-
-                // 12 o'clock Aperture Window
-                const aperture = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                aperture.setAttribute("x", cx - 18);
-                aperture.setAttribute("y", windowY - 18);
-                aperture.setAttribute("width", "36");
-                aperture.setAttribute("height", "36");
-                aperture.setAttribute("rx", "8");
-                aperture.setAttribute("fill", "none");
-                aperture.setAttribute("stroke", cfg.color);
-                aperture.setAttribute("stroke-width", "3");
-                aperture.setAttribute("filter", "drop-shadow(0 0 6px " + cfg.color + ")");
-                aperture.setAttribute("class", "ring-interactive");
-                group.appendChild(aperture);
-
-                // Event Drag Listeners
-                [ringGroup, coverRing, aperture].forEach(el => {
-                    el.addEventListener('mousedown', (e) => startRingDrag(e, cfg.id));
-                    el.addEventListener('touchstart', (e) => startRingDrag(e, cfg.id));
-                });
-            });
-
-            // Center Hub Badge
-            const hubBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            hubBg.setAttribute("cx", cx); hubBg.setAttribute("cy", cy); hubBg.setAttribute("r", "42");
-            hubBg.setAttribute("fill", "#020617"); hubBg.setAttribute("stroke", "#eab308");
-            hubBg.setAttribute("stroke-width", "3");
-            group.appendChild(hubBg);
-
-            const hubLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            hubLabel.setAttribute("x", cx); hubLabel.setAttribute("y", cy - 10);
-            hubLabel.setAttribute("fill", "#94a3b8"); hubLabel.setAttribute("font-size", "8");
-            hubLabel.setAttribute("font-weight", "800"); hubLabel.setAttribute("text-anchor", "middle");
-            hubLabel.textContent = "MARKET TRACKER";
-            group.appendChild(hubLabel);
-
-            const trackerValStr = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
-            const hubVal = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            hubVal.setAttribute("x", cx); hubVal.setAttribute("y", cy + 12);
-            hubVal.setAttribute("fill", "#facc15"); hubVal.setAttribute("font-size", "20");
-            hubVal.setAttribute("font-weight", "900"); hubLabel.setAttribute("text-anchor", "middle");
-            hubVal.setAttribute("text-anchor", "middle");
-            hubVal.textContent = trackerValStr;
-            group.appendChild(hubVal);
-        }
-
-        function drawPlayerPawns(group, cx, cy) {
-            APP_STATE.players.forEach((p, idx) => {
-                if (p.position <= 0) return;
-                
-                const tileIndex = p.position - 1;
-                const totalSectors = 100;
-                const stepAngle = (2 * Math.PI) / totalSectors;
-                const midA = (tileIndex + 0.5) * stepAngle - Math.PI / 2;
-                
-                const rPawn = 380 + (idx % 3) * 15;
-                const px = cx + rPawn * Math.cos(midA);
-                const py = cy + rPawn * Math.sin(midA);
-
-                const pawnGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                pawnGroup.setAttribute("class", "pawn-element");
-
-                const pawnCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                pawnCircle.setAttribute("cx", px); pawnCircle.setAttribute("cy", py);
-                pawnCircle.setAttribute("r", "12");
-                pawnCircle.setAttribute("fill", PLAYER_COLORS[idx % PLAYER_COLORS.length]);
-                pawnCircle.setAttribute("stroke", "#ffffff"); pawnCircle.setAttribute("stroke-width", "2.5");
-                pawnGroup.appendChild(pawnCircle);
-
-                const pawnTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                pawnTxt.setAttribute("x", px); pawnTxt.setAttribute("y", py);
-                pawnTxt.setAttribute("fill", "#ffffff"); pawnTxt.setAttribute("font-size", "10");
-                pawnTxt.setAttribute("font-weight", "900"); pawnTxt.setAttribute("text-anchor", "middle");
-                pawnTxt.setAttribute("dominant-baseline", "central");
-                pawnTxt.textContent = `P${idx + 1}`;
-                pawnGroup.appendChild(pawnTxt);
-
-                group.appendChild(pawnGroup);
-            });
-        }
-
-        function startRingDrag(e, ringIdx) {
-            e.preventDefault();
-            APP_STATE.draggedRingIndex = ringIdx;
-            const pt = getSvgEventCoords(e);
-            const cx = 500, cy = 500;
-            APP_STATE.dragStartAngle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
-
-            window.addEventListener('mousemove', onRingDrag);
-            window.addEventListener('touchmove', onRingDrag);
-            window.addEventListener('mouseup', stopRingDrag);
-            window.addEventListener('touchend', stopRingDrag);
-        }
-
-        function onRingDrag(e) {
-            if (APP_STATE.draggedRingIndex === null) return;
-            const pt = getSvgEventCoords(e);
-            const cx = 500, cy = 500;
-            const currentAngle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
-            const delta = currentAngle - APP_STATE.dragStartAngle;
-
-            const ringIdx = APP_STATE.draggedRingIndex;
-            APP_STATE.ringRotations[ringIdx] = (APP_STATE.ringRotations[ringIdx] + delta) % 360;
-            APP_STATE.dragStartAngle = currentAngle;
-
-            let angleAtTop = (-APP_STATE.ringRotations[ringIdx]) % 360;
-            if (angleAtTop < 0) angleAtTop += 360;
-            const digit = Math.round(angleAtTop / 36) % 10;
-            APP_STATE.marketTracker[ringIdx] = digit;
-
-            updateMarketTrackerUI();
-            drawBoard();
-        }
-
-        function stopRingDrag() {
-            APP_STATE.draggedRingIndex = null;
-            window.removeEventListener('mousemove', onRingDrag);
-            window.removeEventListener('touchmove', onRingDrag);
-            window.removeEventListener('mouseup', stopRingDrag);
-            window.removeEventListener('touchend', stopRingDrag);
-        }
-
-        function getSvgEventCoords(e) {
-            const svg = document.getElementById('boardSvg');
-            const pt = svg.createSVGPoint();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            pt.x = clientX;
-            pt.y = clientY;
-            return pt.matrixTransform(svg.getScreenCTM().inverse());
-        }
-
-        function adjustRing(ringIdx, step) {
-            APP_STATE.marketTracker[ringIdx] = (APP_STATE.marketTracker[ringIdx] + step + 10) % 10;
-            APP_STATE.ringRotations[ringIdx] = -APP_STATE.marketTracker[ringIdx] * 36;
-            updateMarketTrackerUI();
-            drawBoard();
-        }
-
-        function resetMarketTracker() {
-            APP_STATE.marketTracker = [0, 0, 0];
-            APP_STATE.ringRotations = [0, 0, 0];
-            updateMarketTrackerUI();
-            drawBoard();
-        }
-
-        function setDirectMarketTrackerValue(val) {
-            let num = parseInt(val, 10);
-            if (isNaN(num)) num = 0;
-            if (num < 0) num = 0;
-            if (num > 999) num = 999;
-
-            const h = Math.floor(num / 100);
-            const t = Math.floor((num % 100) / 10);
-            const u = num % 10;
-
-            APP_STATE.marketTracker = [u, t, h];
-            APP_STATE.ringRotations = [-u * 36, -t * 36, -h * 36];
-
-            updateMarketTrackerUI();
-            drawBoard();
-        }
-
-        function updateMarketTrackerUI() {
-            document.getElementById('digitUnits').textContent = APP_STATE.marketTracker[0];
-            document.getElementById('digitTens').textContent = APP_STATE.marketTracker[1];
-            document.getElementById('digitHundreds').textContent = APP_STATE.marketTracker[2];
-            
-            const fullVal = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
-            document.getElementById('trackerValueBadge').textContent = fullVal;
-
-            const quickInput = document.getElementById('quickNumberInput');
-            if (quickInput && document.activeElement !== quickInput) {
-                quickInput.value = parseInt(fullVal, 10);
-            }
-        }
-
-        function changePlayerCount(val) {
-            APP_STATE.activePlayersCount = parseInt(val);
-            document.getElementById('playerCountVal').textContent = `${val} Players`;
-            
-            APP_STATE.players = [];
-            for (let i = 1; i <= APP_STATE.activePlayersCount; i++) {
-                APP_STATE.players.push({
-                    id: i,
-                    name: `Investor ${i}`,
-                    position: 1
-                });
-            }
-            APP_STATE.currentPlayerIndex = 0;
-            renderPlayersList();
-            drawBoard();
-        }
-
-        function rollDice() {
-            const roll = Math.floor(Math.random() * 6) + 1;
-            const diceElem = document.getElementById('diceDisplay');
-            diceElem.textContent = roll;
-
-            const p = APP_STATE.players[APP_STATE.currentPlayerIndex];
-            p.position = Math.min(100, p.position + roll);
-
-            APP_STATE.currentPlayerIndex = (APP_STATE.currentPlayerIndex + 1) % APP_STATE.activePlayersCount;
-            document.getElementById('turnPlayerName').textContent = APP_STATE.players[APP_STATE.currentPlayerIndex].name;
-
-            renderPlayersList();
-            drawBoard();
-        }
-
-        function renderPlayersList() {
-            const container = document.getElementById('playersList');
-            if (!container) return;
-            container.innerHTML = '';
-
-            APP_STATE.players.forEach((p, idx) => {
-                const div = document.createElement('div');
-                div.className = `flex items-center justify-between p-2 rounded-xl border ${idx === APP_STATE.currentPlayerIndex ? 'bg-slate-800 border-amber-500/50' : 'bg-slate-900/50 border-slate-800'}`;
-                div.innerHTML = `
-                    <div class="flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-full" style="background-color: ${PLAYER_COLORS[idx % PLAYER_COLORS.length]}"></span>
-                        <span class="font-bold text-slate-200 text-xs">${p.name}</span>
+            <!-- Hero + the join / create card -->
+            <div class="grid lg:grid-cols-[1.15fr_1fr] gap-8 items-center pt-4">
+                <div class="space-y-6">
+                    <span class="landing-eyebrow"><i class="fa-solid fa-seedling"></i> Smart Equity Investing Game</span>
+                    <h1 class="landing-title">Roll the dice.<br>Read the market.<br><span>Outsmart everyone.</span></h1>
+                    <p class="text-lg text-blue-50/95 max-w-xl leading-relaxed">Race around the 100-space market board with friends, live. Buy low, sell high and watch the Market Tracker swing, so you learn how investing really works without risking a cent.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="landing-chip"><i class="fa-solid fa-users"></i> 3 to 10 players</span>
+                        <span class="landing-chip"><i class="fa-solid fa-bolt"></i> Live on every screen</span>
+                        <span class="landing-chip"><i class="fa-solid fa-shield-heart"></i> Zero real money</span>
+                        <span class="landing-chip"><i class="fa-solid fa-hourglass-half"></i> Short, Standard or Long</span>
                     </div>
-                    <span class="font-mono text-emerald-400 font-bold text-xs">Space ${p.position} / 100</span>
-                `;
-                container.appendChild(div);
-            });
-        }
+                    <button type="button" onclick="Howto.open()" class="landing-how-cta"><span class="landing-how-ico"><i class="fa-solid fa-book-open"></i></span><span><b>How does it work?</b><small>Read the quick summary or the full guide</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                    <!-- illustration: three coin stacks growing into a rising chart -->
+                    <svg class="landing-art" viewBox="0 0 520 220" role="img" aria-label="Coins growing into a rising chart">
+                        <defs><linearGradient id="lgGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe17a"/><stop offset="1" stop-color="#e0a416"/></linearGradient></defs>
+                        <rect width="520" height="220" rx="22" fill="rgba(255,255,255,0.14)"/>
+                        <polyline points="30,170 120,140 190,150 280,95 350,105 470,38" fill="none" stroke="#7ff0b4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polygon points="470,26 486,50 456,50" fill="#7ff0b4" transform="rotate(20 470 38)"/>
+                        <g stroke="#b8830a" stroke-width="2">
+                            <g><ellipse cx="90" cy="196" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="90" cy="186" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="90" cy="176" rx="34" ry="11" fill="url(#lgGold)"/></g>
+                            <g><ellipse cx="220" cy="196" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="220" cy="186" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="220" cy="176" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="220" cy="166" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="220" cy="156" rx="34" ry="11" fill="url(#lgGold)"/></g>
+                            <g><ellipse cx="350" cy="196" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="350" cy="186" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="350" cy="176" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="350" cy="166" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="350" cy="156" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="350" cy="146" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="350" cy="136" rx="34" ry="11" fill="url(#lgGold)"/><ellipse cx="350" cy="126" rx="34" ry="11" fill="url(#lgGold)"/></g>
+                        </g>
+                        <g stroke="#1f7a3f" stroke-width="4" fill="#3ddc97" stroke-linecap="round"><path d="M90 168 v-16"/><ellipse cx="80" cy="150" rx="10" ry="6" transform="rotate(-30 80 150)"/><ellipse cx="100" cy="148" rx="10" ry="6" transform="rotate(30 100 148)"/>
+                            <path d="M220 148 v-22"/><ellipse cx="208" cy="124" rx="12" ry="7" transform="rotate(-30 208 124)"/><ellipse cx="232" cy="122" rx="12" ry="7" transform="rotate(30 232 122)"/>
+                            <path d="M350 118 v-28"/><ellipse cx="336" cy="90" rx="14" ry="8" transform="rotate(-30 336 90)"/><ellipse cx="364" cy="88" rx="14" ry="8" transform="rotate(30 364 88)"/></g>
+                        <circle cx="350" cy="70" r="16" fill="url(#lgGold)" stroke="#b8830a" stroke-width="2.5"/><text x="350" y="76" text-anchor="middle" font-size="18" font-weight="900" fill="#7a4d00" font-family="Georgia, serif">$</text>
+                    </svg>
+                </div>
 
-        function randomizeBoardTexts() {
-            for (let i = 0; i < 100; i++) {
-                const randEvt = APP_STATE.eventPool[Math.floor(Math.random() * APP_STATE.eventPool.length)];
-                APP_STATE.tiles[i].text = randEvt;
-            }
-            drawBoard();
-        }
-
-        function loadFinancialPreset(type) {
-            if (type === 'wallstreet') {
-                APP_STATE.eventPool = [
-                    "Dividend Payout (+3)", "Bear Market (-2)", "Stock Split (+1)", "Tax Audit (-1)",
-                    "Bull Run (+2)", "Asset Swap", "Market Crash (-3)", "Interest Earned (+1)",
-                    "VC Investment (+4)", "Inflation Leak (-1)", "Portfolio Shield", "Crypto Rally (+5)",
-                    "Supply Halt (Skip)", "Dividend Yield", "Recession Dip (-2)", "IPO Launch",
-                    "Bubble Eruption (-4)", "Tech Boom (+3)", "Angel Bonus (+2)", "Reserve Vault"
-                ];
-            } else if (type === 'crypto') {
-                APP_STATE.eventPool = [
-                    "Staking Reward (+3)", "Gas Fee (-1)", "Token Burn (+2)", "Rug Pull (-4)",
-                    "Bull Flag (+2)", "Mainnet Swap", "Flash Crash (-3)", "Airdrop (+1)",
-                    "VC Seed (+4)", "SEC Leak (-1)", "Cold Vault", "Moon Rally (+5)",
-                    "Chain Halt (Skip)", "Yield Farming", "Bear Market (-2)", "DEX Listing",
-                    "Exploit (-4)", "NFT Boom (+3)", "DAO Bonus (+2)", "Liquidity Pool"
-                ];
-            }
-            renderEventsEditor();
-            randomizeBoardTexts();
-        }
-
-        function renderEventsEditor() {
-            const grid = document.getElementById('eventsGrid');
-            const countBadge = document.getElementById('eventCountBadge');
-            const editorCount = document.getElementById('editorPoolCount');
-            const editorCountBottom = document.getElementById('editorPoolCountBottom');
-            
-            const poolLen = APP_STATE.eventPool.length;
-            if (countBadge) countBadge.textContent = poolLen;
-            if (editorCount) editorCount.textContent = poolLen;
-            if (editorCountBottom) editorCountBottom.textContent = poolLen;
-
-            if (!grid) return;
-            grid.innerHTML = '';
-
-            APP_STATE.eventPool.forEach((evt, idx) => {
-                const div = document.createElement('div');
-                div.className = 'bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1 relative group';
-                div.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <label class="text-[10px] font-bold text-amber-400 uppercase">Event #${idx + 1}</label>
-                        <button onclick="removeEventFromPool(${idx})" class="text-slate-500 hover:text-red-400 text-xs px-1 transition" title="Delete event">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                <div class="landing-card space-y-4">
+                    <div class="space-y-1">
+                        <h2 class="font-display font-black text-xl text-white">Start playing</h2>
+                        <p class="text-xs text-blue-100">No account needed. Type your name and go.</p>
                     </div>
-                    <input type="text" value="${evt.replace(/"/g, '&quot;')}" onchange="updateEventPoolItem(${idx}, this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-slate-100 font-semibold focus:border-amber-400 outline-none">
-                `;
-                grid.appendChild(div);
-            });
-        }
+                    <div class="space-y-1.5">
+                        <label for="playerNameInput" class="text-xs font-semibold text-blue-100">Your name</label>
+                        <input id="playerNameInput" type="text" maxlength="16" placeholder="e.g. Mehregan" class="w-full bg-slate-950 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white font-semibold focus:border-emerald-400 outline-none">
+                    </div>
 
-        function updateEventPoolItem(idx, val) {
-            APP_STATE.eventPool[idx] = val;
-        }
+                    <div class="flex items-center justify-between bg-slate-950 border border-slate-600 rounded-xl px-3 py-2">
+                        <label class="text-xs font-semibold text-blue-100">Host a game for how many players?</label>
+                        <div class="flex items-center gap-2">
+                            <button id="expMinus" type="button" onclick="stepExpected(-1)" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-black">-</button>
+                            <span id="expectedVal" class="w-8 text-center font-mono font-black text-lg text-emerald-300">4</span>
+                            <button id="expPlus" type="button" onclick="stepExpected(1)" class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 font-black">+</button>
+                        </div>
+                    </div>
 
-        function addNewEventToPool(text) {
-            const evtText = text || `Custom Bonus (+${Math.floor(Math.random() * 3) + 1})`;
-            APP_STATE.eventPool.push(evtText);
-            renderEventsEditor();
-        }
+                    <button id="createRoomBtn" onclick="createRoom()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-black text-sm tracking-wider shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> CREATE A ROOM
+                    </button>
 
-        function addNewEventFromInput() {
-            const input = document.getElementById('newEventInput');
-            if (!input || !input.value.trim()) return;
-            APP_STATE.eventPool.push(input.value.trim());
-            input.value = '';
-            renderEventsEditor();
-        }
+                    <div class="flex items-center gap-3 text-[10px] text-blue-200 uppercase tracking-widest"><span class="flex-1 h-px bg-white/20"></span>or join friends<span class="flex-1 h-px bg-white/20"></span></div>
 
-        function removeEventFromPool(idx) {
-            if (APP_STATE.eventPool.length <= 1) return;
-            APP_STATE.eventPool.splice(idx, 1);
-            renderEventsEditor();
-        }
+                    <div class="flex gap-2">
+                        <input id="roomCodeInput" type="text" maxlength="5" placeholder="ROOM CODE" autocapitalize="characters" class="flex-1 min-w-0 bg-slate-950 border border-slate-600 rounded-xl px-3 py-2.5 text-center text-lg font-mono font-black tracking-[0.3em] text-amber-300 uppercase focus:border-amber-400 outline-none" onkeydown="if(event.key==='Enter') joinRoom()">
+                        <button id="joinRoomBtn" onclick="joinRoom()" class="px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm transition">JOIN</button>
+                    </div>
+                    <button id="resumeBtn" onclick="resumeRoom()" class="w-full py-2 rounded-xl border border-white/25 text-blue-100 text-xs font-bold hover:bg-white/10 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Resume a saved game (type its room code and your name)</button>
 
-        function setBoardMode(mode) {
-            APP_STATE.boardMode = mode;
-            document.getElementById('btnSingleRing').className = mode === 'single' ? "px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition" : "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition";
-            document.getElementById('btnDoubleRing').className = mode === 'double' ? "px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold transition" : "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition";
-            drawBoard();
-        }
+                    <div class="space-y-1.5">
+                        <div class="text-[10px] text-blue-200 uppercase tracking-wider font-bold">Game length <span class="normal-case tracking-normal text-blue-300 font-semibold">(hover or tap an option to read what it means)</span></div>
+                        <input id="setMode" type="hidden" value="long">
+                        <div id="landMode" class="mode-grid"></div>
+                        <p id="landModeHint" class="text-[11px] text-blue-100 leading-snug"></p>
+                    </div>
 
-        function switchTab(tabId) {
-            document.getElementById('editorTab').classList.toggle('hidden', tabId !== 'editor');
-            if (tabId === 'editor') renderEventsEditor();
-        }
+                    <details class="bg-slate-950/70 border border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-300">
+                        <summary class="cursor-pointer font-semibold text-blue-100"><i class="fa-solid fa-gear mr-1"></i> Settings: starting values, event set, one-screen players</summary>
+                        <div class="grid grid-cols-3 gap-2 mt-3">
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Market value</span>
+                                <input id="setMarket" type="number" min="0" max="999" value="500" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-amber-300 outline-none focus:border-amber-400"></label>
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Money each</span>
+                                <input id="setMoney" type="number" min="0" max="1000000" value="5000" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-emerald-300 outline-none focus:border-emerald-400"></label>
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Shares each</span>
+                                <input id="setShares" type="number" min="0" max="1000" value="9" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-cyan-300 outline-none focus:border-cyan-400"></label>
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-2">
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Event set for the board</span>
+                                <select id="setPreset" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-xs font-bold text-white outline-none focus:border-amber-400">
+                                    <option value="classic">Classic board (balanced mix)</option><option value="wallstreet">Wall Street (stable, small steady moves)</option><option value="crypto">Crypto &amp; DeFi (volatile, big swings)</option>
+                                </select></label>
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Players (one-screen mode)</span>
+                                <input id="setSoloPlayers" type="number" min="2" max="10" value="4" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-white outline-none focus:border-emerald-400"></label>
+                        </div>
+                        <div class="flex items-center justify-between mt-2 text-[10px] text-blue-200"><span>Used when you host or play on one screen. Total = money + shares x market value.</span><button type="button" onclick="resetSettingsForm()" class="underline hover:text-white ml-2 whitespace-nowrap">Reset</button></div>
+                    </details>
 
-        // Craft Kit Functions
-        function openCraftKitModal() {
-            document.getElementById('craftKitModal').classList.remove('hidden');
-            renderAllCraftSheets();
-        }
+                    <p id="landingError" class="hidden text-xs text-red-200 bg-red-500/20 border border-red-400/40 rounded-lg px-3 py-2"></p>
+                    <p id="transportNote" class="hidden text-[11px] text-amber-100 bg-amber-500/20 border border-amber-400/40 rounded-lg px-3 py-2"></p>
+                    <div class="text-center">
+                        <button onclick="playSolo()" class="text-xs text-blue-200 hover:text-white underline underline-offset-4">Skip: play on one screen / print the craft kit</button>
+                    </div>
+                </div>
+            </div>
 
-        function closeCraftKitModal() {
-            document.getElementById('craftKitModal').classList.add('hidden');
-        }
+            <!-- How a round works -->
+            <section id="howto" class="pt-16 space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="landing-h2">How a round works</h2>
+                    <p class="text-blue-100 max-w-2xl mx-auto">The same rhythm as real investing: the market moves, events hit, you decide, you check your wealth.</p>
+                </div>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="step-card"><div class="step-num">1</div><div class="step-icon">&#x1F3B2;</div><h3>Roll &amp; move</h3><p>Tap the dice, press Accept and your avatar hops space by space around the market board. The number you roll is the number of spaces you move.</p></div>
+                    <div class="step-card"><div class="step-num">2</div><div class="step-icon">&#x1F4F0;</div><h3>Read the market</h3><p>Every space carries a market event. Bull runs, crashes and dividends push the Market Tracker up or down.</p></div>
+                    <div class="step-card"><div class="step-num">3</div><div class="step-icon">&#x1F3E6;</div><h3>Buy, hold or sell</h3><p>Buy shares when prices are low, sell to lock in gains, or hold your nerve through the dip.</p></div>
+                    <div class="step-card"><div class="step-num">4</div><div class="step-icon">&#x1F4CA;</div><h3>Check your wealth</h3><p>Money plus shares at the current price is your total. Watch it climb and fall with the market.</p></div>
+                </div>
+                <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button type="button" onclick="Howto.open('summary')" class="how-open-btn"><i class="fa-solid fa-list-check"></i> Read the summary</button>
+                    <button type="button" onclick="Howto.open('details')" class="how-open-btn alt"><i class="fa-solid fa-book-open"></i> Read the full guide</button>
+                </div>
+            </section>
 
-        function showCraftSheet(sheetNum) {
-            for (let i = 1; i <= 4; i++) {
-                const sheet = document.getElementById(`sheet${i}View`);
-                const tab = document.getElementById(`craftTab${i}`);
-                if (sheet) sheet.classList.toggle('hidden', i !== sheetNum);
-                if (tab) {
-                    tab.className = i === sheetNum 
-                        ? "px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold" 
-                        : "px-4 py-2 rounded-lg text-slate-400 hover:text-slate-100 font-bold";
-                }
-            }
-        }
+            <!-- Strategy / Risk / Reward -->
+            <section class="pt-16 space-y-6">
+                <div class="text-center space-y-2">
+                    <h2 class="landing-h2">Strategy. Risk. Reward.</h2>
+                    <p class="text-blue-100 max-w-2xl mx-auto">Three ideas every investor lives by, and you feel all three within one game.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="pillar-card pillar-a"><h3><i class="fa-solid fa-chess-knight"></i> Strategy</h3><ul><li>Time your decisions</li><li>Build your portfolio</li><li>Respond to market events</li></ul></div>
+                    <div class="pillar-card pillar-b"><h3><i class="fa-solid fa-triangle-exclamation"></i> Risk</h3><ul><li>Weigh losses before acting</li><li>Manage limited money</li><li>Adapt to sudden shifts</li></ul></div>
+                    <div class="pillar-card pillar-c"><h3><i class="fa-solid fa-trophy"></i> Reward</h3><ul><li>Gains from rising prices</li><li>Well-timed decisions pay off</li><li>Patience beats panic</li></ul></div>
+                </div>
+            </section>
 
-        function renderAllCraftSheets() {
-            renderSheet1_MainBoard();
-            renderSheet2_NumberDials();
-            renderSheet3_CoverShields();
-        }
+            <section class="pt-14">
+                <div class="landing-band">
+                    <p><b>Spot the feelings behind the trades.</b> Fear, overconfidence, herd behaviour and panic selling show up at the table, just like in real markets, only this time nothing real is at stake.</p>
+                </div>
+            </section>
 
-        function renderSheet1_MainBoard() {
-            const svg = document.getElementById('sheet1Svg');
-            if (!svg) return;
-            svg.innerHTML = '';
-            const cx = 500, cy = 500;
-            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            <p class="pt-10 text-center text-[11px] text-blue-200/80">Capital Clash is a learning game. It is not financial advice.</p>
+        </div>
+    </div>
 
-            if (APP_STATE.boardMode === 'single') {
-                drawSinglePerimeterRing(group, cx, cy);
-            } else {
-                drawDoublePerimeterRing(group, cx, cy);
-            }
+    <div id="lobby" class="fixed inset-0 z-[60] bg-slate-950 overflow-y-auto no-print hidden">
+        <div class="min-h-full flex items-center justify-center p-4">
+            <div class="w-full max-w-md space-y-5">
+                <div class="text-center space-y-2">
+                    <p class="text-xs uppercase tracking-widest text-slate-500">Room code</p>
+                    <div id="lobbyCode" class="text-5xl font-mono font-black tracking-[0.3em] text-emerald-300"></div>
+                    <button onclick="copyInviteLink()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold"><i class="fa-solid fa-link mr-1"></i><span id="copyLinkLabel">Copy invite link</span></button>
+                </div>
 
-            const centerMount = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            centerMount.setAttribute("cx", cx); centerMount.setAttribute("cy", cy);
-            centerMount.setAttribute("r", "230"); centerMount.setAttribute("fill", "#090d16");
-            centerMount.setAttribute("stroke", "#eab308"); centerMount.setAttribute("stroke-width", "3");
-            centerMount.setAttribute("stroke-dasharray", "8,8");
-            group.appendChild(centerMount);
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+                    <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide border-b border-slate-800 pb-2">PICK YOUR AVATAR</h2>
+                    <div id="avatarGrid" class="avatar-grid"></div>
+                </div>
 
-            const pinCrossH = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            pinCrossH.setAttribute("x1", cx - 20); pinCrossH.setAttribute("y1", cy);
-            pinCrossH.setAttribute("x2", cx + 20); pinCrossH.setAttribute("y2", cy);
-            pinCrossH.setAttribute("stroke", "#facc15"); pinCrossH.setAttribute("stroke-width", "3");
-            group.appendChild(pinCrossH);
+                <div id="modeCard" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2 shadow-xl">
+                    <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide border-b border-slate-800 pb-2">GAME LENGTH</h2>
+                    <div id="modeGrid" class="mode-grid"></div>
+                    <p id="modeHint" class="text-xs text-slate-400 text-center"></p>
+                </div>
 
-            const pinCrossV = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            pinCrossV.setAttribute("x1", cx); pinCrossV.setAttribute("y1", cy - 20);
-            pinCrossV.setAttribute("x2", cx); pinCrossV.setAttribute("y2", cy + 20);
-            pinCrossV.setAttribute("stroke", "#facc15"); pinCrossV.setAttribute("stroke-width", "3");
-            group.appendChild(pinCrossV);
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide">INVESTORS IN THE ROOM</h2>
+                        <span id="lobbyCount" class="text-xs font-mono font-bold text-amber-300"></span>
+                    </div>
+                    <div id="lobbyList" class="space-y-1.5 text-xs"></div>
+                    <p id="lobbyHint" class="text-xs text-slate-400 text-center"></p>
+                </div>
 
-            const centerTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            centerTxt.setAttribute("x", cx); centerTxt.setAttribute("y", cy + 40);
-            centerTxt.setAttribute("fill", "#facc15"); centerTxt.setAttribute("font-size", "14");
-            centerTxt.setAttribute("font-weight", "900"); centerTxt.setAttribute("text-anchor", "middle");
-            centerTxt.textContent = "SHEET 1 BASE: MOUNT ROTATING DIALS HERE";
-            group.appendChild(centerTxt);
+                <button id="startGameBtn" onclick="hostStartGame()" class="hidden flex w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm tracking-wider shadow-lg transition items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> START GAME
+                </button>
+                <div class="text-center space-y-2">
+                    <button id="botsBtn" onclick="toggleBots()" class="hidden text-xs font-bold text-amber-300 border border-amber-500/40 rounded-lg px-3 py-1.5 hover:bg-amber-500/10"></button>
+                    <button id="startEarlyBtn" onclick="hostStartGame()" class="hidden text-xs text-slate-400 hover:text-amber-300 underline underline-offset-4"></button>
+                    <div><button onclick="leaveRoom()" class="text-xs text-slate-500 hover:text-red-400 underline underline-offset-4">Leave room</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            svg.appendChild(group);
-        }
 
-        function renderSheet2_NumberDials() {
-            const svg = document.getElementById('sheet2Svg');
-            if (!svg) return;
-            svg.innerHTML = '';
-            const cx = 500, cy = 500;
-            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] hidden bg-slate-800 border border-slate-600 text-slate-100 text-xs font-semibold px-4 py-2 rounded-xl shadow-2xl no-print"></div>
 
-            const ringConfigs = [
-                { id: 0, name: "Units Ring", rOut: 100, rIn: 45, color: "#10b981" },
-                { id: 1, name: "Tens Ring", rOut: 160, rIn: 105, color: "#06b6d4" },
-                { id: 2, name: "Hundreds Ring", rOut: 220, rIn: 165, color: "#f59e0b" }
-            ];
+    
 
-            ringConfigs.forEach(cfg => {
-                const rMid = (cfg.rOut + cfg.rIn) / 2;
-                
-                const outC = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                outC.setAttribute("cx", cx); outC.setAttribute("cy", cy); outC.setAttribute("r", cfg.rOut);
-                outC.setAttribute("stroke", cfg.color); outC.setAttribute("stroke-width", "2");
-                outC.setAttribute("stroke-dasharray", "6,4"); outC.setAttribute("fill", "none");
-                group.appendChild(outC);
+    <script src="js/config.js"></script>
+    <script src="js/util.js"></script>
+    <script src="js/event-sets.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/dice.js"></script>
+    <script src="js/rules.js"></script>
+    <script src="js/board.js"></script>
+    <script src="js/howto.js"></script>
+    <script src="js/magnifier.js"></script>
+    <script src="js/events-editor.js"></script>
+    <script src="js/craftkit.js"></script>
+    <script src="js/transport.js"></script>
+    <script src="js/multiplayer.js"></script>
+    <script src="js/lobby.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/save.js"></script>
+    <script src="js/guide.js"></script>
+    <script src="js/main.js"></script>
 
-                const inC = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                inC.setAttribute("cx", cx); inC.setAttribute("cy", cy); inC.setAttribute("r", cfg.rIn);
-                inC.setAttribute("stroke", cfg.color); inC.setAttribute("stroke-width", "2");
-                inC.setAttribute("stroke-dasharray", "6,4"); inC.setAttribute("fill", "none");
-                group.appendChild(inC);
+<!-- Turn popup: shown to everyone when a new step starts -->
+<div id="turnPopup" class="turn-popup no-print" aria-live="polite"></div>
 
-                for (let d = 0; d < 10; d++) {
-                    const ang = (d * 36) * Math.PI / 180 - Math.PI / 2;
-                    const nx = cx + rMid * Math.cos(ang);
-                    const ny = cy + rMid * Math.sin(ang);
+<!-- Bank window: buy / sell shares -->
+<div id="tradeModal" class="trade-modal hidden no-print" role="dialog" aria-modal="true" aria-labelledby="tradeTitle">
+    <div class="trade-card">
+        <h3 id="tradeTitle">Buy shares</h3>
+        <div class="trade-row"><span>Share price (Market Tracker)</span><b id="tradePrice">500</b></div>
+        <div class="trade-row"><span>Your money</span><b id="tradeMoney">0</b></div>
+        <div class="trade-row"><span>Your shares</span><b id="tradeShares">0</b></div>
+        <label class="trade-label" for="tradeQty">How many shares?</label>
+        <div class="trade-qty">
+            <button type="button" onclick="tradeStep(-1)" aria-label="One less">-</button>
+            <input id="tradeQty" type="number" min="0" step="1" inputmode="numeric" value="1" oninput="renderTrade()" onkeydown="if(event.key==='Enter')confirmTrade()">
+            <button type="button" onclick="tradeStep(1)" aria-label="One more">+</button>
+            <button type="button" class="max" onclick="tradeSetMax()">Max</button>
+        </div>
+        <div class="trade-row total"><span>Total</span><b id="tradeTotal">0</b></div>
+        <div class="trade-row"><span>Money after</span><b id="tradeAfterMoney">0</b></div>
+        <div class="trade-row"><span>Shares after</span><b id="tradeAfterShares">0</b></div>
+        <div id="tradeErr" class="trade-err"></div>
+        <div class="trade-actions"><button type="button" class="cancel" onclick="closeTrade()">Cancel</button><button type="button" id="tradeOk" class="ok" onclick="confirmTrade()">Buy</button></div>
+    </div>
+</div>
 
-                    const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    txt.setAttribute("x", nx); txt.setAttribute("y", ny);
-                    txt.setAttribute("fill", "#0f172a"); txt.setAttribute("font-size", "22");
-                    txt.setAttribute("font-weight", "900"); txt.setAttribute("text-anchor", "middle");
-                    txt.setAttribute("dominant-baseline", "central");
-                    txt.textContent = d;
-                    group.appendChild(txt);
-                }
-            });
+<!-- Guide: ask once per new room, then coach marks -->
+<div id="guidePrompt" class="trade-modal hidden no-print" role="dialog" aria-modal="true">
+    <div class="trade-card guide-ask">
+        <h3>Quick guide?</h3>
+        <p>Want a short tour of the screen? It shows what to do on your turn, with arrows and glowing spots. You will only see each step once.</p>
+        <div class="trade-actions"><button type="button" id="guideNo" class="cancel">No thanks</button><button type="button" id="guideYes" class="ok">Yes, show me</button></div>
+    </div>
+</div>
+<div id="guideLayer" class="guide-layer hidden no-print">
+    <div id="guideSpot" class="guide-spot"></div>
+    <div id="guideArrow" class="guide-arrow">&#9664;</div>
+    <div id="guidePop" class="guide-pop" role="dialog" aria-live="polite">
+        <div class="guide-head"><b id="guideTitle"></b><span id="guideCount"></span></div>
+        <p id="guideText"></p>
+        <div class="guide-actions"><button type="button" onclick="Guide.skip()">Skip guide</button><button type="button" id="guideNext" class="primary" onclick="Guide.next()">Next</button></div>
+    </div>
+</div>
 
-            const pinV = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            pinV.setAttribute("x1", cx); pinV.setAttribute("y1", cy - 25);
-            pinV.setAttribute("x2", cx); pinV.setAttribute("y2", cy + 25);
-            pinV.setAttribute("stroke", "#0f172a"); pinV.setAttribute("stroke-width", "2");
-            group.appendChild(pinV);
+<!-- How to play: full-page view (Summary / Full guide, text size) -->
+<div id="howModal" class="how-modal hidden no-print">
+    <div class="how-card" role="dialog" aria-label="How to play Capital Clash">
+        <div class="how-head">
+            <div class="how-title">How to play</div>
+            <div class="how-size" role="group" aria-label="Text size"><button type="button" onclick="Howto.size(-1)" aria-label="Smaller text" title="Smaller text">A&minus;</button><span id="howSizeVal">100%</span><button type="button" onclick="Howto.size(1)" aria-label="Bigger text" title="Bigger text">A+</button></div>
+            <div class="how-tabs" role="tablist">
+                <button type="button" id="howTabSummary" class="on" role="tab" onclick="Howto.show('summary')">Summary</button>
+                <button type="button" id="howTabDetails" role="tab" onclick="Howto.show('details')">Full guide</button>
+            </div>
+            <button type="button" id="howClose" class="how-close" onclick="Howto.close()" aria-label="Close">&times;</button>
+        </div>
+        <div id="howSummary" class="how-summary"><div class="how-summary-in">
+            <p class="how-lead">&#127942; Finish with the most money. <b>Total = money + shares &times; Market Tracker value.</b> Everyone starts with Market 500, 5,000 money and 9 shares.</p>
+            <div class="how-grid">
+<div class="how-box"><div class="how-ico">&#127922;</div><h4>Your turn</h4><ul><li><b>Roll</b> the dice</li><li><b>Accept</b>: you hop that many spaces</li><li><b>Bank</b>: buy or sell shares (it glows)</li><li><b>End turn</b> (waits 5 s so you do not slip)</li></ul></div>
+<div class="how-box"><div class="how-ico">&#128200;</div><h4>The market</h4><ul><li><span class="pl">Plus tile</span> raises it</li><li><span class="mi">Minus tile</span> lowers it</li><li>Skip tile: nothing</li><li>Always between 0 and 999</li></ul></div>
+<div class="how-box"><div class="how-ico">&#128002;&#128059;</div><h4>Forecast</h4><ul><li><b>Bull</b>: rising, plus tiles +1</li><li><b>Bear</b>: falling, minus tiles +1</li><li><b>Neutral</b>: calm</li><li>A hint, not a promise: 3 in 10 turn around</li></ul></div>
+<div class="how-box"><div class="how-ico">&#127963;&#65039;&#9878;&#65039;&#129689;</div><h4>Three boards</h4><ul><li><b>Wall Street</b>: calm, small steady moves</li><li><b>Classic</b>: balanced mix</li><li><b>Crypto</b>: wild, big swings</li><li>Same average, plus = minus</li></ul></div>
+<div class="how-box"><div class="how-ico">&#9201;&#65039;</div><h4>Game length</h4><ul><li><b>Long</b> die 1-6, ~29 turns</li><li><b>Standard</b> die 1-9, ~20</li><li><b>Short</b> die 1-18, ~10</li><li><b>Beginner</b>: gentle tiles + tour</li></ul></div>
+<div class="how-box"><div class="how-ico">&#127937;</div><h4>The end</h4><ul><li>Pawn on space 100 starts the <b>last round</b></li><li>Everyone else plays one last turn</li><li><b>Highest total wins</b></li><li>Tip: &#128269; Magnifier reads any tile</li></ul></div>
+            </div>
+            <div class="how-foot"><button type="button" class="how-open-btn" onclick="Howto.show('details')"><i class="fa-solid fa-book-open"></i> Read the full guide with pictures</button></div>
+        </div></div>
+        <div id="howDetails" class="how-details hidden"><iframe id="howFrame" title="Capital Clash full player guide" loading="lazy"></iframe></div>
+    </div>
+</div>
+<!-- Big popup in the middle of the screen: market phase, final round -->
+<div id="bigPopup" class="big-popup no-print" aria-live="polite"></div>
 
-            const pinH = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            pinH.setAttribute("x1", cx - 25); pinH.setAttribute("y1", cy);
-            pinH.setAttribute("x2", cx + 25); pinH.setAttribute("y2", cy);
-            pinH.setAttribute("stroke", "#0f172a"); pinH.setAttribute("stroke-width", "2");
-            group.appendChild(pinH);
-
-            svg.appendChild(group);
-        }
-
-        function renderSheet3_CoverShields() {
-            const svg = document.getElementById('sheet3Svg');
-            if (!svg) return;
-            svg.innerHTML = '';
-            const cx = 500, cy = 500;
-            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-
-            const ringConfigs = [
-                { id: 0, name: "Units Cover", rOut: 100, rIn: 45, color: "#10b981" },
-                { id: 1, name: "Tens Cover", rOut: 160, rIn: 105, color: "#06b6d4" },
-                { id: 2, name: "Hundreds Cover", rOut: 220, rIn: 165, color: "#f59e0b" }
-            ];
-
-            ringConfigs.forEach(cfg => {
-                const rMid = (cfg.rOut + cfg.rIn) / 2;
-                const windowY = cy - rMid;
-
-                const cBody = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                cBody.setAttribute("cx", cx); cBody.setAttribute("cy", cy); cBody.setAttribute("r", rMid);
-                cBody.setAttribute("stroke", "#0f172a"); cBody.setAttribute("stroke-width", cfg.rOut - cfg.rIn);
-                cBody.setAttribute("fill", "none");
-                group.appendChild(cBody);
-
-                const cutWin = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                cutWin.setAttribute("x", cx - 18); cutWin.setAttribute("y", windowY - 18);
-                cutWin.setAttribute("width", "36"); cutWin.setAttribute("height", "36");
-                cutWin.setAttribute("rx", "6");
-                cutWin.setAttribute("fill", "#ffffff"); cutWin.setAttribute("stroke", "#ef4444");
-                cutWin.setAttribute("stroke-width", "3"); cutWin.setAttribute("stroke-dasharray", "4,4");
-                group.appendChild(cutWin);
-
-                const cutTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                cutTxt.setAttribute("x", cx); cutTxt.setAttribute("y", windowY);
-                cutTxt.setAttribute("fill", "#ef4444"); cutTxt.setAttribute("font-size", "9");
-                cutTxt.setAttribute("font-weight", "900"); cutTxt.setAttribute("text-anchor", "middle");
-                cutTxt.setAttribute("dominant-baseline", "central");
-                cutTxt.textContent = "CUT OUT";
-                group.appendChild(cutTxt);
-            });
-
-            svg.appendChild(group);
-        }
-
-        // Global Initialization Window Handler
-        window.onload = function() {
-            initTiles();
-            changePlayerCount(4);
-            renderEventsEditor();
-            drawBoard();
-        };
-    </script>
+<!-- Results -->
+<div id="overModal" class="trade-modal hidden no-print" role="dialog" aria-modal="true">
+    <div class="trade-card over-card">
+        <div class="over-trophy">&#127942;</div>
+        <h3 id="overTitle">We have a winner!</h3>
+        <p id="overSub" class="over-sub"></p>
+        <div id="overRows" class="over-rows"></div>
+        <div class="trade-actions"><button type="button" class="cancel" onclick="closeResults()">Close</button><button type="button" id="overAgain" class="ok" onclick="playAgain()">Play again</button></div>
+    </div>
+</div>
+<div id="lens" class="lens no-print" aria-hidden="true"><svg id="lensSvg" viewBox="-40 425 295 155"><rect x="-2000" y="-2000" width="5000" height="5000" fill="#0b1f4d"/><use id="lensUse" href="#boardGroup"/></svg></div>
 </body>
 </html>

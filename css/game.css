@@ -1,0 +1,154 @@
+/* Capital Clash: dice, turn glow, avatars, pawns. Plain CSS (does not depend on Tailwind). */
+
+/* ---------- Dice dock (top-left) ---------- */
+.dice-dock {
+    position: relative; box-sizing: border-box; flex: none;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    width: 100%; padding: 12px 10px 12px; border-radius: 18px;
+    background: linear-gradient(165deg, #3c62ad, #2b4b91); border: 2px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 10px 26px rgba(10, 25, 70, 0.45);
+}
+.dice-dock.dock-hidden { display: none; }
+.dice-dock.yourturn { border-color: #facc15; animation: dockGlow 1.4s ease-in-out infinite; }
+
+.dice-scene {
+    width: 112px; height: 112px; margin: 10px 0 6px; position: relative; padding: 0; border: 0; background: none;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.dice-scene:disabled { cursor: default; }
+#diceScene { perspective: 700px; }            /* must sit on the direct parent of the cube */
+#diceScene.dice-hop { animation: diceHop 1.2s ease-out; }
+.dice-cube {
+    --dice: 84px; --half: 42px;
+    position: relative; width: var(--dice); height: var(--dice);
+    transform-style: preserve-3d; transform: rotateX(0deg) rotateY(0deg);
+}
+/* Fixed viewing angle so the die always looks like a real cube (front face + top + side visible). */
+.dice-tilt {
+    position: absolute; left: 50%; top: 50%; width: var(--dice, 84px); height: var(--dice, 84px);
+    margin: calc(var(--dice, 84px) / -2) 0 0 calc(var(--dice, 84px) / -2);
+    transform-style: preserve-3d; transform: none; /* the die faces the player straight on */
+    --dice: 84px;
+}
+.dice-shadow {
+    position: absolute; left: 50%; bottom: -4px; width: 78px; height: 14px; margin-left: -39px; border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.55), rgba(0,0,0,0) 70%); pointer-events: none;
+}
+.dice-face {
+    position: absolute; inset: 0; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 13px; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: linear-gradient(145deg, #ffffff, #d5dde9); border: 1px solid #8b9ab0;
+    box-shadow: inset 0 0 10px rgba(15, 23, 42, 0.18);
+}
+.dice-face[data-face="1"] { transform: translateZ(var(--half)); }
+.dice-face[data-face="6"] { transform: rotateY(180deg) translateZ(var(--half)); }
+.dice-face[data-face="2"] { transform: rotateY(90deg) translateZ(var(--half)); }
+.dice-face[data-face="5"] { transform: rotateY(-90deg) translateZ(var(--half)); }
+.dice-face[data-face="3"] { transform: rotateX(90deg) translateZ(var(--half)); }
+.dice-face[data-face="4"] { transform: rotateX(-90deg) translateZ(var(--half)); }
+.dice-face::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: rgba(15, 23, 42, var(--shade, 0)); }
+.dice-face[data-face="2"], .dice-face[data-face="5"] { --shade: 0.16; }
+.dice-face[data-face="4"], .dice-face[data-face="6"] { --shade: 0.08; }
+.dice-pip {
+    align-self: center; justify-self: center; width: 15px; height: 15px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #475569, #0f172a);
+}
+.dice-pip-one { width: 22px; height: 22px; }
+.dice-face.up .dice-pip { background: radial-gradient(circle at 35% 35%, #ff6b6b, #c40d0d); }
+
+.dice-status { min-height: 34px; text-align: center; font-size: 14px; line-height: 1.3; font-weight: 800; color: #eaf2ff; }
+.dice-dock.yourturn .dice-status { color: #fde68a; }
+.dice-accept {
+    width: 100%; padding: 10px 6px; border: 0; border-radius: 12px; cursor: pointer;
+    font-size: 14px; font-weight: 900; letter-spacing: 0.03em; color: #022c22;
+    background: linear-gradient(90deg, #34d399, #2dd4bf); animation: acceptPulse 1s ease-in-out infinite;
+}
+.dice-accept.hidden { display: none; }
+.dice-sound {
+    position: absolute; top: 6px; right: 8px; border: 0; background: none; cursor: pointer;
+    font-size: 16px; opacity: 0.9; color: #fff;
+}
+.dice-sound:hover { opacity: 1; }
+
+@keyframes diceHop {
+    0% { transform: translateY(0) scale(1); }
+    18% { transform: translateY(-34px) scale(1.18); }
+    38% { transform: translateY(0) scale(0.96); }
+    52% { transform: translateY(-14px) scale(1.05); }
+    68% { transform: translateY(0) scale(1); }
+    80% { transform: translateY(-5px); }
+    100% { transform: translateY(0); }
+}
+@keyframes dockGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.0), 0 10px 30px rgba(0, 0, 0, 0.5); }
+    50% { box-shadow: 0 0 22px 4px rgba(250, 204, 21, 0.55), 0 10px 30px rgba(0, 0, 0, 0.5); }
+}
+@keyframes acceptPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@media (max-width: 640px) {
+}
+
+/* ---------- Turn banner above the board ---------- */
+.turn-banner {
+    --pc: #34d399;
+    display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 40px;
+    margin: 0 auto; padding: 5px 16px; max-width: 420px; border-radius: 999px;
+    font-weight: 800; font-size: 14px; color: #f8fafc;
+    background: rgba(15, 23, 42, 0.85); border: 2px solid var(--pc);
+}
+.turn-banner.hidden { display: none; }
+.turn-banner.mine { animation: bannerGlow 1.3s ease-in-out infinite; }
+.turn-banner .banner-avatar { font-size: 22px; line-height: 1; }
+@keyframes bannerGlow {
+    0%, 100% { box-shadow: 0 0 6px var(--pc); }
+    50% { box-shadow: 0 0 24px 4px var(--pc); }
+}
+
+/* ---------- Player list ---------- */
+.player-row { --pc: #64748b; }
+.player-row.turn-glow {
+    border-color: var(--pc) !important; background: rgba(60, 98, 173, 0.95) !important;
+    animation: rowGlow 1.4s ease-in-out infinite;
+}
+@keyframes rowGlow {
+    0%, 100% { box-shadow: 0 0 4px var(--pc); }
+    50% { box-shadow: 0 0 18px 2px var(--pc); }
+}
+.avatar-chip {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 26px; height: 26px; border-radius: 50%; font-size: 15px; line-height: 1;
+    background: #0f172a; border: 2px solid var(--pc, #64748b);
+}
+
+/* ---------- Avatar picker (lobby) ---------- */
+.avatar-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.avatar-btn {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 26px;
+    border-radius: 14px; border: 2px solid #1e293b; background: #0f172a; cursor: pointer;
+    transition: transform 0.12s, border-color 0.12s;
+}
+.avatar-btn:hover:not(:disabled) { transform: scale(1.1); border-color: #64748b; }
+.avatar-btn.mine { border-color: #34d399; box-shadow: 0 0 14px rgba(52, 211, 153, 0.6); }
+.avatar-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ---------- Pawns on the board (SVG) ---------- */
+.pawn-glow { animation: pawnPulse 1.1s ease-in-out infinite; }
+@keyframes pawnPulse {
+    0%, 100% { r: 24px; opacity: 0.95; }
+    50% { r: 34px; opacity: 0.2; }
+}
+
+/* Keep the dice and buttons from being squashed. */
+.dice-dock > * { flex-shrink: 0; }
+
+/* 10/20-sided die (canvas) and the big number shown after it lands */
+.dice-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
+.dice-big {
+    position: absolute; right: -14px; bottom: -8px; min-width: 44px; padding: 0 8px; border-radius: 14px; text-align: center;
+    font: 900 34px/44px system-ui, sans-serif; color: #d10f0f; background: #fff; border: 2px solid #d10f0f;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .3); display: none; pointer-events: none;
+}
+.dice-big.on { display: block; }
