@@ -30,9 +30,11 @@ const Howto = (() => {
         $('howModal').classList.remove('hidden');
         document.body.classList.add('how-open');
         show(which); applyScale();
+        const sum = $('howSummary'); if (sum && !sum.dataset.terms) { sum.dataset.terms = '1'; highlightTerms(sum); sum.querySelectorAll('.screen-tour').forEach(ScreenTour.mount); }
         const c = $('howClose'); if (c) c.focus();
     }
     function close() { $('howModal').classList.add('hidden'); document.body.classList.remove('how-open'); }
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('howModal') && !$('howModal').classList.contains('hidden')) close(); });
     return { open, close, show, size };
 })();
+window.Howto = Howto; // reachable from the guide inside the frame (its Home button)

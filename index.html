@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no" class="notranslate">
 <head>
+    <meta name="google" content="notranslate">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Capital Clash</title>
@@ -11,7 +12,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Fredoka:wght@500;700&family=Nunito:wght@400;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
     <script src="js/tailwind-config.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/game.css">
@@ -25,11 +26,27 @@
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 to-emerald-400 flex items-center justify-center text-slate-950 font-extrabold text-lg shadow-lg">
                     <i class="fa-solid fa-chart-line"></i>
                 </div>
-                <h1 class="text-xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-200 via-emerald-200 to-cyan-200 bg-clip-text text-transparent">CAPITAL CLASH</h1>
+                <div class="brand-col">
+                    <h1 class="text-xl font-extrabold tracking-tight font-display bg-gradient-to-r from-amber-200 via-emerald-200 to-cyan-200 bg-clip-text text-transparent">CAPITAL CLASH</h1>
+                    <div class="font-box"><label for="fontPick" class="font-label">Font</label><select id="fontPick" class="font-pick" aria-label="Game font" onchange="setGameFont(this.value)"><option value="DM Sans">DM Sans</option><option value="Fredoka">Fredoka</option><option value="Nunito">Nunito</option><option value="Atkinson Hyperlegible">Atkinson</option><option value="Georgia">Georgia</option></select><label for="langPick" class="font-label">Language</label><select id="langPick" class="font-pick lang-pick" aria-label="Language"></select></div>
+                </div>
             </div>
-            <div id="turnBanner" class="turn-banner hidden no-print" aria-live="polite"></div>
+            <div id="statusCard" class="status-card no-print">
+                <div id="turnBanner" class="turn-banner hidden" aria-live="polite"></div>
+                <div id="phaseBar" class="phase-bar neutral"></div>
+            </div>
+            <div id="toolsBox" class="tools-box no-print"></div>
             <div class="flex items-center gap-2">
-                <button id="howBtn" onclick="Howto.open()" class="menu-btn how-head-btn" title="Read how to play during the game"><i class="fa-solid fa-book-open"></i> How to play</button>
+                <div class="tg-wrap">
+                    <button id="tourBtn" onclick="toggleTourMenu(event)" class="menu-btn how-head-btn" aria-haspopup="true" aria-expanded="false" title="How to play and the screen tour"><i class="fa-solid fa-book-open"></i> Tour Guide <i class="fa-solid fa-caret-down"></i></button>
+                    <div id="tourMenu" class="tg-menu hidden" role="menu">
+                        <button type="button" role="menuitem" onclick="closeTourMenu();Howto.open()"><i class="fa-solid fa-book-open"></i> How to play (Summary &amp; Full guide)</button>
+                        <button type="button" role="menuitem" onclick="closeTourMenu();Guide.replay()"><i class="fa-solid fa-circle-question"></i> Screen tour</button>
+                        <button type="button" role="menuitem" onclick="Seat.showKey()"><i class="fa-solid fa-key"></i> My Seat key (play on another device)</button>
+                        <button type="button" role="menuitem" onclick="openBugReport()"><i class="fa-solid fa-bug"></i> Report a bug</button>
+                    </div>
+                </div>
+                <span id="connPill" class="conn-pill hidden" data-s="online"><i class="fa-solid fa-wifi"></i> <span id="connText">Online</span> <button id="connRetry" class="hidden" onclick="Conn.reconnect()">Reconnect</button></span>
                 <button id="homeBtn" onclick="goHome()" class="menu-btn" title="Back to the home page"><i class="fa-solid fa-house"></i> Home page</button>
                 <!-- The Menu button and its toolbar (room code, Guide, shuffle, layout, events, print) are hidden for now: remove style="display:none" from #menuBtn to bring them back. -->
                 <button id="menuBtn" onclick="toggleMenu()" class="menu-btn" style="display:none" aria-expanded="false" aria-controls="menuBar"><i class="fa-solid fa-bars"></i> Menu</button>
@@ -76,6 +93,23 @@
 
         <!-- LEFT: dice (top) and players (below), shown during a game -->
         <aside id="leftRail" class="left-rail dock-hidden no-print">
+            <div id="playersCard" class="players-card" aria-label="Players: shares, money and total value">
+                <div class="card-title"><i class="fa-solid fa-users"></i> PLAYER PORTFOLIO <span class="card-sub">Share price <b id="walletMarket">0</b></span></div>
+                <div id="walletRows" class="players-rows"></div>
+            </div>
+        </aside>
+
+        <!-- CENTER: the board -->
+        <section id="boardSection" class="board-section flex-1 min-w-0 flex flex-col items-center justify-start">
+            <div class="board-container p-1 flex items-center justify-center">
+                <svg id="boardSvg" viewBox="-75 -70 1180 1120" class="w-full h-full select-none" style="overflow:visible">
+                    <!-- SVG Dynamic Content Generated by JavaScript -->
+                </svg>
+            </div>
+        </section>
+
+        <!-- RIGHT: bank, card, market tracker -->
+        <aside class="right-rail no-print">
     <div id="diceDock" class="dice-dock dock-hidden">
         <button id="soundBtn" class="dice-sound" onclick="toggleSound()" title="Sound on/off" aria-label="Sound on or off"></button>
         <button id="diceBtn" class="dice-scene" onclick="onDiceClick()" aria-label="Roll the dice" disabled>
@@ -87,24 +121,6 @@
         <button id="acceptBtn" class="dice-accept hidden" onclick="onAcceptClick()"></button>
         <button id="endBtn" class="dice-accept end-turn hidden" onclick="onEndClick()">End turn</button>
     </div>
-            <div id="playersCard" class="players-card" aria-label="Players: shares, money and total value">
-                <div class="card-title"><i class="fa-solid fa-users"></i> PLAYERS <span class="card-sub">Market value <b id="walletMarket">0</b></span></div>
-                <div id="walletRows" class="players-rows"></div>
-            </div>
-        </aside>
-
-        <!-- CENTER: the board -->
-        <section id="boardSection" class="board-section flex-1 min-w-0 flex flex-col items-center justify-start">
-            <div id="phaseBar" class="phase-bar neutral no-print"></div>
-            <div class="board-container p-1 flex items-center justify-center">
-                <svg id="boardSvg" viewBox="-55 -55 1110 1110" class="w-full h-full select-none" style="overflow:visible">
-                    <!-- SVG Dynamic Content Generated by JavaScript -->
-                </svg>
-            </div>
-        </section>
-
-        <!-- RIGHT: bank, card, market tracker -->
-        <aside class="right-rail no-print">
             <!-- Bank: trading is wired later; the buttons already have their sounds -->
             <div id="bankCard" class="bank-card">
                 <svg class="bank-art" viewBox="0 0 320 190" role="img" aria-label="Capital Bank building">
@@ -125,7 +141,7 @@
                     <polygon points="30,66 160,16 290,66" fill="url(#bkRoof)" stroke="#173d86" stroke-width="3" stroke-linejoin="round"/>
                     <polygon points="52,62 160,24 268,62" fill="none" stroke="#7fb0ff" stroke-width="2"/>
                     <circle cx="160" cy="46" r="15" fill="url(#bkGold)" stroke="#b8830a" stroke-width="2"/>
-                    <text x="160" y="52" text-anchor="middle" font-size="18" font-weight="900" fill="#7a4d00" font-family="Georgia, serif">$</text>
+                    <text x="160" y="52" text-anchor="middle" font-size="18" font-weight="900" fill="#7a4d00" font-family="Georgia, serif" id="bankSym">$</text>
                     <!-- sign band -->
                     <rect x="34" y="66" width="252" height="20" rx="3" fill="url(#bkGold)" stroke="#b8830a" stroke-width="2"/>
                     <text x="160" y="80.5" text-anchor="middle" font-size="12.5" font-weight="900" letter-spacing="3" fill="#3b2a00" font-family="Georgia, serif">CAPITAL BANK</text>
@@ -149,27 +165,11 @@
                     </g>
                     <g fill="#fff" opacity=".95"><path d="M12 140 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/><path d="M304 132 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z"/></g>
                 </svg>
-                <div class="bank-title">BANK <span>trade shares</span></div>
+                <div class="bank-title">THE BANK <span>trade shares</span></div>
                 <div class="bank-price">Share price <b id="bankPrice">500</b></div>
-                <div id="bankHint" class="bank-hint">Opens after you move</div>
-                <div class="bank-actions">
-                    <button type="button" class="bank-btn sell locked" disabled onclick="bankAction('sell')"><i class="fa-solid fa-hand-holding-dollar"></i> SELL SHARE</button>
-                    <button type="button" class="bank-btn buy locked" disabled onclick="bankAction('buy')"><i class="fa-solid fa-cart-shopping"></i> BUY SHARE</button>
-                </div>
-            </div>
-
-            <!-- Card slot: event cards are coming later -->
-            <div id="cardSlot" class="card-slot">
-                <div class="playing-card">
-                    <div class="pc-corner">?</div>
-                    <div class="pc-body"><i class="fa-solid fa-bolt"></i><b>EVENT CARD</b></div>
-                    <div class="pc-corner br">?</div>
-                </div>
-                <div class="card-soon"><span>COMING SOON</span><small>Market events will be drawn here</small></div>
-            </div>
-
+                <div id="bankPrev" class="bank-prev"></div>
             <!-- Market Tracker 3-Ring Controller Panel -->
-            <div id="trackerPanel" class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-4">
+            <div id="trackerPanel" style="display:none" class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-compass text-amber-400 text-lg"></i>
@@ -177,8 +177,7 @@
                     </div>
                     <span id="trackerValueBadge" class="font-mono font-black text-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 px-3 py-0.5 rounded-lg">500</span>
                 </div>
-
-                
+                <div id="trackerPrev" class="tracker-prev"></div>
 
                 <!-- Direct Number Selector -->
                 <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between gap-3">
@@ -191,6 +190,22 @@
                 <button id="resetTrackerBtn" onclick="resetMarketTracker()" title="Host only: back to the start" class="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition">
                     Reset game (host)
                 </button>
+            </div>
+
+                <div id="bankHint" class="bank-hint">Opens after you move</div>
+                <div class="bank-actions">
+                    <button type="button" class="bank-btn enter locked" disabled onclick="bankAction('buy')"><i class="fa-solid fa-building-columns"></i> ENTER THE BANK</button>
+                </div>
+            </div>
+
+            <!-- Event Card Deck: glows when the current player lands on an Event Card Tile -->
+            <div id="cardSlot" class="card-slot deck-slot">
+                <div class="deck-arrow" aria-hidden="true">&#11015;</div>
+                <button type="button" id="deckBtn" class="deck-btn" onclick="onDeckClick()" aria-label="Event Card Deck: draw the top card" disabled>
+                    <span class="playing-card d3"></span><span class="playing-card d2"></span>
+                    <span class="playing-card d1"><span class="pc-corner">?</span><span class="pc-body"><i class="fa-solid fa-bolt"></i><b>EVENT CARD</b></span><span class="pc-corner br">?</span></span>
+                </button>
+                <div class="card-soon"><span>EVENT CARD DECK</span><small id="deckHint">Land on an Event Card Tile (gold) to draw a card</small><small id="deckLeft" class="deck-left"></small></div>
             </div>
 
                 <!-- Player Count Selection (2 to 10) -->
@@ -345,6 +360,7 @@
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-emerald-400 flex items-center justify-center text-slate-950 text-xl shadow-lg"><i class="fa-solid fa-chart-line"></i></div>
                     <span class="font-display font-black tracking-wide text-white text-lg">CAPITAL CLASH</span>
+                    <label class="landing-lang"><i class="fa-solid fa-globe"></i><span class="sr-only">Language</span><select class="lang-pick" aria-label="Language"></select></label>
                 </div>
                 
             </nav>
@@ -352,14 +368,14 @@
             <!-- Hero + the join / create card -->
             <div class="grid lg:grid-cols-[1.15fr_1fr] gap-8 items-center pt-4">
                 <div class="space-y-6">
-                    <span class="landing-eyebrow"><i class="fa-solid fa-seedling"></i> Smart Equity Investing Game</span>
-                    <h1 class="landing-title">Roll the dice.<br>Read the market.<br><span>Outsmart everyone.</span></h1>
-                    <p class="text-lg text-blue-50/95 max-w-xl leading-relaxed">Race around the 100-space market board with friends, live. Buy low, sell high and watch the Market Tracker swing, so you learn how investing really works without risking a cent.</p>
+                    <span class="landing-eyebrow landing-eyebrow-quote"><i class="fa-solid fa-seedling"></i> Smart equity investing game which makes you &lsquo;feel&rsquo; the market, and not just read about it.</span>
+                    <h1 class="landing-title" data-noterms>Roll the dice.<br>Read the market.<br><span>Outsmart everyone.</span></h1>
+                    <p class="text-lg text-blue-50/95 max-w-xl leading-relaxed">Race around the 100 Tiles on the Space Board with friends, live. Buy low, sell high and watch the Market Tracker swing, so you learn how investing really works without risking a cent.</p>
                     <div class="flex flex-wrap gap-2">
                         <span class="landing-chip"><i class="fa-solid fa-users"></i> 3 to 10 players</span>
                         <span class="landing-chip"><i class="fa-solid fa-bolt"></i> Live on every screen</span>
-                        <span class="landing-chip"><i class="fa-solid fa-shield-heart"></i> Zero real money</span>
-                        <span class="landing-chip"><i class="fa-solid fa-hourglass-half"></i> Short, Standard or Long</span>
+                        <span class="landing-chip"><i class="fa-solid fa-shield-heart"></i> No real money</span>
+                        <span class="landing-chip"><i class="fa-solid fa-hourglass-half"></i> Short, Standard or Long game mode</span>
                     </div>
                     <button type="button" onclick="Howto.open()" class="landing-how-cta"><span class="landing-how-ico"><i class="fa-solid fa-book-open"></i></span><span><b>How does it work?</b><small>Read the quick summary or the full guide</small></span><i class="fa-solid fa-chevron-right"></i></button>
                     <!-- illustration: three coin stacks growing into a rising chart -->
@@ -409,6 +425,7 @@
                         <input id="roomCodeInput" type="text" maxlength="5" placeholder="ROOM CODE" autocapitalize="characters" class="flex-1 min-w-0 bg-slate-950 border border-slate-600 rounded-xl px-3 py-2.5 text-center text-lg font-mono font-black tracking-[0.3em] text-amber-300 uppercase focus:border-amber-400 outline-none" onkeydown="if(event.key==='Enter') joinRoom()">
                         <button id="joinRoomBtn" onclick="joinRoom()" class="px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm transition">JOIN</button>
                     </div>
+                    <input id="seatKeyInput" type="text" maxlength="11" autocomplete="off" autocapitalize="characters" placeholder="Seat key (only to take back your seat on another device)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center text-xs text-slate-200 tracking-widest">
                     <button id="resumeBtn" onclick="resumeRoom()" class="w-full py-2 rounded-xl border border-white/25 text-blue-100 text-xs font-bold hover:bg-white/10 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Resume a saved game (type its room code and your name)</button>
 
                     <div class="space-y-1.5">
@@ -419,11 +436,11 @@
                     </div>
 
                     <details class="bg-slate-950/70 border border-slate-600 rounded-xl px-3 py-2 text-xs text-slate-300">
-                        <summary class="cursor-pointer font-semibold text-blue-100"><i class="fa-solid fa-gear mr-1"></i> Settings: starting values, event set, one-screen players</summary>
+                        <summary class="cursor-pointer font-semibold text-blue-100"><i class="fa-solid fa-gear mr-1"></i> Settings: starting values, currency, event set, one-screen players</summary>
                         <div class="grid grid-cols-3 gap-2 mt-3">
-                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Market value</span>
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Share price</span>
                                 <input id="setMarket" type="number" min="0" max="999" value="500" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-amber-300 outline-none focus:border-amber-400"></label>
-                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Money each</span>
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Cash each</span>
                                 <input id="setMoney" type="number" min="0" max="1000000" value="5000" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-emerald-300 outline-none focus:border-emerald-400"></label>
                             <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Shares each</span>
                                 <input id="setShares" type="number" min="0" max="1000" value="9" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-cyan-300 outline-none focus:border-cyan-400"></label>
@@ -433,10 +450,14 @@
                                 <select id="setPreset" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-xs font-bold text-white outline-none focus:border-amber-400">
                                     <option value="classic">Classic board (balanced mix)</option><option value="wallstreet">Wall Street (stable, small steady moves)</option><option value="crypto">Crypto &amp; DeFi (volatile, big swings)</option>
                                 </select></label>
+                            <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Currency</span>
+                                <select id="setCurrency" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-xs font-bold text-white outline-none focus:border-amber-400">
+                                    <option value="USD">$ US Dollar</option><option value="EUR">&euro; Euro</option><option value="GBP">&pound; British Pound</option><option value="JPY">&yen; Japanese Yen</option>
+                                </select></label>
                             <label class="space-y-1"><span class="block text-[10px] text-blue-200 uppercase tracking-wider">Players (one-screen mode)</span>
                                 <input id="setSoloPlayers" type="number" min="2" max="10" value="4" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-white outline-none focus:border-emerald-400"></label>
                         </div>
-                        <div class="flex items-center justify-between mt-2 text-[10px] text-blue-200"><span>Used when you host or play on one screen. Total = money + shares x market value.</span><button type="button" onclick="resetSettingsForm()" class="underline hover:text-white ml-2 whitespace-nowrap">Reset</button></div>
+                        <div class="flex items-center justify-between mt-2 text-[10px] text-blue-200"><span>Used when you host or play on one screen. Total = Cash + (Shares &times; share price).</span><button type="button" onclick="resetSettingsForm()" class="underline hover:text-white ml-2 whitespace-nowrap">Reset</button></div>
                     </details>
 
                     <p id="landingError" class="hidden text-xs text-red-200 bg-red-500/20 border border-red-400/40 rounded-lg px-3 py-2"></p>
@@ -454,8 +475,8 @@
                     <p class="text-blue-100 max-w-2xl mx-auto">The same rhythm as real investing: the market moves, events hit, you decide, you check your wealth.</p>
                 </div>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="step-card"><div class="step-num">1</div><div class="step-icon">&#x1F3B2;</div><h3>Roll &amp; move</h3><p>Tap the dice, press Accept and your avatar hops space by space around the market board. The number you roll is the number of spaces you move.</p></div>
-                    <div class="step-card"><div class="step-num">2</div><div class="step-icon">&#x1F4F0;</div><h3>Read the market</h3><p>Every space carries a market event. Bull runs, crashes and dividends push the Market Tracker up or down.</p></div>
+                    <div class="step-card"><div class="step-num">1</div><div class="step-icon">&#x1F3B2;</div><h3>Roll &amp; move</h3><p>Tap the Dice, press Accept and your Player Avatar hops Tile by Tile around the Space Board. The number you roll is the number of Tiles you move.</p></div>
+                    <div class="step-card"><div class="step-num">2</div><div class="step-icon">&#x1F4F0;</div><h3>Read the market</h3><p>Every Tile on the Space Board carries a market event. Bull runs, crashes and dividends push the Market Tracker up or down.</p></div>
                     <div class="step-card"><div class="step-num">3</div><div class="step-icon">&#x1F3E6;</div><h3>Buy, hold or sell</h3><p>Buy shares when prices are low, sell to lock in gains, or hold your nerve through the dip.</p></div>
                     <div class="step-card"><div class="step-num">4</div><div class="step-icon">&#x1F4CA;</div><h3>Check your wealth</h3><p>Money plus shares at the current price is your total. Watch it climb and fall with the market.</p></div>
                 </div>
@@ -499,7 +520,14 @@
 
                 <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
                     <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide border-b border-slate-800 pb-2">PICK YOUR AVATAR</h2>
+                    <p class="text-[11px] text-slate-400">Avatars already chosen by another player are greyed out and cannot be picked.</p>
                     <div id="avatarGrid" class="avatar-grid"></div>
+                </div>
+
+                <div id="currencyCard" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2 shadow-xl">
+                    <h2 class="font-bold text-slate-200 font-display text-sm tracking-wide border-b border-slate-800 pb-2">CURRENCY</h2>
+                    <div id="currencyGrid" class="mode-grid"></div>
+                    <p id="currencyHint" class="text-xs text-slate-400 text-center"></p>
                 </div>
 
                 <div id="modeCard" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2 shadow-xl">
@@ -534,12 +562,15 @@
 
     
 
+    <script src="js/i18n-de.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/config.js"></script>
     <script src="js/util.js"></script>
     <script src="js/event-sets.js"></script>
     <script src="js/state.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/dice.js"></script>
+    <script src="js/cards.js"></script>
     <script src="js/rules.js"></script>
     <script src="js/board.js"></script>
     <script src="js/howto.js"></script>
@@ -549,9 +580,25 @@
     <script src="js/transport.js"></script>
     <script src="js/multiplayer.js"></script>
     <script src="js/lobby.js"></script>
+    <script src="js/fx.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/card-flow.js"></script>
+    <script src="js/stats.js"></script>
     <script src="js/save.js"></script>
+    <script src="js/seat.js"></script>
+    <script src="js/screen-tour.js"></script>
     <script src="js/guide.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/connection.js"></script>
+    <div id="seatKeyBox" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/70 p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+        <div class="bg-slate-900 border border-amber-400/60 rounded-2xl p-5 max-w-sm w-full text-center space-y-3">
+            <h3 class="font-black text-amber-300"><i class="fa-solid fa-key"></i> Your Seat key</h3>
+            <p class="text-xs text-slate-300">Room code: <b id="seatKeyRoom" data-noi18n></b></p><p class="text-xs text-slate-300">To play on another device or tab, open the game there, type the room code, your name and this key, then press JOIN. Keep it secret: anyone with it can take your seat.</p>
+            <div id="seatKeyText" data-noi18n class="text-2xl font-black tracking-widest text-slate-100 select-all"></div>
+            <p class="text-[11px] text-slate-400">After you use it, you get a new key and the old one stops working.</p>
+            <div class="flex gap-2 justify-center"><button onclick="Seat.copyKey()" class="px-4 py-1.5 rounded-xl bg-amber-400 text-slate-950 font-bold text-xs">Copy</button><button onclick="$('seatKeyBox').classList.add('hidden')" class="px-4 py-1.5 rounded-xl border border-slate-600 text-slate-200 font-bold text-xs">Close</button></div>
+        </div>
+    </div>
     <script src="js/main.js"></script>
 
 <!-- Turn popup: shown to everyone when a new step starts -->
@@ -560,9 +607,10 @@
 <!-- Bank window: buy / sell shares -->
 <div id="tradeModal" class="trade-modal hidden no-print" role="dialog" aria-modal="true" aria-labelledby="tradeTitle">
     <div class="trade-card">
-        <h3 id="tradeTitle">Buy shares</h3>
-        <div class="trade-row"><span>Share price (Market Tracker)</span><b id="tradePrice">500</b></div>
-        <div class="trade-row"><span>Your money</span><b id="tradeMoney">0</b></div>
+        <div class="trade-head"><h3 id="tradeTitle">The Bank</h3><button type="button" class="trade-x" onclick="closeTrade()" aria-label="Close">&times;</button></div>
+        <div class="trade-tabs" role="tablist"><button type="button" id="tabBuy" role="tab" onclick="setTradeKind('buy')"><i class="fa-solid fa-cart-shopping"></i> Buy</button><button type="button" id="tabSell" role="tab" onclick="setTradeKind('sell')"><i class="fa-solid fa-hand-holding-dollar"></i> Sell</button></div>
+        <div class="trade-row"><span>Share price</span><b id="tradePrice">500</b></div>
+        <div class="trade-row"><span>Your cash</span><b id="tradeMoney">0</b></div>
         <div class="trade-row"><span>Your shares</span><b id="tradeShares">0</b></div>
         <label class="trade-label" for="tradeQty">How many shares?</label>
         <div class="trade-qty">
@@ -572,10 +620,21 @@
             <button type="button" class="max" onclick="tradeSetMax()">Max</button>
         </div>
         <div class="trade-row total"><span>Total</span><b id="tradeTotal">0</b></div>
-        <div class="trade-row"><span>Money after</span><b id="tradeAfterMoney">0</b></div>
+        <div class="trade-row"><span>Cash after</span><b id="tradeAfterMoney">0</b></div>
         <div class="trade-row"><span>Shares after</span><b id="tradeAfterShares">0</b></div>
         <div id="tradeErr" class="trade-err"></div>
         <div class="trade-actions"><button type="button" class="cancel" onclick="closeTrade()">Cancel</button><button type="button" id="tradeOk" class="ok" onclick="confirmTrade()">Buy</button></div>
+    </div>
+</div>
+
+<!-- Report a bug -->
+<div id="bugModal" class="trade-modal hidden no-print" role="dialog" aria-modal="true" aria-labelledby="bugTitle">
+    <div class="trade-card">
+        <h3 id="bugTitle">Report a bug</h3>
+        <label class="trade-label" for="bugText">What went wrong? What did you do just before?</label>
+        <textarea id="bugText" rows="5" maxlength="2000" class="bug-text"></textarea>
+        <p id="bugMsg" class="over-sub"></p>
+        <div class="trade-actions"><button type="button" class="cancel" onclick="closeBugReport()">Cancel</button><button type="button" class="ok" onclick="sendBugReport()">Send report</button></div>
     </div>
 </div>
 
@@ -593,7 +652,7 @@
     <div id="guidePop" class="guide-pop" role="dialog" aria-live="polite">
         <div class="guide-head"><b id="guideTitle"></b><span id="guideCount"></span></div>
         <p id="guideText"></p>
-        <div class="guide-actions"><button type="button" onclick="Guide.skip()">Skip guide</button><button type="button" id="guideNext" class="primary" onclick="Guide.next()">Next</button></div>
+        <div class="guide-actions"><button type="button" onclick="Guide.skip()">Skip tour</button><span class="guide-nav"><button type="button" id="guidePrev" onclick="Guide.prev()">&#9664; Back</button><button type="button" id="guideNext" class="primary" onclick="Guide.next()">Next</button></span></div>
     </div>
 </div>
 
@@ -607,22 +666,32 @@
                 <button type="button" id="howTabSummary" class="on" role="tab" onclick="Howto.show('summary')">Summary</button>
                 <button type="button" id="howTabDetails" role="tab" onclick="Howto.show('details')">Full guide</button>
             </div>
+            <button type="button" class="how-home" onclick="Howto.close();goHome()" title="Back to the home page"><i class="fa-solid fa-house"></i> Home</button>
             <button type="button" id="howClose" class="how-close" onclick="Howto.close()" aria-label="Close">&times;</button>
         </div>
         <div id="howSummary" class="how-summary"><div class="how-summary-in">
-            <p class="how-lead">&#127942; Finish with the most money. <b>Total = money + shares &times; Market Tracker value.</b> Everyone starts with Market 500, 5,000 money and 9 shares.</p>
+            <h4 style="margin:0 0 6px">Your game screen</h4><div class="screen-tour" data-img="/img/guide-screen.jpg"></div>
+            <p class="how-lead">&#127942; <b>Goal:</b> finish with the highest portfolio value.<br><b>Total = Cash in hand + (Number of shares &times; share price on the <span class="comp">Space Board</span> centre)</b>.<br>Everyone starts with 5,000 cash and 9 shares, each share worth 500 (so 9,500 in total).</p>
             <div class="how-grid">
-<div class="how-box"><div class="how-ico">&#127922;</div><h4>Your turn</h4><ul><li><b>Roll</b> the dice</li><li><b>Accept</b>: you hop that many spaces</li><li><b>Bank</b>: buy or sell shares (it glows)</li><li><b>End turn</b> (waits 5 s so you do not slip)</li></ul></div>
-<div class="how-box"><div class="how-ico">&#128200;</div><h4>The market</h4><ul><li><span class="pl">Plus tile</span> raises it</li><li><span class="mi">Minus tile</span> lowers it</li><li>Skip tile: nothing</li><li>Always between 0 and 999</li></ul></div>
-<div class="how-box"><div class="how-ico">&#128002;&#128059;</div><h4>Forecast</h4><ul><li><b>Bull</b>: rising, plus tiles +1</li><li><b>Bear</b>: falling, minus tiles +1</li><li><b>Neutral</b>: calm</li><li>A hint, not a promise: 3 in 10 turn around</li></ul></div>
-<div class="how-box"><div class="how-ico">&#127963;&#65039;&#9878;&#65039;&#129689;</div><h4>Three boards</h4><ul><li><b>Wall Street</b>: calm, small steady moves</li><li><b>Classic</b>: balanced mix</li><li><b>Crypto</b>: wild, big swings</li><li>Same average, plus = minus</li></ul></div>
-<div class="how-box"><div class="how-ico">&#9201;&#65039;</div><h4>Game length</h4><ul><li><b>Long</b> die 1-6, ~29 turns</li><li><b>Standard</b> die 1-9, ~20</li><li><b>Short</b> die 1-18, ~10</li><li><b>Beginner</b>: gentle tiles + tour</li></ul></div>
-<div class="how-box"><div class="how-ico">&#127937;</div><h4>The end</h4><ul><li>Pawn on space 100 starts the <b>last round</b></li><li>Everyone else plays one last turn</li><li><b>Highest total wins</b></li><li>Tip: &#128269; Magnifier reads any tile</li></ul></div>
+<div class="how-box"><div class="how-ico">&#127922;</div><h4>Your turn</h4><ul><li><b>Roll</b> the <span class="comp">Dice</span> (in Long mode: a die with value 1&ndash;6)</li><li><b>Accept</b>: your <span class="comp">Player Avatar</span> hops that many Tiles on the <span class="comp">Space Board</span></li><li><span class="comp">The Bank</span>: buy or sell shares (it glows)</li><li><b>End turn</b>: locked for a 5s safety wait so nobody ends a turn by accident before using <span class="comp">The Bank</span></li></ul></div>
+<div class="how-box"><div class="how-ico">&#128200;</div><h4>The market</h4><ul><li><span class="pl">Plus Tile</span> (+1, +2, +3 and so on) raises the <span class="comp">Market Tracker</span></li><li><span class="mi">Minus Tile</span> (&minus;1, &minus;2, &minus;3 and so on) lowers it</li><li>Skip Tile: no change</li><li>The price always stays between 0 and 999</li></ul></div>
+<div class="how-box"><div class="how-ico">&#128002;&#128059;</div><h4>Forecast (market mood)</h4><ul><li>Not a Tile: a mood shown in the bar above the <span class="comp">Space Board</span></li><li><b>Bull</b>: rising. Plus Tiles get 1 extra (+3 becomes +4)</li><li><b>Bear</b>: falling. Minus Tiles get 1 extra (&minus;2 becomes &minus;3)</li><li><b>Neutral</b>: calm. A hint, not a promise: 3 in 10 forecasts turn around</li></ul></div>
+<div class="how-box"><div class="how-ico">&#127963;&#65039;&#9878;&#65039;&#129689;</div><h4>Three boards</h4><ul><li><b>Wall Street</b>: calm, small steady moves</li><li><b>Classic</b>: balanced mix</li><li><b>Crypto</b>: wild, big swings</li><li>All plus Tiles together equal all minus Tiles together, so the market has no built-in drift</li></ul></div>
+<div class="how-box"><div class="how-ico">&#9201;&#65039;</div><h4>Game length (Turns)</h4><ul><li><b>Long</b>: die with value 1&ndash;6, about 29 Turns each</li><li><b>Standard</b>: die with value 1&ndash;9, about 20 Turns</li><li><b>Short</b>: die with value 1&ndash;18, about 10 Turns</li><li><b>Beginner</b>: Short die, gentle Tiles + tour</li></ul></div>
+<div class="how-box"><div class="how-ico">&#128172;</div><h4>Chat, language and help</h4><ul><li><b>Game chat</b> (live rooms): messages and emoji in a pop-up you can close</li><li><b>Notify</b> reminds the player whose Turn it is, with a sound</li><li>A Turn longer than 3 minutes: everyone else can vote to remove that player</li><li>Pick your own <b>Font</b> and <b>Language</b> (English or Deutsch) under the game name</li><li><b>Tour Guide</b> menu: How to play, Screen tour, Report a bug</li></ul></div>
+<div class="how-box"><div class="how-ico">&#127937;</div><h4>The end</h4><ul><li>A Player Avatar on Tile 100 starts the <b>last round</b></li><li>Everyone else plays one last Turn</li><li><b>Highest total wins</b></li><li><b>Dynamic Tile Shuffling</b>: after every Turn the Tiles nobody has reached yet are shuffled, like real news you cannot predict</li></ul></div>
             </div>
             <div class="how-foot"><button type="button" class="how-open-btn" onclick="Howto.show('details')"><i class="fa-solid fa-book-open"></i> Read the full guide with pictures</button></div>
         </div></div>
         <div id="howDetails" class="how-details hidden"><iframe id="howFrame" title="Capital Clash full player guide" loading="lazy"></iframe></div>
     </div>
+</div>
+<!-- Event Card: turns over in the middle of the screen -->
+<div id="cardModal" class="card-modal hidden no-print" role="dialog" aria-modal="true" aria-label="Event Card">
+    <div class="ec-stage"><div id="cardInner" class="ec-inner">
+        <div class="ec-face ec-back"><div class="ec-back-in"><i class="fa-solid fa-bolt"></i><b>EVENT CARD</b><small>Capital Clash</small></div></div>
+        <div id="cardFront" class="ec-face ec-front"></div>
+    </div></div>
 </div>
 <!-- Big popup in the middle of the screen: market phase, final round -->
 <div id="bigPopup" class="big-popup no-print" aria-live="polite"></div>
@@ -634,8 +703,18 @@
         <h3 id="overTitle">We have a winner!</h3>
         <p id="overSub" class="over-sub"></p>
         <div id="overRows" class="over-rows"></div>
-        <div class="trade-actions"><button type="button" class="cancel" onclick="closeResults()">Close</button><button type="button" id="overAgain" class="ok" onclick="playAgain()">Play again</button></div>
+        <div id="overStats" class="over-stats"></div>
+        <div class="trade-actions"><button type="button" class="cancel" onclick="closeResults()">Close</button><button type="button" id="overAgain" class="ok" onclick="playAgain()">Start new game</button></div>
     </div>
+</div>
+<!-- Game chat: a pop-up (live rooms only) -->
+<button id="chatFab" type="button" class="chat-fab hidden no-print" onclick="Chat.toggle()" aria-label="Open the game chat" title="Game chat"><i class="fa-solid fa-comments"></i><span id="chatBadge" class="chat-badge hidden">0</span></button>
+<div id="chatPop" class="chat-pop hidden no-print" role="dialog" aria-label="Game chat">
+    <div class="chat-head"><b><i class="fa-solid fa-comments"></i> Game chat</b><button type="button" onclick="Chat.toggle(false)" aria-label="Close chat">&times;</button></div>
+    <div id="chatTurn" class="chat-turn"></div>
+    <div id="chatList" class="chat-list" aria-live="polite"></div>
+    <div id="chatEmojis" class="chat-emojis"></div>
+    <form class="chat-form" onsubmit="Chat.send(event)"><input id="chatInput" maxlength="200" autocomplete="off" placeholder="Write a message..." aria-label="Message"><button type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button></form>
 </div>
 <div id="lens" class="lens no-print" aria-hidden="true"><svg id="lensSvg" viewBox="-40 425 295 155"><rect x="-2000" y="-2000" width="5000" height="5000" fill="#0b1f4d"/><use id="lensUse" href="#boardGroup"/></svg></div>
 </body>

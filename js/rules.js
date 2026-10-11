@@ -6,12 +6,12 @@
 // The game length decides which die is used: the roll IS the number of spaces moved, so the 100 spaces get used.
 // Long: normal die 1-6 (about 29 turns each), Standard: die 1-9 (about 20), Short: die 1-18 (about 10).
 const MODES = {
-    short:    { label: 'Short',    sides: 18, gentle: false, tag: 'Die 1-18', hint: 'Short: die with numbers 1-18, about 10 turns each' },
-    standard: { label: 'Standard', sides: 9,  gentle: false, tag: 'Die 1-9',  hint: 'Standard: die with numbers 1-9, about 20 turns each' },
-    long:     { label: 'Long',     sides: 6,  gentle: false, tag: 'Die 1-6',  hint: 'Long: normal die 1-6, about 29 turns each. The full game.' },
-    beginner: { label: 'Beginner', sides: 18, gentle: true,  tag: 'Die 1-18', hint: 'Beginner: short game (die 1-18), gentle tiles (max +/-3, no Skip), guide on' }
+    short:    { label: 'Short',    sides: 18, gentle: false, tag: 'Die with value 1–18', hint: 'Short: die with value 1–18, about 10 Turns each' },
+    standard: { label: 'Standard', sides: 9,  gentle: false, tag: 'Die with value 1–9',  hint: 'Standard: die with value 1–9, about 20 Turns each' },
+    long:     { label: 'Long',     sides: 6,  gentle: false, tag: 'Die with value 1–6',  hint: 'Long: normal die with value 1–6, about 29 Turns each. The full game' },
+    beginner: { label: 'Beginner', sides: 18, gentle: true,  tag: 'Die with value 1–18', hint: 'Beginner: short game (die with value 1–18), gentle Tiles (at most +3 or −3, no Skip), tour on' }
 };
-const MODE_NOTE = 'In Short, Standard and Beginner the dice numbers change (bigger dice) so players can reach the end of the board.';
+const MODE_NOTE = 'In Short, Standard and Beginner the Dice have bigger values so players can reach Tile 100 in fewer Turns.';
 const modeCfg = () => MODES[APP_STATE.settings.mode] || MODES.long;
 const diceSides = () => modeCfg().sides;
 // Hop speed: a long move (up to 18 spaces) must not take forever.
@@ -22,7 +22,17 @@ const PHASES = {
     bull:    { label: 'Bull',    emoji: '\u{1F402}',   text: 'Forecast: the market looks set to rise (BULL)', rule: 'Plus tiles count 1 extra' },
     bear:    { label: 'Bear',    emoji: '\u{1F43B}',   text: 'Forecast: the market looks set to fall (BEAR)', rule: 'Minus tiles count 1 extra' }
 };
-const phaseBonus = delta => { const p = APP_STATE.marketPhase; return p === 'bull' && delta > 0 ? 1 : p === 'bear' && delta < 0 ? -1 : 0; };
+// Forecast push, applied together with the Tile on every landing (never at End turn).
+// A percentage of the share price so it really moves portfolios: Classic / Wall Street 3-5%, Crypto 6-10%, Beginner 1-3%. Neutral = 0.
+const isCryptoPool = () => typeof EVENT_SETS !== 'undefined' && APP_STATE.eventPool.includes(EVENT_SETS.crypto[0]);
+function forecastRange() { return modeCfg().gentle ? [1, 3] : isCryptoPool() ? [6, 10] : [3, 5]; }
+function phaseBonus(_delta, value, rand) {
+    const p = APP_STATE.marketPhase; if (p !== 'bull' && p !== 'bear') return 0;
+    const [lo, hi] = forecastRange(), r = rand || Math.random;
+    const pct = lo + Math.floor(r() * (hi - lo + 1));
+    const v = value == null ? marketValue() : value;
+    return (p === 'bull' ? 1 : -1) * Math.max(1, Math.round(v * pct / 100));
+}
 
 /* ---------- Balanced tiles ---------- */
 
@@ -55,7 +65,7 @@ function poolAverage(events) { const v = events.filter(e => e.sign !== 0).map(e 
 // Fill all 100 tiles: every event gets a + or - number (except Skip). The numbers are scaled to the tile average of the game length,
 // and all + tiles together stay under a cap (and all - tiles over its negative) so the Market Tracker can stay inside 0 - 999.
 function buildBalancedTiles() {
-    const gentle = modeCfg().gentle, avg = tileAverage();
+    const gentle = modeCfg().gentle, avg = tileAverage(), N = 100 - CARD_TILE_COUNT;   // N normal Tiles + the Event Card Tiles
     let flip = Math.random() < 0.5 ? 1 : -1;
     const parsed = APP_STATE.eventPool.map(parseEvent), k = avg / poolAverage(parsed);
     const base = parsed.map(e => {
@@ -64,8 +74,8 @@ function buildBalancedTiles() {
         return e;
     });
     let order = [];
-    while (order.length < 100) order = order.concat(shuffled(base.map((_, i) => i)));
-    const picks = order.slice(0, 100).map(i => ({ ...base[i] }));
+    while (order.length < N) order = order.concat(shuffled(base.map((_, i) => i)));
+    const picks = order.slice(0, N).map(i => ({ ...base[i] }));
     if (!gentle) picks.forEach(p => { if (p.sign !== 0) p.mag = Math.max(1, Math.round(p.mag * k * (0.75 + Math.random() * 0.5))); });
     // Make + and - add up to the same total, so the market has no built-in drift upwards or downwards.
     const pl = picks.filter(p => p.sign > 0), mi = picks.filter(p => p.sign < 0), tot = a => a.reduce((x, p) => x + p.mag, 0);
@@ -85,18 +95,29 @@ function buildBalancedTiles() {
     });
     // Skip tiles are spread over the whole board (one at a random place in the middle of each equal part), never bunched together.
     const skips = picks.filter(p => p.sign === 0), rest = picks.filter(p => p.sign !== 0), slots = new Set();
-    skips.forEach((_, i) => slots.add(Math.min(99, Math.floor((i + 0.2 + Math.random() * 0.6) * 100 / skips.length))));
+    skips.forEach((_, i) => slots.add(Math.min(N - 1, Math.floor((i + 0.2 + Math.random() * 0.6) * N / skips.length))));
     const final = []; let ri = 0, si = 0;
     for (let i = 0; i < picks.length; i++) final.push(slots.has(i) && si < skips.length ? skips[si++] : rest[ri++] || skips[si++]);
-    APP_STATE.tiles = final.map((p, i) => ({ number: i + 1, text: fmtTile(p.name, p.sign * p.mag) }));
+    // Event Card Tiles: CARD_TILE_COUNT of them, any two at least CARD_GAP Tiles apart; the normal Tiles fill the rest in order.
+    const cardAt = new Set(spacedSlots(CARD_TILE_COUNT, 0, 99, CARD_GAP) || []);
+    let fi = 0;
+    APP_STATE.tiles = Array.from({ length: 100 }, (_, i) => {
+        if (cardAt.has(i)) return { number: i + 1, text: CARD_TILE_TEXT };
+        const p = final[fi++] || { name: 'Reserve Vault', sign: 0, mag: 0 };
+        return { number: i + 1, text: fmtTile(p.name, p.sign * p.mag) };
+    });
 }
 
 // After every turn the tiles nobody has reached yet are shuffled, so the road ahead is never predictable.
 function reshuffleAhead() {
     const maxPos = Math.max(1, ...APP_STATE.players.map(p => p.position));
-    const idx = []; for (let i = maxPos; i < 100; i++) idx.push(i);
-    const texts = shuffled(idx.map(i => APP_STATE.tiles[i].text));
-    idx.forEach((i, k) => { APP_STATE.tiles[i].text = texts[k]; });
+    // Event Card Tiles stay at least CARD_GAP Tiles apart (see js/cards.js).
+    const before = APP_STATE.tiles.map(t => t.text);
+    const texts = shuffleAheadTexts(before, maxPos);
+    // Hard lock: a Tile with any avatar on it never changes.
+    const occupied = new Set(APP_STATE.players.map(p => p.position - 1).filter(i => i >= 0));
+    if ([...occupied].some(i => texts[i] !== before[i])) return;
+    APP_STATE.tiles.forEach((t, i) => { t.text = texts[i]; });
 }
 
 /* ---------- Ranking ---------- */
@@ -157,16 +178,7 @@ function advancePhase() {
         else { S.marketPhase = to; S.phaseNote = to === 'neutral' ? 'calm' : 'reverse'; }
         S.phaseSeq = nextEvt();
     }
-    const i = S.phaseTotal - S.phaseLeft, step = S.phaseSteps[i] || 0;
-    if (step) {
-        const v = marketValue();
-        let nv = v + step;
-        if (step > 0) nv = Math.min(nv, Math.max(v, SOFT_HI)); else nv = Math.max(nv, Math.min(v, SOFT_LO));
-        if (nv !== v) {
-            setTrackerNumber(nv);
-            S.lastEffect = { kind: 'phase', by: '', text: PHASES[S.marketPhase].label, delta: nv - v, before: v, after: nv, seq: nextEvt() };
-        }
-    }
+    // The forecast no longer moves the price here: it is added to each Tile landing (see phaseBonus).
     S.phaseLeft--;
     if (S.phaseLeft > 0) return;
     const next = otherPhases(S.marketPhase)[rnd(0, 1)];

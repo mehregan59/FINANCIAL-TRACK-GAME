@@ -23,7 +23,7 @@ function LocalTransport(code) {
         async join(m) { meta = m; beat(); timer = setInterval(() => { beat(); emit(); }, 1000); await new Promise(r => setTimeout(r, 700)); emit(); },
         updateMeta(m) { meta = m; beat(); emit(); },
         send(e, d) { bc.postMessage({ k: 'msg', e, d }); },
-        onMessage(f) { msgH = f; }, onPresence(f) { presH = f; },
+        onMessage(f) { msgH = f; }, onPresence(f) { presH = f; }, onStatus(f) { statH = f; },
         leave() { if (meta) bc.postMessage({ k: 'bye', id: meta.id }); clearInterval(timer); bc.close(); }
     };
 }
@@ -31,7 +31,7 @@ function LocalTransport(code) {
 // Production backend: Supabase Realtime.
 function SupabaseTransport(code) {
     const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { realtime: { params: { eventsPerSecond: 20 } } });
-    let ch, msgH = () => {}, presH = () => {}, meta = null;
+    let ch, msgH = () => {}, presH = () => {}, statH = () => {}, meta = null;
     const readPresence = () => presH(Object.values(ch.presenceState()).map(a => a[a.length - 1]));
     return {
         join(m) {
@@ -45,10 +45,10 @@ function SupabaseTransport(code) {
                 ch.subscribe(async status => {
                     if (status === 'SUBSCRIBED') {
                         await ch.track(meta); // also re-announces us after an automatic reconnect
-                        if (!settled) { settled = true; clearTimeout(to); resolve(); } else showToast('Reconnected');
+                        statH('online'); if (!settled) { settled = true; clearTimeout(to); resolve(); }
                     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                         if (!settled) { settled = true; clearTimeout(to); reject(new Error('Could not connect to the game server.')); }
-                        else showToast('Connection lost, reconnecting...');
+                        else statH('lost');
                     }
                 });
             });

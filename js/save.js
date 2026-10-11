@@ -62,7 +62,7 @@ function claimSeats() {
     let changed = false;
     MP.members.forEach(m => {
         if (APP_STATE.players.some(p => p.id === m.id)) return;
-        const seat = APP_STATE.players.find(p => !p.bot && !isPresent(p) && p.name.toLowerCase() === m.name.toLowerCase());
+        const seat = APP_STATE.players.find(p => !p.bot && !p.kh && !isPresent(p) && p.name.toLowerCase() === m.name.toLowerCase());
         if (seat) { seat.id = m.id; changed = true; }
     });
     if (changed) { broadcastState(); updateTurnUI(); watchCurrentPlayer(); }
@@ -77,7 +77,10 @@ async function resumeRoom() {
     const s = await Save.get(code);
     setLandingBusy(false);
     if (!s || !Array.isArray(s.players) || s.phase !== 'playing') { showLandingError('No saved game found for room ' + code + '.'); return; }
-    if (!s.players.some(p => !p.bot && String(p.name).toLowerCase() === n.toLowerCase())) {
+    Seat.useTyped(code);
+    const mine = s.players.find(p => !p.bot && String(p.name).toLowerCase() === n.toLowerCase());
+    if (mine && mine.kh && !Seat.hasKey(code)) { showLandingError('This seat is protected. Type your Seat key, or resume from the browser you played on.'); return; }
+    if (!mine) {
         showLandingError('Use the same name you played with. Players in this game: ' + s.players.filter(p => !p.bot).map(p => p.name).join(', '));
         return;
     }
@@ -95,6 +98,7 @@ function applyResume() {
     applyState(s);
     claimSeats();
     broadcastState();
+    Seat.check();
     resumeAfterTakeover();
     applyRoleUI(); updateTurnUI(); watchCurrentPlayer();
     showToast('Saved game resumed. Others can join with code ' + MP.code);

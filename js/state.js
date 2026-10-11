@@ -23,7 +23,7 @@ const APP_STATE = {
     tiles: [],
     eventPool: [...EVENT_SETS.classic],   // 100 different events, see js/event-sets.js
     // Starting values chosen on the landing page (host's choice is what the room uses).
-    settings: { market: 500, money: 5000, shares: 9, mode: 'long' },
+    settings: { market: 500, money: 5000, shares: 9, mode: 'long', currency: 'USD' },
     players: [],
     activePlayersCount: 4,
     currentPlayerIndex: 0,
@@ -39,9 +39,17 @@ const APP_STATE = {
     gameOver: null,             // { seq, ranking: [{ id, name, total, money, shares }] } once the game has ended
     lastEffect: null,  // { kind: 'tile'|'reset'|'phase', by, text, delta, before, after, seq }  Market Tracker change
     lastTrade: null,   // { by, kind: 'buy'|'sell', qty, price, seq }
+    prevMarket: null,  // share price before the latest Market Tracker change (shown as 'Previous')
     evtSeq: 0,
     anim: null         // local only: { id, pos, lift, count } while an avatar is hopping
 };
+
+// Currencies the host can choose. Only the symbol changes: the numbers stay the same.
+const CURRENCIES = { USD: { sym: '$', label: 'US Dollar' }, EUR: { sym: '\u20AC', label: 'Euro' }, GBP: { sym: '\u00A3', label: 'British Pound' }, JPY: { sym: '\u00A5', label: 'Japanese Yen' } };
+const CURRENCY_IDS = Object.keys(CURRENCIES);
+const curSym = () => (CURRENCIES[APP_STATE.settings.currency] || CURRENCIES.USD).sym;
+// Money with the room's currency symbol, e.g. "$5,000".
+const money = n => (n < 0 ? '-' : '') + curSym() + Math.abs(Number(n) || 0).toLocaleString('en-US');
 
 const SETTING_LIMITS = { market: [0, 999, 500], money: [0, 1000000, 5000], shares: [0, 1000, 9] };
 const MODE_IDS = ['long', 'standard', 'short', 'beginner'];
@@ -50,6 +58,7 @@ function cleanSettings(s) {
     const o = {};
     for (const k in SETTING_LIMITS) { const [lo, hi, def] = SETTING_LIMITS[k]; o[k] = clampInt(s[k], lo, hi, def); }
     o.mode = MODE_IDS.includes(s.mode) ? s.mode : 'long';
+    o.currency = CURRENCY_IDS.includes(s.currency) ? s.currency : 'USD';
     return o;
 }
 // Current Market Tracker value (0-999) as a number.

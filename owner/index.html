@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Owner panel · Capital Crash Online</title>
+<meta name="description" content="Owner panel for Capital Crash Online: feedback questions, answers, notes and bug reports.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body{margin:0;font-family:system-ui,sans-serif;background:#0f2a4a;color:#1d2433}
+  .wrap{max-width:980px;margin:0 auto;padding:24px}
+  h1{color:#fff;font-size:24px;display:flex;justify-content:space-between;align-items:center}
+  .card{background:#fdf6e3;border-radius:12px;padding:18px;margin-bottom:14px}
+  input,textarea,select{width:100%;box-sizing:border-box;padding:8px;border:1px solid #c9bfa5;border-radius:6px;margin:4px 0 8px;font:inherit}
+  button{padding:8px 14px;border-radius:999px;border:1px solid #c9bfa5;background:#fff;cursor:pointer;font:inherit}
+  button.primary{background:#f2c230;border-color:#d9a900;font-weight:700}
+  .tabs button.on{background:#f2c230;font-weight:700}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .bar{height:10px;background:#e04848;border-radius:5px}
+  .row{display:flex;gap:8px;align-items:center}
+  .muted{color:#6b6250;font-size:13px}
+  .login{max-width:360px;margin:40px auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span>Capital Crash · Owner panel</span><button id="out" hidden>Sign out</button></h1>
+  <div id="app"><div class="card">Loading…</div></div>
+</div>
+<script>
+const sb = supabase.createClient('https://scnnmkroadvzhjspxqtv.supabase.co', 'sb_publishable_Jfm4wTvO40J1WL3scYPznQ_o8NmfwA-');
+const app = document.getElementById('app');
+const el = (t, p = {}, ...kids) => { const e = document.createElement(t); Object.assign(e, p); kids.flat().forEach(k => e.append(k)); return e; };
+let tab = 'analysis', data = null;
+
+document.getElementById('out').onclick = () => sb.auth.signOut();
+sb.auth.onAuthStateChange((_e, s) => { document.getElementById('out').hidden = !s; s ? load() : login(); });
+
+function login() {
+  let mode = 'in';
+  const email = el('input', { type: 'email', placeholder: 'Email', required: true });
+  const pw = el('input', { type: 'password', placeholder: 'Password', minLength: 8, required: true });
+  const msg = el('p', { className: 'muted' });
+  const title = el('h2', { textContent: 'Sign in' });
+  const go = el('button', { className: 'primary', textContent: 'Sign in' });
+  const sw = el('button', { type: 'button', textContent: 'First time? Create the owner account' });
+  sw.onclick = () => { mode = mode === 'in' ? 'up' : 'in'; title.textContent = mode === 'in' ? 'Sign in' : 'Create the owner account'; go.textContent = mode === 'in' ? 'Sign in' : 'Create account'; sw.textContent = mode === 'in' ? 'First time? Create the owner account' : 'I already have an account'; };
+  const f = el('form', { className: 'card login' }, title, email, pw, el('div', { className: 'row' }, go, sw), msg, el('p', { className: 'muted', textContent: 'Only the first account created becomes the owner.' }));
+  f.onsubmit = async e => {
+    e.preventDefault(); msg.textContent = 'Please wait…';
+    const r = mode === 'in' ? await sb.auth.signInWithPassword({ email: email.value, password: pw.value })
+      : await sb.auth.signUp({ email: email.value, password: pw.value, options: { emailRedirectTo: location.origin + '/owner' } });
+    msg.textContent = r.error ? r.error.message : (mode === 'up' ? 'Check your email to confirm the account, then sign in.' : '');
+  };
+  app.replaceChildren(f);
+}
+
+async function load() {
+  const { data: u } = await sb.auth.getUser();
+  const { data: isAdmin } = await sb.rpc('has_role', { _user_id: u.user.id, _role: 'admin' });
+  if (!isAdmin) { app.replaceChildren(el('div', { className: 'card', textContent: 'This account is not the owner account.' })); return; }
+  const [q, r, b] = await Promise.all([
+    sb.from('feedback_questions').select('*').order('position'),
+    sb.from('feedback_responses').select('*').order('created_at', { ascending: false }).limit(1000),
+    sb.from('bug_reports').select('*').order('created_at', { ascending: false }).limit(500),
+  ]);
+  data = { questions: q.data || [], responses: r.data || [], bugs: b.data || [] };
+  render();
+}
+
+function render() {
+  const tabs = [['analysis', 'Answers'], ['notes', 'Notes'], ['questions', 'Questions'], ['bugs', `Bug reports (${data.bugs.filter(x => x.status === 'open').length})`]];
+  const nav = el('div', { className: 'tabs' }, tabs.map(([k, l]) => { const btn = el('button', { textContent: l, className: tab === k ? 'on' : '' }); btn.onclick = () => { tab = k; render(); }; return btn; }));
+  app.replaceChildren(nav, ...({ analysis, notes, questions, bugs }[tab])());
+}
+
+function analysis() {
+  const out = [el('p', { className: 'muted', style: 'color:#fff', textContent: `${data.responses.length} responses` })];
+  data.questions.forEach(q => {
+    const counts = {}; let total = 0;
+    data.responses.forEach(r => { const a = r.answers && r.answers[q.id]; if (a) { counts[a] = (counts[a] || 0) + 1; total++; } });
+    out.push(el('div', { className: 'card' }, el('strong', { textContent: `${q.position}. ${q.question}` }),
+      (q.options || []).map(o => { const n = counts[o] || 0, pct = total ? Math.round(n / total * 100) : 0;
+        return el('div', {}, el('div', { className: 'muted', textContent: `${o} — ${n} (${pct}%)` }), el('div', { className: 'bar', style: `width:${pct}%` })); })));
+  });
+  return out;
+}
+
+function notes() {
+  const list = data.responses.filter(r => r.notes);
+  if (!list.length) return [el('div', { className: 'card', textContent: 'No notes yet.' })];
+  return list.map(r => el('div', { className: 'card' }, el('p', { textContent: r.notes }), el('p', { className: 'muted', textContent: `${r.player_name || 'Anonymous'} · ${r.game_mode || ''} · ${new Date(r.created_at).toLocaleString()}` })));
+}
+
+function questions() {
+  const out = data.questions.map(q => qForm(q));
+  if (data.questions.length < 10) out.push(qForm({ position: data.questions.length + 1, section: 'game', question: '', options: ['', ''], active: true }));
+  return out;
+}
+
+function qForm(q) {
+  const pos = el('input', { type: 'number', min: 1, max: 10, value: q.position });
+  const sec = el('select', {}, el('option', { value: 'game', textContent: 'Game experience' }), el('option', { value: 'learning', textContent: 'Learning' })); sec.value = q.section;
+  const text = el('input', { value: q.question, placeholder: 'Question' });
+  const opts = el('textarea', { rows: 4, value: (q.options || []).join('\n'), placeholder: 'One answer per line (2–6)' });
+  const act = el('input', { type: 'checkbox', checked: q.active, style: 'width:auto' });
+  const msg = el('span', { className: 'muted' });
+  const save = el('button', { className: 'primary', textContent: q.id ? 'Save' : 'Add question' });
+  save.onclick = async () => {
+    const options = opts.value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (text.value.trim().length < 3 || options.length < 2 || options.length > 6) { msg.textContent = 'Need a question and 2–6 answers.'; return; }
+    const row = { position: +pos.value, section: sec.value, question: text.value.trim(), options, active: act.checked };
+    const r = q.id ? await sb.from('feedback_questions').update(row).eq('id', q.id) : await sb.from('feedback_questions').insert(row);
+    if (r.error) msg.textContent = 'Could not save.'; else load();
+  };
+  const kids = [el('div', { className: 'row' }, el('label', { textContent: 'Position' }), pos, sec), text, opts, el('label', { className: 'row' }, act, 'Active (shown to players)'), el('div', { className: 'row' }, save, msg)];
+  if (q.id) { const del = el('button', { textContent: 'Delete' }); del.onclick = async () => { if (confirm('Delete this question?')) { await sb.from('feedback_questions').delete().eq('id', q.id); load(); } }; kids[kids.length - 1].append(del); }
+  return el('div', { className: 'card' }, kids);
+}
+
+function bugs() {
+  if (!data.bugs.length) return [el('div', { className: 'card', textContent: 'No bug reports yet.' })];
+  return data.bugs.map(b => { const btn = el('button', { textContent: b.status === 'open' ? 'Mark resolved' : 'Reopen' });
+    btn.onclick = async () => { await sb.from('bug_reports').update({ status: b.status === 'open' ? 'resolved' : 'open' }).eq('id', b.id); load(); };
+    return el('div', { className: 'card' }, el('strong', { textContent: b.status === 'open' ? 'Open' : 'Resolved' }), el('p', { textContent: b.description }),
+      el('p', { className: 'muted', textContent: `${b.player_name || 'Anonymous'} · ${b.game_mode || ''} · ${b.browser || ''} · ${new Date(b.created_at).toLocaleString()}` }), btn); });
+}
+</script>
+</body>
+</html>

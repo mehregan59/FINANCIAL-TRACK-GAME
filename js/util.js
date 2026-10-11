@@ -8,9 +8,15 @@ function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function showToast(msg) {
-    const el = $('toast'); el.textContent = msg; el.classList.remove('hidden');
-    clearTimeout(MP.toastTimer); MP.toastTimer = setTimeout(() => el.classList.add('hidden'), 2600);
+// sticky = a game event: it stays on screen until the next message replaces it (or the player closes it).
+function showToast(msg, sticky) {
+    const el = $('toast');
+    el.innerHTML = '<span class="toast-msg"></span>' + (sticky ? '<button type="button" class="toast-x" aria-label="Close message" onclick="this.parentNode.classList.add(\'hidden\')">&times;</button>' : '');
+    el.firstChild.textContent = msg;
+    el.classList.toggle('sticky', !!sticky);
+    el.classList.remove('hidden'); el.classList.remove('toast-in'); void el.offsetWidth; el.classList.add('toast-in');
+    clearTimeout(MP.toastTimer);
+    if (!sticky) MP.toastTimer = setTimeout(() => el.classList.add('hidden'), 2600);
 }
 
 const cleanName = s => String(s || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16);

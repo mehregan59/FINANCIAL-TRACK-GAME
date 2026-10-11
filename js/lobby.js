@@ -19,6 +19,10 @@ function mpInit() {
         n.textContent = 'Test mode: rooms only work between tabs of this browser, because the online game server is not connected yet.';
         n.classList.remove('hidden');
     }
+    // Same tab reloaded during a live room: rejoin automatically with the same seat.
+    let back = ''; try { back = sessionStorage.getItem('ftg_room') || ''; } catch (_) {}
+    const nm = $('playerNameInput').value.trim();
+    if (pre && back === pre && nm) { showToast('Rejoining room ' + pre + '...'); enterRoom(pre, nm, false, 0); return; }
     $('landing').classList.remove('hidden');
     (pre ? $('playerNameInput') : $('playerNameInput')).focus();
 }
@@ -45,11 +49,11 @@ function readName() {
 
 // Landing page "Game settings": starting Market value, money and shares per player.
 function readSettingsForm() {
-    const s = cleanSettings({ market: $('setMarket').value, money: $('setMoney').value, shares: $('setShares').value, mode: $('setMode').value });
+    const s = cleanSettings({ market: $('setMarket').value, money: $('setMoney').value, shares: $('setShares').value, mode: $('setMode').value, currency: $('setCurrency') ? $('setCurrency').value : 'USD' });
     $('setMarket').value = s.market; $('setMoney').value = s.money; $('setShares').value = s.shares;
     return s;
 }
-function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 9; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; renderLandMode(); }
+function resetSettingsForm() { $('setMarket').value = 500; $('setMoney').value = 5000; $('setShares').value = 9; $('setPreset').value = 'classic'; $('setSoloPlayers').value = 4; $('setMode').value = 'long'; if ($('setCurrency')) $('setCurrency').value = 'USD'; renderLandMode(); }
 
 // Event set chosen under Settings ('classic' keeps the board as it is).
 const chosenPreset = () => { const p = $('setPreset') ? $('setPreset').value : 'classic'; return p === 'wallstreet' || p === 'crypto' ? p : 'classic'; };
@@ -58,8 +62,7 @@ let SETUP_PRESET = 'classic';
 
 // Back to the start page (leaves the room / resets the one-screen game).
 function goHome() {
-    const msg = MP.on ? 'Leave this game and go back to the start page? You can rejoin with the room code.' : 'Go back to the start page? The one-screen game will be reset.';
-    if (window.confirm(msg)) leaveRoom();
+    leaveRoom(); // no browser pop-up: in a live room you can rejoin with the room code
 }
 
 async function createRoom() { const n = readName(); if (n) { await Guide.ask(); APP_STATE.settings = readSettingsForm(); SETUP_PRESET = chosenPreset(); await enterRoom(newRoomCode(), n, true, EXPECTED_SETUP); } }
@@ -68,6 +71,7 @@ async function joinRoom() {
     const n = readName(); if (!n) return;
     const code = cleanCode($('roomCodeInput').value);
     if (code.length !== 5) { showLandingError('Room codes have 5 characters.'); return; }
+    Seat.useTyped(code);
     await Guide.ask();
     await enterRoom(code, n, false);
 }
@@ -81,14 +85,16 @@ async function enterRoom(code, name, creator, expected) {
     MP.t = makeTransport(code);
     MP.t.onMessage(onMpMessage);
     MP.t.onPresence(onMpPresence);
+    Conn.attach(MP.t);
     try { await MP.t.join(myMeta()); }
     catch (err) { abortJoin(err.message || 'Could not join the room.'); return; }
     await admitWait;
     if (!MP.on) return;
     // One-time capacity check at the moment we join (never re-run, so existing players are not kicked out).
     const cap = MP.expected || MAX_PLAYERS;
-    if (!creator && MP.members.filter(m => m.id !== MP.id).length >= cap) { abortJoin('This room is full (' + cap + ' players).'); return; }
-    try { history.replaceState(null, '', location.pathname + '?room=' + code); } catch (_) {}
+    if (!creator && !Seat.hasKey(code) && MP.members.filter(m => m.id !== MP.id).length >= cap) { abortJoin('This room is full (' + cap + ' players).'); return; }
+    try { history.replaceState(null, '', location.pathname + '?room=' + code); sessionStorage.setItem('ftg_room', code); } catch (_) {}
+    Conn.start();
     $('landing').classList.add('hidden');
     if (MP.resumeState) { applyResume(); return; }
     if (MP.phase !== 'playing') showLobby(); // a running game may already have arrived while we waited
@@ -140,6 +146,7 @@ function renderLobby() {
     const bb = $('botsBtn');
     if (bb) { bb.classList.toggle('hidden', !(TEST_BOTS && isHost())); bb.textContent = MP.bots ? 'Remove the 2 test players' : '+ Add 2 test players (temporary)'; }
     renderModeGrid();
+    renderCurrencyGrid();
     renderAvatarGrid();
     const n = ordered.length, full = (n >= N && n >= MIN_PLAYERS) || (bots > 0 && n + bots >= MIN_PLAYERS);
     $('lobbyCount').textContent = `${n} of ${N} joined`;
@@ -168,6 +175,21 @@ function renderModeGrid() {
         grid.appendChild(b);
     });
     $('modeHint').textContent = (host ? MODES[cur].hint : 'Game length chosen by the host: ' + MODES[cur].hint) + '. ' + MODE_NOTE;
+}
+
+// Currency: the host chooses ($, \u20AC, \u00A3, \u00A5); everyone sees it on every price once the game starts.
+function renderCurrencyGrid() {
+    const grid = $('currencyGrid'); if (!grid) return;
+    const cur = APP_STATE.settings.currency || 'USD', host = isHost();
+    grid.innerHTML = '';
+    CURRENCY_IDS.forEach(id => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'mode-btn' + (id === cur ? ' on' : ''); b.disabled = !host;
+        b.innerHTML = `<b>${CURRENCIES[id].sym} ${id}</b><small>${CURRENCIES[id].label}</small>`;
+        b.onclick = () => { APP_STATE.settings = { ...APP_STATE.settings, currency: id }; renderCurrencyGrid(); };
+        grid.appendChild(b);
+    });
+    $('currencyHint').textContent = host ? 'Every price, wallet and The Bank will show ' + CURRENCIES[cur].sym + ' (' + CURRENCIES[cur].label + ').' : 'Currency chosen by the host: ' + CURRENCIES[cur].sym + ' ' + cur;
 }
 
 // Avatar picker: taken avatars are greyed out and show who has them.
@@ -221,20 +243,21 @@ function hostStartGame() {
         let name = memberName(id) || `Investor ${i + 1}`;
         used[name] = (used[name] || 0) + 1;
         if (used[name] > 1) name = `${name} ${used[name]}`;
-        return { id, name, position: 1, avatar: avatars[i], ...newWallet() };
+        return { id, name, position: 0, avatar: avatars[i], ...newWallet() };
     });
     for (let b = 1; b <= bots; b++) { // TEST BOTS
-        APP_STATE.players.push({ id: 'bot-' + b, name: 'Test Bot ' + b, position: 1, avatar: avatars[order.length + b - 1], bot: true, ...newWallet() });
+        APP_STATE.players.push({ id: 'bot-' + b, name: 'Test Bot ' + b, position: 0, avatar: avatars[order.length + b - 1], bot: true, ...newWallet() });
     }
     APP_STATE.activePlayersCount = APP_STATE.players.length;
     APP_STATE.currentPlayerIndex = 0; // the host (player 1) starts, then one after the other
     Object.assign(APP_STATE, { turnPhase: 'roll', pending: null, lastRoll: null, lastMove: null, lastEffect: null, lastTrade: null, evtSeq: 0 });
     setTrackerNumber(APP_STATE.settings.market);
     applyChosenPreset(SETUP_PRESET);
-    APP_STATE.rank = []; APP_STATE.finalBy = ''; APP_STATE.finalSeq = 0; APP_STATE.gameOver = null;
-    buildBalancedTiles(); startPhase();
+    APP_STATE.rank = []; APP_STATE.finalBy = ''; APP_STATE.finalSeq = 0; APP_STATE.gameOver = null; APP_STATE.prevMarket = null;
+    buildBalancedTiles(); startPhase(); resetCards(); if (typeof Stats !== 'undefined') Stats.reset();
     MP.phase = 'playing';
     broadcastState();
+    Seat.check();
     enterGameView();
     syncEffects(true);
     updateMarketTrackerUI(); drawBoard();
@@ -251,10 +274,10 @@ function toggleBots() { if (!isHost()) return; MP.bots = MP.bots ? 0 : 2; render
 
 // Game length on the start page: all four options are visible; hovering (or tapping) one explains it.
 const MODE_TIPS = {
-    long: 'The full game. A normal die (1-6), about 29 turns each. Best when you have time.',
-    standard: 'A shorter game. A 10-sided die with numbers 1-9, about 20 turns each. The dice numbers change so players can reach the end of the board.',
-    short: 'A quick game. A 20-sided die with numbers 1-18, about 10 turns each. The dice numbers change so players can reach the end of the board.',
-    beginner: 'For new players. The Short die (1-18), gentle tiles (at most +3 or -3, no Skip) and the guided tour always on.'
+    long: 'The full game. A normal die with value 1–6, about 29 Turns each. Best when you have time.',
+    standard: 'A shorter game. A 10-sided die with value 1–9, about 20 Turns each. Bigger Dice values so players can reach Tile 100.',
+    short: 'A quick game. A 20-sided die with value 1–18, about 10 Turns each. Bigger Dice values so players can reach Tile 100.',
+    beginner: 'For new players. The Short die (value 1–18), gentle Tiles (at most +3 or −3, no Skip) and the guided tour always on.'
 };
 function renderLandMode() {
     const grid = $('landMode'); if (!grid) return;

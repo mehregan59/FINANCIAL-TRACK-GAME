@@ -1,7 +1,7 @@
 /* Capital Clash: SVG board, Market Tracker dials and pawns. */
 
 // Inner radius of the single ring (smaller hole = longer bars).
-const SINGLE_R_IN = 200;
+const SINGLE_R_IN = 125;
 
 function drawBoard() {
     const svg = document.getElementById('boardSvg');
@@ -11,15 +11,21 @@ function drawBoard() {
     const cx = 500, cy = 500;
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
     group.setAttribute('id', 'boardGroup');
+    fitBoardViewport(svg);
+    // Fit the oval to the remaining centre area without resizing either rail.
+    const wheel = svgEl('g', { transform: `translate(500 0) scale(${BOARD_SX} 1) translate(-500 0)` });
 
     if (APP_STATE.boardMode === 'single') {
-        drawSinglePerimeterRing(group, cx, cy);
+        drawSinglePerimeterRing(wheel, cx, cy);
     } else {
-        drawDoublePerimeterRing(group, cx, cy);
+        drawDoublePerimeterRing(wheel, cx, cy);
     }
 
-    drawMarketTrackerRings(group, cx, cy);
-    drawPlayerPawns(group, cx, cy);
+    drawMarketTrackerRings(wheel, cx, cy);
+    // Start Tile 0 shows only while someone still waits on it (new game); hidden once everyone has left.
+    if (!APP_STATE.players.length || APP_STATE.players.some(p => p.position <= 0)) drawStartBench(group);
+    drawPlayerPawns(wheel, cx, cy);
+    group.appendChild(wheel);
 
     svg.appendChild(group);
     const u = document.getElementById('lensUse'); if (u) { u.setAttribute('href', '#'); u.setAttribute('href', '#boardGroup'); }
@@ -43,36 +49,46 @@ function drawSinglePerimeterRing(group, cx, cy) {
         const o1 = pt(R_out, A1 + GAP / 2 / R_out), o2 = pt(R_out, A2 - GAP / 2 / R_out);
         const i2 = pt(R_in, A2 - GAP / 2 / R_in), i1 = pt(R_in, A1 + GAP / 2 / R_in);
 
+        const card = isCardTile(tile);
+        const mt = tile.text.match(/^(.*) \(([^)]*)\)$/);
+        const effTxt = mt ? mt[2] : '';
+        const neg = /^[-\u2212]/.test(effTxt);
+        const fillCol = card ? '#f5b800' : neg ? '#dc2626' : '#16a34a';
         const sectorPath = svgEl('path', {
             d: `M ${o1[0]} ${o1[1]} A ${R_out} ${R_out} 0 0 1 ${o2[0]} ${o2[1]} L ${i2[0]} ${i2[1]} A ${R_in} ${R_in} 0 0 0 ${i1[0]} ${i1[1]} Z`,
-            fill: palette[i % palette.length]
+            fill: fillCol, ...(card ? { stroke: '#fff7cc', 'stroke-width': 2.5 } : {})
         });
         group.appendChild(sectorPath);
 
         const midA = (A1 + A2) / 2;
-        const [textStartX, textStartY] = pt(R_out - 9, midA);
+        // Tile number in a fixed circle near the outer edge, so every number sits in the same place.
+        const [bx, by] = pt(R_out - 19, midA);
+        group.appendChild(svgEl('circle', { cx: bx, cy: by, r: 13, fill: '#ffffff', stroke: card ? '#7a5a00' : '#0b1f4d', 'stroke-width': 1.5 }));
+        const nb = svgEl('text', { x: bx, y: by, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': tile.number >= 100 ? 10 : 13, 'font-weight': 700, fill: '#0b1f4d' });
+        nb.textContent = tile.number; group.appendChild(nb);
+
+        const [textStartX, textStartY] = pt(R_out - 38, midA);
         const textAngle = (midA * 180 / Math.PI) + 180;
-
         const textGroup = svgEl('g', { transform: `translate(${textStartX}, ${textStartY}) rotate(${textAngle})` });
-        // "Bubble Eruption (-18)" -> name + effect
-        const m = tile.text.match(/^(.*) \(([^)]*)\)$/);
-        const name = m ? m[1] : tile.text, effect = m ? m[2] : '';
-        // Long names get a slightly smaller size so name and effect always fit in the ring length.
-        const fs = Math.min(14.5, Math.max(11.5, (R_out - R_in - 70) / (name.length * 0.58)));
-
-        const textElem = svgEl('text', { x: 0, y: 0, fill: '#ffffff', 'font-size': fs.toFixed(1), 'font-weight': 800, 'dominant-baseline': 'central', class: 'text-stroke' });
-        const numSpan = svgEl('tspan', { fill: '#facc15', 'font-weight': 900, 'font-size': (fs + 3).toFixed(1) });
-        numSpan.textContent = tile.number;
-        const nameSpan = svgEl('tspan', { dx: 6, fill: '#ffffff' });
-        nameSpan.textContent = name;
-        textElem.appendChild(numSpan); textElem.appendChild(nameSpan);
-        if (effect) {
-            const effSpan = svgEl('tspan', { dx: 6, fill: '#ffffff', 'font-weight': 900, 'font-size': (fs + 1.5).toFixed(1) });
-            effSpan.textContent = effect;
-            textElem.appendChild(effSpan);
-        }
+        const name = card ? 'Event Card' : mt ? mt[1] : tile.text, effect = card ? 'Draw' : effTxt;
+        // The name gets the lane between the number badge and the effect ring.
+        const EFF_R = 302;   // fixed ring for every effect value
+        const lane = (R_out - 38) - (EFF_R + 24);
+        const fs = Math.min(15, Math.max(9, lane / (name.length * 0.58)));
+        const txtCol = card ? '#000000' : '#ffffff';
+        const textElem = svgEl('text', { x: 0, y: 0, fill: txtCol, 'font-size': fs.toFixed(1), 'font-weight': 500, 'dominant-baseline': 'central' });
+        textElem.textContent = name;
+        if (name.length * fs * 0.58 > lane) { textElem.setAttribute('textLength', lane); textElem.setAttribute('lengthAdjust', 'spacingAndGlyphs'); }
         textGroup.appendChild(textElem);
         group.appendChild(textGroup);
+        // Effect (+5, -9, Draw) always sits on the same inner ring, so all values line up.
+        if (effect) {
+            const [ex, ey] = pt(EFF_R, midA);
+            const eg = svgEl('g', { transform: `translate(${ex}, ${ey}) rotate(${textAngle})` });
+            const et = svgEl('text', { x: 0, y: 0, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: txtCol, 'font-size': 17, 'font-weight': 800, stroke: card ? 'none' : 'rgba(0,0,0,.35)', 'stroke-width': 0.6, 'paint-order': 'stroke' });
+            et.textContent = effect;
+            eg.appendChild(et); group.appendChild(eg);
+        }
     }
 }
 
@@ -141,13 +157,13 @@ function drawMarketTrackerRings(group, cx, cy) {
     group.appendChild(disc);
     group.appendChild(svgEl("circle", { cx, cy, r: rInner, fill: "#12336f", stroke: "#eab308", "stroke-width": 5 }));
     const v = APP_STATE.marketTracker[2] * 100 + APP_STATE.marketTracker[1] * 10 + APP_STATE.marketTracker[0];
-    const t1 = svgEl("text", { x: cx, y: cy - 70, fill: "#cfe0ff", "font-size": single ? 27 : 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
+    const t1 = svgEl("text", { x: cx, y: cy - (single ? 50 : 70), fill: "#cfe0ff", "font-size": single ? 17 : 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
     t1.textContent = "MARKET TRACKER";
-    const t2 = svgEl("text", { x: cx, y: cy - 36, fill: "#cfe0ff", "font-size": single ? 27 : 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
+    const t2 = svgEl("text", { x: cx, y: cy - (single ? 28 : 36), fill: "#cfe0ff", "font-size": single ? 17 : 30, "font-weight": 800, "text-anchor": "middle", "letter-spacing": 3 });
     t2.textContent = "VALUE";
-    const val = svgEl("text", { id: "centerValue", x: cx, y: cy + 76, fill: "#facc15", "font-size": single ? 135 : 150, "font-weight": 900, "text-anchor": "middle" });
+    const val = svgEl("text", { id: "centerValue", x: cx, y: cy, "dominant-baseline": "central", fill: "#facc15", "font-size": single ? 82 : 150, "font-weight": 900, "text-anchor": "middle" });
     val.textContent = v;
-    group.appendChild(t1); group.appendChild(t2); group.appendChild(val);
+    group.appendChild(val);
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -163,6 +179,42 @@ function svgEl(name, attrs) {
 const PAWN_R = 27;            // pawn radius
 const PAWN_R0 = 487 + 30;     // first row, just outside the outer edge of the tiles (485)
 const PAWN_GAP = 4;           // free space kept between two pawns
+// Tile 0: the Start Bench in the top-left corner, before Tile 1. Pawns wait here until their first roll,
+// so a first roll of 5 lands exactly on Tile 5.
+let BOARD_SX = 1.16;
+let boardResizeObserver;
+function fitBoardViewport(svg) {
+    const container = svg.parentElement;
+    if (!container) return;
+    const { width, height } = container.getBoundingClientRect();
+    if (width <= 0 || height <= 0) return;
+    BOARD_SX = Math.min(1.25, Math.max(1.16, width / height * 1120 / 970));
+    // Keep a gentle oval instead of flattening the board to fill wide screens.
+    const viewWidth = 970 * BOARD_SX;
+    svg.setAttribute('viewBox', `${500 - viewWidth / 2} -70 ${viewWidth} 1120`);
+    if (!boardResizeObserver && typeof ResizeObserver !== 'undefined') {
+        boardResizeObserver = new ResizeObserver(() => drawBoard());
+        boardResizeObserver.observe(container);
+    }
+}
+const BENCH = { x: 1000, y: -62, w: 100, h: 100 };
+// Waiting spots beside the bench (screen coords), converted into the stretched wheel's coords.
+const BENCH_SPOTS = [[945, -38], [887, -38], [829, -38], [771, -38], [713, -38], [1080, 90], [1022, 90], [964, 90], [1080, 148], [1022, 148]];
+const benchSpot = k => { const [x, y] = BENCH_SPOTS[k % BENCH_SPOTS.length]; return { x: 500 + (x - 500) / BOARD_SX, y }; };
+function drawStartBench(group) {
+    const g = svgEl('g', { id: 'startBench' });
+    g.appendChild(svgEl('rect', { x: BENCH.x, y: BENCH.y, width: BENCH.w, height: BENCH.h, rx: 8, class: 'start-tile' }));
+    const number = svgEl('text', { x: BENCH.x + BENCH.w / 2, y: BENCH.y + 56, 'text-anchor': 'middle', 'font-size': 48, 'font-weight': 900, class: 'start-tile-number' });
+    number.textContent = '0';
+    g.appendChild(number);
+    const t = svgEl('text', { x: BENCH.x + BENCH.w / 2, y: BENCH.y + 84, 'text-anchor': 'middle', 'font-size': 18, 'font-weight': 900, class: 'start-tile-label' });
+    t.textContent = 'START';
+    g.appendChild(t);
+    // dashed arrow from the bench towards Tile 1 (just right of 12 o'clock)
+    g.appendChild(svgEl('path', { d: 'M 1000 -70 Q 760 -95 560 -2', fill: 'none', stroke: '#ffd54a', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-dasharray': '2 9' }));
+    g.appendChild(svgEl('path', { d: 'M 548 6 l 8 -18 l 12 14 z', fill: '#ffd54a' }));
+    group.appendChild(g);
+}
 const pawnAngle = pos => (pos - 0.5) * (2 * Math.PI / 100) - Math.PI / 2;
 
 // Spots of all players (index = player index). Uses stored positions, so a hopping pawn keeps its spot.
@@ -170,7 +222,9 @@ function pawnSpots() {
     const spots = [], placed = [];
     const need = 2 * PAWN_R + PAWN_GAP, side = need, rowStep = need * 0.87;
     const evenRow = [0, -1, 1, -2, 2, -3, 3, -4, 4], oddRow = [-0.5, 0.5, -1.5, 1.5, -2.5, 2.5, -3.5, 3.5];
+    let bench = 0;
     APP_STATE.players.forEach((p, i) => {
+        if (p.position <= 0) { spots[i] = benchSpot(bench++); spots[i].bench = true; return; }
         const ang = pawnAngle(p.position), tx = -Math.sin(ang), ty = Math.cos(ang);
         let best = null;
         for (let row = 0; row < 4 && !best; row++) {
@@ -206,8 +260,10 @@ function fillPawnLayer(layer) {
 
         const g = svgEl('g', { class: 'pawn-element' });
         // link to the tile the pawn is standing at
-        g.appendChild(svgEl('line', { x1: 500 + 487 * Math.cos(ang), y1: 500 + 487 * Math.sin(ang), x2: x, y2: y, stroke: color, 'stroke-width': 3, 'stroke-linecap': 'round', opacity: 0.85 }));
-        g.appendChild(svgEl('circle', { cx: 500 + 487 * Math.cos(ang), cy: 500 + 487 * Math.sin(ang), r: 4, fill: color, stroke: '#fff', 'stroke-width': 1.5 }));
+        if (anim || !spots[idx].bench) {
+            g.appendChild(svgEl('line', { x1: 500 + 487 * Math.cos(ang), y1: 500 + 487 * Math.sin(ang), x2: x, y2: y, stroke: color, 'stroke-width': 3, 'stroke-linecap': 'round', opacity: 0.85 }));
+            g.appendChild(svgEl('circle', { cx: 500 + 487 * Math.cos(ang), cy: 500 + 487 * Math.sin(ang), r: 4, fill: color, stroke: '#fff', 'stroke-width': 1.5 }));
+        }
         g.appendChild(svgEl('ellipse', { cx: x, cy: y + PAWN_R - 2, rx: PAWN_R * 0.8 - lift * 4, ry: 4 - lift, fill: 'rgba(0,0,0,0.45)' }));
         if (isTurn) g.appendChild(svgEl('circle', { class: 'pawn-glow', cx: x, cy: yy, r: PAWN_R + 3, fill: 'none', stroke: color, 'stroke-width': 4 }));
         g.appendChild(svgEl('circle', { class: 'pawn-body', cx: x, cy: yy, r: PAWN_R, fill: '#0f172a', stroke: color, 'stroke-width': 6 }));
@@ -245,7 +301,13 @@ function updateMarketTrackerUI() {
     
     const fullVal = `${APP_STATE.marketTracker[2]}${APP_STATE.marketTracker[1]}${APP_STATE.marketTracker[0]}`;
     document.getElementById('trackerValueBadge').textContent = fullVal;
-    const bp = document.getElementById('bankPrice'); if (bp) bp.textContent = parseInt(fullVal, 10);
+    const bp = document.getElementById('bankPrice'); if (bp) bp.textContent = money(parseInt(fullVal, 10));
+    const bs = document.getElementById('bankSym'); if (bs) bs.textContent = curSym();
+    // Previous share price right under the current one, so everyone sees where the market moved.
+    const now = parseInt(fullVal, 10), pv = APP_STATE.prevMarket, d = pv == null ? 0 : now - pv;
+    const prevHtml = pv == null ? '<span>Previous: <b>-</b></span><em class="flat">no move yet</em>'
+        : `<span>Previous: <b>${money(pv)}</b></span><em class="${d > 0 ? 'up' : d < 0 ? 'down' : 'flat'}">${d > 0 ? '\u25B2 +' + d : d < 0 ? '\u25BC ' + d : '= 0'}</em>`;
+    ['bankPrev', 'trackerPrev'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = prevHtml; });
 
     if (typeof renderWallet === 'function') renderWallet();
     if (typeof renderTrade === 'function' && !document.getElementById('tradeModal').classList.contains('hidden')) renderTrade();

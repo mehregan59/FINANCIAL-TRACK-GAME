@@ -5,17 +5,17 @@
 :root{
   --bg:#e9f1ff; --panel:#ffffff; --panel2:#f3f7ff; --ink:#10204a; --mute:#51618a; --line:#cfdcf7;
   --blue:#2b5bd7; --blue2:#1c3f9e; --gold:#f5b800; --gold-ink:#3b2a00; --green:#12a676; --red:#e0413c; --dice:#fdfdfd; --pip:#16223f;
-  --shadow:0 10px 24px rgba(28,63,158,.14);
+  --shadow:0 10px 24px rgba(28,63,158,.14); --comp:#dc2626;
   --display:'Fredoka','Trebuchet MS',system-ui,sans-serif; --body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0c1734; --panel:#14254f; --panel2:#1a2f63; --ink:#eaf1ff; --mute:#a9b8df; --line:#2b427f;
   --blue:#6d9bff; --blue2:#9bb9ff; --gold:#ffd54a; --gold-ink:#3b2a00; --green:#34d3a0; --red:#ff7a75; --dice:#f4f7ff; --pip:#16223f;
-  --shadow:0 10px 24px rgba(0,0,0,.4); color-scheme:dark}}
+  --shadow:0 10px 24px rgba(0,0,0,.4); --comp:#ff6b6b; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0c1734; --panel:#14254f; --panel2:#1a2f63; --ink:#eaf1ff; --mute:#a9b8df; --line:#2b427f;
   --blue:#6d9bff; --blue2:#9bb9ff; --gold:#ffd54a; --gold-ink:#3b2a00; --green:#34d3a0; --red:#ff7a75; --dice:#f4f7ff; --pip:#16223f;
-  --shadow:0 10px 24px rgba(0,0,0,.4); color-scheme:dark}
+  --shadow:0 10px 24px rgba(0,0,0,.4); --comp:#ff6b6b; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;padding-inline:16px;padding-block:0 56px}
 .wrap{max-width:1500px;margin-inline:auto}
@@ -125,252 +125,345 @@ footer{margin-top:56px;text-align:center;color:var(--mute);font-size:.88rem}
   .two{grid-template-columns:1fr}
 }
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.comp{font-weight:800;color:var(--comp);white-space:nowrap}
+.homebar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;background:var(--bg)}
+.homebar a,.homebar button{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:9px 16px;font:700 .95rem/1 var(--body);cursor:pointer;text-decoration:none;background:var(--gold);color:var(--gold-ink);box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.homebar .crumb{font:700 .8rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.hero .comp{color:#ffd54a}
+.tagline{font-style:italic;font-weight:700;color:#ffd54a !important}
+.comps{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:22px}
+.comps .card h3{display:flex;align-items:center;gap:10px}
+.comps .num{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--comp);color:#fff;font:700 .95rem/1 var(--display)}
+.comps .card p{color:var(--mute);font-size:.93rem;margin-top:8px}
+.shot{position:relative;margin-top:22px;border-radius:18px;overflow:hidden;border:2px solid var(--line);box-shadow:var(--shadow)}
+.shot img{display:block;width:100%;height:auto}
+.shot .pin{position:absolute;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--comp);color:#fff;font:700 1rem/1 var(--display);border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 </style>
 
 <div class="wrap">
+<nav class="homebar" aria-label="Guide navigation">
+  <button type="button" onclick="goHome()" title="Back to the game"><span aria-hidden="true">&#127968;</span> Home</button>
+  <span class="crumb">Capital Clash &middot; Player guide</span>
+</nav>
 <header class="hero">
   <div>
     <div class="eyebrow" style="color:#ffd54a">Player guide</div>
     <h1>Capital <span>Clash</span></h1>
-    <p>Race around a 100-space market, watch the Market Tracker swing, and trade shares. When the final round ends, the richest portfolio wins.</p>
-    <div class="chips"><span class="chip">3 to 10 players</span><span class="chip">100 spaces</span><span class="chip">Live on every screen</span><span class="chip">Zero real money</span></div>
+    <p class="tagline">&ldquo;Smart equity investing game which makes you &lsquo;feel&rsquo; the market, and not just read about it.&rdquo;</p>
+    <p>Race around the 100 Tiles on the <span class="comp">Space Board</span>, watch the <span class="comp">Market Tracker</span> swing, and trade shares at <span class="comp">The Bank</span>. When the final round ends, the highest portfolio value wins.</p>
+    <div class="chips"><span class="chip">3 to 10 players</span><span class="chip">100 Tiles</span><span class="chip">Live on every screen</span><span class="chip">No real money</span></div>
   </div>
   <div class="hero-art">
     <div class="ringwrap">
-      <div class="ring" role="img" aria-label="The 100-space board"></div>
+      <div class="ring" role="img" aria-label="The Space Board with 100 Tiles"></div>
       <div class="ring-core"><small>Market Tracker Value</small><b>500</b></div>
       <svg class="hero-dice" viewBox="0 0 100 100" role="img" aria-label="Die showing five"><rect x="6" y="6" width="88" height="88" rx="20" fill="#fdfdfd" stroke="#8b9ab0" stroke-width="3"/><g fill="#d10f0f"><circle cx="30" cy="30" r="8"/><circle cx="70" cy="30" r="8"/><circle cx="50" cy="50" r="8"/><circle cx="30" cy="70" r="8"/><circle cx="70" cy="70" r="8"/></g></svg>
     </div>
   </div>
 </header>
 
-<section>
+<nav class="toc" aria-label="Contents"><b>Contents</b><ol><li><a href="#screen-tour">Your game screen</a></li><li><a href="#components">Game Components</a></li><li><a href="#sec-2">How a game flows</a></li><li><a href="#sec-3">Setting up a room</a></li><li><a href="#sec-4">Game lengths and their Dice</a></li><li><a href="#sec-5">Your Turn</a></li><li><a href="#sec-6">The Space Board and the Market Tracker</a></li><li><a href="#sec-7">Forecasts: Bull, Bear and Neutral</a></li><li><a href="#sec-8">The Event Card Deck</a></li><li><a href="#sec-9">The Bank</a></li><li><a href="#sec-10">Ranking</a></li><li><a href="#sec-11">Ending the game</a></li><li><a href="#sec-12">Helpers</a></li><li><a href="#sec-13">Rules at a glance</a></li></ol></nav>
+<section id="screen-tour">
+  <h2>Your game screen</h2>
+  <p class="lead">This is what you see during a game. Press Next to walk through each part of the screen.</p>
+  <div class="screen-tour" data-img="/img/guide-screen.jpg"></div>
+  <ol class="lead">
+    <li><b>Top bar:</b> whose turn it is, the Forecast, the Magnifier, font choice, How to play, Tour and Home.</li>
+    <li><span class="comp">Player Portfolio</span> (left): each player&rsquo;s Tile, shares, cash and total value.</li>
+    <li><span class="comp">Space Board</span> (centre): 100 Tiles, the Start Tile 0 at the top right, and the share price in the middle.</li>
+    <li><span class="comp">Dice</span> (right, top): roll, then press Accept.</li>
+    <li><span class="comp">The Bank</span> (right): share price, previous price, Buy and Sell.</li>
+    <li><span class="comp">Event Card Deck</span> (right, bottom): glows when you land on a gold Tile.</li>
+  </ol>
+</section>
+<section id="components">
+  <div class="eyebrow">Know your table</div>
+  <h2>Game Components</h2>
+  <p class="lead">These are the parts of the game screen. Their names are always written in <span class="comp">this colour</span> in the guide.</p>
+  <!--SHOT-->
+  <div class="comps">
+    <div class="card"><h3><span class="num">1</span><span class="comp">Dice</span></h3><p>Tap it on your turn. The value you roll is how many Tiles your Player Avatar moves. Long mode uses a die with value 1&ndash;6.</p></div>
+    <div class="card"><h3><span class="num">2</span><span class="comp">Space Board</span></h3><p>The big ring made of 100 Tiles, numbered 1 to 100. Every Tile shows its number, a market event and its effect.</p></div>
+    <div class="card"><h3><span class="num">3</span><span class="comp">Market Tracker</span></h3><p>The share price in the middle of the <span class="comp">Space Board</span> (0 to 999, starts at 500). The Tile you land on moves it up (+) or down (&minus;).</p></div>
+    <div class="card"><h3><span class="num">4</span><span class="comp">The Bank</span></h3><p>Opens after you move. Buy shares from <span class="comp">The Bank</span> or sell shares to it, always at the <span class="comp">Market Tracker</span> price.</p></div>
+    <div class="card"><h3><span class="num">5</span><span class="comp">Player Portfolio</span></h3><p>Every investor&rsquo;s Tile, shares, cash and total value, sorted from richest to poorest.</p></div>
+    <div class="card"><h3><span class="num">6</span><span class="comp">Event Card Deck</span></h3><p>10 Event Cards. Land on a gold Event Card Tile, tap the deck and the top card turns over. Read what it means for you, then press Accept Event.</p></div>
+    <div class="card"><h3><span class="num">7</span>Forecast bar</h3><p>The strip above the <span class="comp">Space Board</span>. It is not a Tile: it shows the mood of the market (Bull, Bear or Neutral).</p></div>
+  </div>
+</section>
+
+<section id="sec-2">
   <div class="eyebrow">The game in one minute</div>
   <h2>How a game flows</h2>
-  <p class="lead">Roll, move, land on a tile that moves the market, then trade shares before you pass the dice. The turn order never changes.</p>
+  <p class="lead">Roll the <span class="comp">Dice</span>, move, land on a Tile that moves the <span class="comp">Market Tracker</span>, then trade shares at <span class="comp">The Bank</span> before you pass the <span class="comp">Dice</span>. The turn order never changes.</p>
   <div class="flow">
-    <div class="step"><h3>Create or join</h3><p>The host creates a room and shares the code or invite link. Everyone picks a different avatar.</p></div>
+    <div class="step"><h3>Create or join</h3><p>The host creates a room and shares the code or invite link. Each player picks an avatar of their choice. Avatars already taken by another player are greyed out and cannot be picked.</p></div>
     <div class="step"><h3>Pick a length</h3><p>The host chooses Long, Standard, Short or Beginner in the lobby, then presses Start.</p></div>
-    <div class="step"><h3>Roll and move</h3><p>Tap the dice, press Accept, and your pawn hops as many spaces as you rolled.</p></div>
-    <div class="step"><h3>Tile moves the market</h3><p>Plus tiles raise the Market Tracker, minus tiles lower it, Skip changes nothing.</p></div>
-    <div class="step"><h3>Trade at the Bank</h3><p>Buy or sell shares at the new Market Tracker value.</p></div>
-    <div class="step"><h3>End your turn</h3><p>Press End turn. The first pawn on space 100 starts the final round.</p></div>
+    <div class="step"><h3>Roll and move</h3><p>Tap the <span class="comp">Dice</span>, press Accept, and your Player Avatar hops the <span class="comp">Dice</span> value and lands on a Tile on the <span class="comp">Space Board</span>.</p></div>
+    <div class="step"><h3>Tile moves the market</h3><p>Plus Tiles raise the <span class="comp">Market Tracker</span>, minus Tiles lower it, Skip Tiles change nothing.</p></div>
+    <div class="step"><h3>Trade at <span class="comp">The Bank</span></h3><p>Buy or sell shares at the new <span class="comp">Market Tracker</span> price.</p></div>
+    <div class="step"><h3>End your Turn</h3><p>Press End turn. The first Player Avatar on Tile 100 starts the final round.</p></div>
   </div>
 </section>
 
-<section>
+<section id="sec-3">
   <div class="eyebrow">Before you start</div>
   <h2>Setting up a room</h2>
-  <p class="lead">The host's starting values are used by everyone in the room. Change them under Settings on the start page.</p>
+  <p class="lead">The host&rsquo;s starting values are used by everyone in the room. Change them under Settings on the start page.</p>
   <div class="grid g4">
-    <div class="card"><div class="eyebrow">Market value</div><h3 style="font-size:2rem">500</h3><p class="lead" style="margin-top:4px">Where the Market Tracker starts. Range 0 to 999.</p></div>
-    <div class="card"><div class="eyebrow">Money each</div><h3 style="font-size:2rem">5,000</h3><p class="lead" style="margin-top:4px">Range 0 to 1,000,000.</p></div>
-    <div class="card"><div class="eyebrow">Shares each</div><h3 style="font-size:2rem">9</h3><p class="lead" style="margin-top:4px">Range 0 to 1,000.</p></div>
+    <div class="card"><div class="eyebrow">Share price</div><h3 style="font-size:2rem">500</h3><p class="lead" style="margin-top:4px">Where the <span class="comp">Market Tracker</span> starts. Range 0 to 999.</p></div>
+    <div class="card"><div class="eyebrow">Cash each</div><h3 style="font-size:2rem">5,000</h3><p class="lead" style="margin-top:4px">Range 0 to 1,000,000.</p></div>
+    <div class="card"><div class="eyebrow">Shares each</div><h3 style="font-size:2rem">9</h3><p class="lead" style="margin-top:4px">Each worth 500 at the start. Range 0 to 1,000.</p></div>
     <div class="card"><div class="eyebrow">Players</div><h3 style="font-size:2rem">3 to 10</h3><p class="lead" style="margin-top:4px">The host can start early with fewer players than the room holds, but never fewer than 3.</p></div>
   </div>
-  <p class="lead" style="margin-top:14px">Every player picks their own avatar; a taken avatar is greyed out. To play alone on one screen, choose "Skip: play on one screen" and set the number of players.</p>
+  <div class="formula">Starting portfolio = 5,000 cash + (9 shares &times; 500) = 9,500</div>
+  <p class="lead" style="margin-top:14px"><b>Currency:</b> the host picks US Dollar ($), Euro (&euro;), British Pound (&pound;) or Japanese Yen (&yen;) in the lobby (or under Settings for a one-screen game). Every price, the <span class="comp">Player Portfolio</span> and <span class="comp">The Bank</span> then show that symbol.</p>
+  <p class="lead" style="margin-top:14px">To play alone on one screen, choose &ldquo;Skip: play on one screen&rdquo; and set the number of players.</p>
 </section>
 
-<section>
+<section id="sec-4">
   <div class="eyebrow">Choose your pace</div>
-  <h2>Game lengths and their dice</h2>
-  <p class="lead">The game length decides which die you roll. The number you roll is exactly the number of spaces you move, with no multiplier.</p>
+  <h2>Game lengths and their <span class="comp">Dice</span></h2>
+  <p class="lead">The game length decides which die you roll. The value you roll is exactly the number of Tiles you move, with no multiplier.</p>
   <div class="grid g4">
     <div class="card mode def">
       <div class="top"><h3>Long</h3><span class="tag">Default</span></div>
       <svg class="die" viewBox="0 0 100 100" role="img" aria-label="Normal die"><rect x="6" y="6" width="88" height="88" rx="20" fill="var(--dice)" stroke="#8b9ab0" stroke-width="3"/><g fill="var(--pip)"><circle cx="30" cy="28" r="8"/><circle cx="70" cy="28" r="8"/><circle cx="30" cy="50" r="8"/><circle cx="70" cy="50" r="8"/><circle cx="30" cy="72" r="8"/><circle cx="70" cy="72" r="8"/></g></svg>
-      <dl><dt>Die</dt><dd>Normal, 1 to 6</dd><dt>Turns each</dt><dd>about 29</dd><dt>Tiles</dt><dd>Normal</dd></dl>
+      <dl><dt>Die</dt><dd>Normal die with value 1&ndash;6</dd><dt>Turns each</dt><dd>about 29</dd><dt>Tiles</dt><dd>Normal</dd></dl>
       <p class="lead" style="margin:0;font-size:.9rem">The full game.</p>
     </div>
     <div class="card mode">
       <div class="top"><h3>Standard</h3><span class="tag">Shorter</span></div>
       <svg class="die" viewBox="0 0 100 100" role="img" aria-label="Ten-sided die"><polygon points="50,6 92,40 50,94 8,40" fill="var(--dice)" stroke="#8b9ab0" stroke-width="3" stroke-linejoin="round"/><polyline points="8,40 50,52 92,40 M50,52 50,94 M50,6 50,52" fill="none" stroke="#8b9ab0" stroke-width="2"/><text x="50" y="38" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="26" fill="#d10f0f">8</text></svg>
-      <dl><dt>Die</dt><dd>10-sided, numbers 1 to 9</dd><dt>Turns each</dt><dd>about 20</dd><dt>Tiles</dt><dd>Normal</dd></dl>
+      <dl><dt>Die</dt><dd>10-sided die with value 1&ndash;9</dd><dt>Turns each</dt><dd>about 20</dd><dt>Tiles</dt><dd>Normal</dd></dl>
     </div>
     <div class="card mode">
       <div class="top"><h3>Short</h3><span class="tag">Quick</span></div>
       <svg class="die" viewBox="0 0 100 100" role="img" aria-label="Twenty-sided die"><polygon points="50,4 91,27 91,73 50,96 9,73 9,27" fill="var(--dice)" stroke="#8b9ab0" stroke-width="3" stroke-linejoin="round"/><polygon points="50,20 78,66 22,66" fill="#fff1f1" stroke="#8b9ab0" stroke-width="2"/><path d="M50,4 50,20 M91,27 78,66 M9,27 22,66 M50,96 50,66 M22,66 9,73 M78,66 91,73 M50,20 9,27 M50,20 91,27 M22,66 50,96 M78,66 50,96" fill="none" stroke="#8b9ab0" stroke-width="2"/><text x="50" y="58" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="22" fill="#d10f0f">14</text></svg>
-      <dl><dt>Die</dt><dd>20-sided, numbers 1 to 18</dd><dt>Turns each</dt><dd>about 10</dd><dt>Tiles</dt><dd>Normal</dd></dl>
+      <dl><dt>Die</dt><dd>20-sided die with value 1&ndash;18</dd><dt>Turns each</dt><dd>about 10</dd><dt>Tiles</dt><dd>Normal</dd></dl>
     </div>
     <div class="card mode">
       <div class="top"><h3>Beginner</h3><span class="tag">Learn</span></div>
       <svg class="die" viewBox="0 0 100 100" role="img" aria-label="Twenty-sided die"><polygon points="50,4 91,27 91,73 50,96 9,73 9,27" fill="var(--dice)" stroke="#8b9ab0" stroke-width="3" stroke-linejoin="round"/><polygon points="50,20 78,66 22,66" fill="#fff1f1" stroke="#8b9ab0" stroke-width="2"/><path d="M50,4 50,20 M91,27 78,66 M9,27 22,66 M50,96 50,66 M22,66 9,73 M78,66 91,73 M50,20 9,27 M50,20 91,27 M22,66 50,96 M78,66 50,96" fill="none" stroke="#8b9ab0" stroke-width="2"/><text x="50" y="58" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="700" font-size="22" fill="#d10f0f">7</text></svg>
-      <dl><dt>Die</dt><dd>Same 1 to 18 die as Short</dd><dt>Turns each</dt><dd>about 10</dd><dt>Tiles</dt><dd>Gentle: at most +3 or -3, no Skip</dd><dt>Tour</dt><dd>Always on</dd></dl>
+      <dl><dt>Die</dt><dd>Same die with value 1&ndash;18 as Short</dd><dt>Turns each</dt><dd>about 10</dd><dt>Tiles</dt><dd>Gentle: at most +3 or &minus;3, no Skip</dd><dt>Tour</dt><dd>Always on</dd></dl>
     </div>
   </div>
-  <div class="callout"><b>Why the dice change.</b> In Short, Standard and Beginner the dice numbers are bigger so players can reach the end of the board in fewer turns. The 10-sided die has one spare face (10) and the 20-sided die has two (19 and 20). They carry their own numbers but are never rolled. After the die lands, your number is shown big and red next to it.</div>
+  <div class="callout"><b>Why the <span class="comp">Dice</span> change.</b> In Short, Standard and Beginner the <span class="comp">Dice</span> have bigger values so players can reach Tile 100 in fewer Turns. The 10-sided die has one spare face (10) and the 20-sided die has two (19 and 20); they are never rolled. After the die lands, your value is shown big and red next to it.</div>
   <p class="lead" style="margin-top:14px">On the start page all four options are shown above Settings; hover or tap one to read what it means. The host can also change the length in the lobby before pressing Start.</p>
 </section>
 
-<section>
+<section id="sec-5">
   <div class="eyebrow">Step by step</div>
-  <h2>Your turn</h2>
-  <p class="lead">Every step is manual. Only the player whose turn it is can press the buttons, and the control you need glows. When you press End turn, the market takes its forecast step.</p>
+  <h2>Your Turn</h2>
+  <p class="lead">Every step is manual. Only the player whose Turn it is can press the buttons, and the control you need glows. When you press End turn, the market takes its Forecast step.</p>
   <div class="flow">
-    <div class="step"><h3>Roll</h3><p>Tap the dice. It tumbles and lands.</p><span class="btn dice">Tap the dice</span></div>
-    <div class="step"><h3>Accept</h3><p>Check your number and confirm the move.</p><span class="btn accept">Accept: move 7</span></div>
-    <div class="step"><h3>Move</h3><p>Your pawn hops forward one space at a time.</p></div>
-    <div class="step"><h3>Tile</h3><p>The tile you land on changes the Market Tracker.</p></div>
-    <div class="step"><h3>Bank</h3><p>The Bank opens and glows. Buy or sell shares, or skip it.</p></div>
-    <div class="step"><h3>End turn</h3><p>It stays locked for 5 seconds after your move (with a countdown) so you cannot end by mistake. Buying or selling unlocks it at once. Then it glows.</p><span class="btn end">End turn (5)</span></div>
+    <div class="step"><h3>Roll</h3><p>Tap the <span class="comp">Dice</span>. It tumbles and lands.</p><span class="btn dice">Tap the Dice</span></div>
+    <div class="step"><h3>Accept</h3><p>Check your value and confirm the move.</p><span class="btn accept">Accept: move 5</span></div>
+    <div class="step"><h3>Move</h3><p>Your Player Avatar hops forward one Tile at a time.</p></div>
+    <div class="step"><h3>Tile</h3><p>The market movement on your landed Tile on the <span class="comp">Space Board</span> is applied to the <span class="comp">Market Tracker</span>.</p></div>
+    <div class="step"><h3><span class="comp">The Bank</span></h3><p><span class="comp">The Bank</span> opens and glows. Buy or sell shares, or skip it.</p></div>
+    <div class="step"><h3>End turn</h3><p>The 5s safety wait: End turn stays locked for 5 seconds (with a countdown) after your move, so nobody ends a Turn by accident before using <span class="comp">The Bank</span>. Buying or selling unlocks it at once.</p><span class="btn end">End turn (5)</span></div>
   </div>
-  <p class="lead" style="margin-top:14px">A player who has already reached space 100 does not roll again.</p>
+  <p class="lead" style="margin-top:14px">A player who has already reached Tile 100 does not roll again.</p>
 </section>
 
-<section>
+<section id="sec-6">
   <div class="eyebrow">The heart of the game</div>
-  <h2>The board and the Market Tracker</h2>
+  <h2>The <span class="comp">Space Board</span> and the <span class="comp">Market Tracker</span></h2>
   <div class="two">
     <div>
-      <p class="lead" style="margin-top:0">The board is a circle of 100 spaces, each its own bar with a clear gap between bars. Every bar shows its number (yellow), its name, and the effect in bold at the end, for example "Bubble Eruption -18". The Market Tracker value in the middle is the current market price, between 0 and 999, and it starts at 500.</p>
+      <p class="lead" style="margin-top:0">The <span class="comp">Space Board</span> is a circle of 100 Tiles. Every Tile shows its number in a white circle, its name and its effect, for example &ldquo;Bubble Eruption &minus;18&rdquo;. Tiles have only three colours: <b style="color:#16a34a">green</b> for plus Tiles, <b style="color:#dc2626">red</b> for minus Tiles and <b style="color:#b8860b">gold</b> for Event Card Tiles. The number in the middle of the <span class="comp">Space Board</span> is the current share price, between 0 and 999, and it starts at 500.</p>
       <div class="tiles"><span class="tile p">Crypto Rally (+14)</span><span class="tile m">Bear Market (-9)</span><span class="tile s">Supply Halt (Skip)</span></div>
       <ul class="rules" style="margin-top:16px">
-        <li><b>Plus tile:</b> the number is added to the Market Tracker.</li>
-        <li><b>Minus tile:</b> the number is subtracted.</li>
-        <li><b>Skip tile:</b> no change.</li>
-        <li><b>Limits:</b> tiles can never take the value below 0 or above 999.</li>
-        <li><b>Magnifier:</b> press the Magnifier button in the strip above the board, then move your finger or mouse over the board. A round lens follows you and shows that spot bigger, turned so the text reads left to right. It only changes your own screen. While an avatar hops, every screen zooms on it automatically and holds the landing tile for a few seconds.</li>
-        <li><b>Hands off:</b> players cannot change the tracker by hand. Only tiles and the market forecast move it, and the host can reset it.</li>
-        <li><b>No built-in drift:</b> on every board the plus tiles and the minus tiles add up to the same total, so the market is as likely to fall as to rise.</li>
-        <li><b>Reshuffled road:</b> after every turn the tiles ahead of the pawns are shuffled.</li>
+        <li><b>Plus Tile</b> (+1, +2, +3 and so on): the number is added to the <span class="comp">Market Tracker</span>.</li>
+        <li><b>Minus Tile</b> (&minus;1, &minus;2, &minus;3 and so on): the number is subtracted.</li>
+        <li><b>Skip Tile:</b> no change.</li>
+        <li><b>Limits:</b> Tiles can never take the price below 0 or above 999.</li>
+        <li><b>Magnifier:</b> press the Magnifier button in the strip above the <span class="comp">Space Board</span>, then move your finger or mouse over it. A round lens shows that spot bigger. While a Player Avatar hops, every screen zooms on it automatically.</li>
+        <li><b>Hands off:</b> players cannot change the <span class="comp">Market Tracker</span> by hand. Only Tiles and the Forecast move it, and the host can reset it.</li>
+        <li><b>No built-in drift:</b> all plus Tiles together add up to exactly the same amount as all minus Tiles together, so the market is as likely to fall as to rise.</li>
+        <li><b>Dynamic Tile Shuffling:</b> after every Turn, the Tiles that no Player Avatar has reached yet swap places at random. Like real news, you cannot plan your whole route ahead.</li>
       </ul>
     </div>
     <div class="card">
       <div class="eyebrow">Example</div>
-      <p>You land on <b>Crypto Rally (+14)</b> while the market is at 500.</p>
+      <p>You land on <b>Crypto Rally (+14)</b> while the <span class="comp">Market Tracker</span> is at 500.</p>
       <div class="calc">500 <em>+ 14</em> = 514</div>
-      <p style="margin-top:14px">The next player lands on <b>Bear Market (-9)</b>.</p>
-      <div class="calc">514 <i>- 9</i> = 505</div>
+      <p style="margin-top:14px">The next player lands on <b>Bear Market (&minus;9)</b>.</p>
+      <div class="calc">514 <i>&minus; 9</i> = 505</div>
     </div>
   </div>
   <h3 style="margin-top:28px">How big are the numbers?</h3>
-  <p class="lead">Short games have fewer landings, so their tile numbers are bigger. With 8 or more players there are more landings, so the numbers shrink a little. A few rare events are about two to three times the average.</p>
+  <p class="lead">Short games have fewer landings, so their Tile numbers are bigger. With 8 or more players there are more landings, so the numbers shrink a little. A few rare events are about two to three times the average.</p>
   <div class="grid g4">
-    <div class="card"><div class="eyebrow">Long</div><h3 style="font-size:1.8rem">about 10</h3><p class="lead" style="margin-top:4px">per tile, on average</p></div>
-    <div class="card"><div class="eyebrow">Standard</div><h3 style="font-size:1.8rem">about 12</h3><p class="lead" style="margin-top:4px">per tile, on average</p></div>
-    <div class="card"><div class="eyebrow">Short</div><h3 style="font-size:1.8rem">about 18</h3><p class="lead" style="margin-top:4px">per tile, on average</p></div>
-    <div class="card"><div class="eyebrow">Beginner</div><h3 style="font-size:1.8rem">at most 3</h3><p class="lead" style="margin-top:4px">gentle, and no Skip tiles</p></div>
+    <div class="card"><div class="eyebrow">Long</div><h3 style="font-size:1.8rem">about 10</h3><p class="lead" style="margin-top:4px">per Tile, on average</p></div>
+    <div class="card"><div class="eyebrow">Standard</div><h3 style="font-size:1.8rem">about 12</h3><p class="lead" style="margin-top:4px">per Tile, on average</p></div>
+    <div class="card"><div class="eyebrow">Short</div><h3 style="font-size:1.8rem">about 18</h3><p class="lead" style="margin-top:4px">per Tile, on average</p></div>
+    <div class="card"><div class="eyebrow">Beginner</div><h3 style="font-size:1.8rem">at most 3</h3><p class="lead" style="margin-top:4px">gentle, and no Skip Tiles</p></div>
   </div>
 </section>
 
-<section>
+<section id="sec-7">
   <div class="eyebrow">The mood of the market</div>
   <h2>Forecasts: Bull, Bear and Neutral</h2>
-  <p class="lead">A phase is a forecast, not a promise. A big pop-up announces it, the bar above the board shows it, and like a real market it can change course.</p>
+  <p class="lead">The Forecast is <b>not a Tile or a card</b>. It is the general mood of the market, shown in the bar above the <span class="comp">Space Board</span>. A big pop-up announces each new Forecast, and like a real market it can change course.</p>
   <div class="grid g3">
-    <div class="card phase neu"><div class="glyph">=</div><h3>Neutral forecast</h3><p>A calm market. Only tiles move the price.</p><span class="rule">No bonus</span></div>
-    <div class="card phase bull"><div class="glyph">&#9650;</div><h3>Bull forecast</h3><p>The market looks set to rise. The price creeps up turn by turn.</p><span class="rule">Plus tiles count 1 extra: +3 becomes +4</span></div>
-    <div class="card phase bear"><div class="glyph">&#9660;</div><h3>Bear forecast</h3><p>The market looks set to fall. The price creeps down turn by turn.</p><span class="rule">Minus tiles count 1 extra: -2 becomes -3</span></div>
+    <div class="card phase neu"><div class="glyph">=</div><h3>Neutral forecast</h3><p>A calm market. Only Tiles move the price.</p><span class="rule">No bonus</span></div>
+    <div class="card phase bull"><div class="glyph">&#9650;</div><h3>Bull forecast</h3><p>The market looks set to rise. The price creeps up Turn by Turn.</p><span class="rule">Plus Tiles count 1 extra: +3 becomes +4</span></div>
+    <div class="card phase bear"><div class="glyph">&#9660;</div><h3>Bear forecast</h3><p>The market looks set to fall. The price creeps down Turn by Turn.</p><span class="rule">Minus Tiles count 1 extra: &minus;2 becomes &minus;3</span></div>
   </div>
-  <h3 style="margin-top:30px">How a forecast plays out</h3>
+  <h3 style="margin-top:30px">How a Forecast plays out</h3>
   <div class="flow" style="margin-top:26px">
-    <div class="step"><h3>Announcement</h3><p>A pop-up says the forecast and reminds you it is not a promise.</p></div>
-    <div class="step"><h3>Small steps</h3><p>When each turn ends, the market takes a small step, and some steps are zero. A Bull or Bear phase adds up to 5% to 20% of the value at its start (Beginner: 3% to 10%).</p></div>
-    <div class="step"><h3>Sudden change</h3><p>In about 3 of 10 Bull or Bear phases the forecast changes after the first real step. The rest goes the other way with the amount that was left (7 times in 10), or stops (3 times in 10).</p></div>
-    <div class="step"><h3>Calm can break</h3><p>A Neutral phase can also turn into Bull or Bear at any moment, with a fresh total.</p></div>
+    <div class="step"><h3>Announcement</h3><p>A pop-up says the Forecast and reminds you it is not a promise.</p></div>
+    <div class="step"><h3>Small steps</h3><p>When each Turn ends, the <span class="comp">Market Tracker</span> takes a small step, and some steps are zero. A Bull or Bear phase adds up to 5% to 20% of the price at its start (Beginner: 3% to 10%).</p></div>
+    <div class="step"><h3>Sudden change</h3><p>In about 3 of 10 Bull or Bear phases the Forecast changes after the first real step. The rest goes the other way (7 times in 10), or stops (3 times in 10).</p></div>
+    <div class="step"><h3>Calm can break</h3><p>A Neutral phase can also turn into Bull or Bear at any moment.</p></div>
   </div>
   <div class="card" style="margin-top:22px">
-    <div class="eyebrow">Example: a Bull forecast that turns</div>
+    <div class="eyebrow">Example: a Bull Forecast that turns</div>
     <div style="overflow-x:auto">
     <svg viewBox="0 0 620 230" width="100%" style="min-width:520px;display:block" role="img" aria-label="Market rises from 500 to 517, then the forecast reverses and it falls to 484">
       <g stroke="var(--line)" stroke-width="1"><line x1="60" y1="30" x2="600" y2="30"/><line x1="60" y1="105" x2="600" y2="105"/><line x1="60" y1="180" x2="600" y2="180"/></g>
-      <g font-family="DM Sans,sans-serif" font-size="12" fill="var(--mute)"><text x="8" y="34">520</text><text x="8" y="109">500</text><text x="8" y="184">480</text><text x="60" y="214">start</text><text x="560" y="214">turn 7</text></g>
+      <g font-family="DM Sans,sans-serif" font-size="12" fill="var(--mute)"><text x="8" y="34">520</text><text x="8" y="109">500</text><text x="8" y="184">480</text><text x="60" y="214">start</text><text x="560" y="214">Turn 7</text></g>
       <polyline points="70,105 147,105 224,86 301,86 378,41 455,41 532,71 609,165" fill="none" stroke="var(--blue)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" transform="translate(-10,0)"/>
       <g fill="var(--blue)" transform="translate(-10,0)"><circle cx="70" cy="105" r="5"/><circle cx="147" cy="105" r="5"/><circle cx="224" cy="86" r="5"/><circle cx="301" cy="86" r="5"/><circle cx="378" cy="41" r="5"/></g>
       <g fill="var(--red)" transform="translate(-10,0)"><circle cx="455" cy="41" r="5"/><circle cx="532" cy="71" r="5"/><circle cx="609" cy="165" r="5"/></g>
       <line x1="445" y1="24" x2="445" y2="190" stroke="var(--gold)" stroke-width="3" stroke-dasharray="6 5"/>
       <g font-family="DM Sans,sans-serif" font-size="13" font-weight="700"><text x="64" y="22" fill="var(--green)">Forecast: Bull</text><text x="452" y="20" fill="var(--ink)">Sudden change</text><text x="452" y="36" fill="var(--red)" font-size="12">rest goes the other way</text></g>
     </svg></div>
-    <p class="lead" style="margin:8px 0 0;font-size:.9rem">The market rises from 500 to 517, then the forecast reverses and it ends at 484.</p>
+    <p class="lead" style="margin:8px 0 0;font-size:.9rem">The <span class="comp">Market Tracker</span> rises from 500 to 517, then the Forecast reverses and it ends at 484.</p>
   </div>
-  <div class="callout"><b>Safety net.</b> Forecast steps never push the market below 50 or above 950, so it always has room to move both ways. Tiles can still use the full range from 0 to 999.</div>
+  <div class="callout"><b>Safety net.</b> Forecast steps never push the <span class="comp">Market Tracker</span> below 50 or above 950, so it always has room to move both ways. Tiles can still use the full range from 0 to 999.</div>
 </section>
 
-<section>
+<section id="sec-8">
+  <div class="eyebrow">Surprise!</div>
+  <h2>The <span class="comp">Event Card Deck</span></h2>
+  <p class="lead" style="margin-top:0">10 of the 100 Tiles are gold <b>Event Card Tiles</b>. Any two of them are always at least 7 Tiles apart, also after Dynamic Tile Shuffling. Land on one and the <span class="comp">Event Card Deck</span> glows with an arrow: tap it, the top card turns over in the middle of the screen and shows its name, its rule and exactly what it means for <b>you</b> (with your own cash and shares). Press <b>Accept Event</b>, then <span class="comp">The Bank</span> opens as usual. When all 10 cards are used the deck is reshuffled.</p>
+  <p class="lead"><b>Penalty:</b> if you cannot fulfil a card (not enough cash or shares), nothing is paid or traded, but you must <b>skip your next turn</b>.</p>
+  <div class="cheat"><table>
+    <thead><tr><th>#</th><th>Event Card</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>&#x1F7E2; 1</td><td>Dividend Bonus</td><td>Receive 300 for every share you currently hold.</td></tr>
+      <tr><td>&#x1F534; 2</td><td>Investment Tax</td><td>Pay 300 for every share you currently hold.</td></tr>
+      <tr><td>&#x1F7E2; 3</td><td>Shareholder Reward</td><td>Receive 500 if you own at least 5 shares. Otherwise receive 200.</td></tr>
+      <tr><td>&#x1F534; 4</td><td>Annual Holding Fee</td><td>Pay 100 for every share you own.</td></tr>
+      <tr><td>&#x1F7E2; 5</td><td>Investor Grant</td><td>Receive 1,000 if you own at least 10 shares. Otherwise receive 300.</td></tr>
+      <tr><td>&#x1F534; 6</td><td>Emergency Contribution</td><td>Pay 50 for every share you own.</td></tr>
+      <tr><td>&#x1F535; 7</td><td>Mandatory Hold</td><td>Hold all your shares until your next turn: no buying or selling.</td></tr>
+      <tr><td>&#x1F535; 8</td><td>Forced Sale</td><td>Sell 3 shares immediately at the current market price.</td></tr>
+      <tr><td>&#x1F535; 9</td><td>Forced Purchase</td><td>Buy 3 shares immediately at the current market price.</td></tr>
+      <tr><td>&#x1F535; 10</td><td>Investor&rsquo;s Choice</td><td>Choose one: receive 2,500, buy 5 shares, or sell 5 shares at the current market price.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="sec-9">
   <div class="eyebrow">Buy low, sell high</div>
-  <h2>The Bank</h2>
+  <h2><span class="comp">The Bank</span></h2>
   <div class="two">
     <div>
-      <p class="lead" style="margin-top:0">The Bank opens for you after you have moved and your tile has been applied. The share price equals the current Market Tracker value, so a share costs more when the market is high.</p>
+      <p class="lead" style="margin-top:0"><span class="comp">The Bank</span> opens for you after you have moved and your Tile has been applied. The share price equals the current <span class="comp">Market Tracker</span> value, so a share costs more when the market is high.</p>
       <ul class="rules" style="margin-top:14px">
-        <li><b>Buy:</b> press Buy, enter how many shares in the window that opens, and confirm. You need enough money.</li>
-        <li><b>Sell:</b> press Sell, enter how many shares and confirm. You need enough shares.</li>
-        <li><b>Prices move:</b> shares are valued at the updated tracker, so your total changes even when you do not trade.</li>
+        <li><b>Enter The Bank:</b> press the one Enter The Bank button. A small window opens on top of <span class="comp">The Bank</span>.</li>
+        <li><b>Buy:</b> choose the Buy tab, enter how many shares (or press Max) and confirm. You need enough cash.</li>
+        <li><b>Sell:</b> choose the Sell tab, enter how many shares (or press Max) and confirm. You need enough shares.</li>
+        <li><b>After an Event Card:</b> <span class="comp">The Bank</span> stays closed until your next Turn.</li>
+        <li><b>Prices move:</b> your shares are valued at the latest <span class="comp">Market Tracker</span> price, so your total changes even when you do not trade.</li>
       </ul>
     </div>
     <div class="card bank">
-      <div class="roof">CAPITAL BANK</div>
+      <div class="roof">THE BANK</div>
       <div>Share price</div><div class="price">505</div>
-      <div class="row"><span class="btn sell">Sell share</span><span class="btn buy">Buy share</span></div>
+      <div class="row"><span class="btn buy">Enter The Bank</span></div>
     </div>
   </div>
-  <div class="formula">Total value = money + shares &times; Market Tracker value</div>
+  <div class="formula">Total = Cash in hand + (Number of shares &times; share price on the <span class="comp">Market Tracker</span>)</div>
 </section>
 
-<section>
+<section id="sec-10">
   <div class="eyebrow">Who is ahead</div>
-  <h2>Ranking and the changing board</h2>
+  <h2>Ranking</h2>
   <div class="two">
     <div>
-      <p class="lead" style="margin-top:0">When a turn ends, the players list is sorted from the highest total value to the lowest, and each player gets a rank number. #1 is the richest. The ranking is for display only: the turn order never changes.</p>
-      <p class="lead">After each turn the tiles ahead of the pawns are reshuffled, so you cannot plan your whole route from the tile texts you see now.</p>
+      <p class="lead" style="margin-top:0">When a Turn ends, the <span class="comp">Player Portfolio</span> are sorted from the highest total value to the lowest, and each player gets a rank number. #1 is the richest. The ranking is for display only: the turn order never changes.</p>
+      <p class="lead">Remember Dynamic Tile Shuffling: the Tiles ahead of the Player Avatars change places after each Turn.</p>
     </div>
     <div class="card">
-      <div class="eyebrow">Example ranking at a market of 505</div>
+      <div class="eyebrow">Example ranking at a share price of 505</div>
       <div class="rank">
-        <div class="prow"><div class="n">1</div><div><b>Fox</b> <span>2 shares, 9,000 money</span></div><b>10,010</b></div>
-        <div class="prow"><div class="n">2</div><div><b>Panda</b> <span>9 shares, 5,000 money</span></div><b>9,545</b></div>
-        <div class="prow"><div class="n">3</div><div><b>Lion</b> <span>8 shares, 1,200 money</span></div><b>5,240</b></div>
+        <div class="prow"><div class="n">1</div><div><b>Fox</b> <span>2 shares, 9,000 cash</span></div><b>10,010</b></div>
+        <div class="prow"><div class="n">2</div><div><b>Panda</b> <span>9 shares, 5,000 cash</span></div><b>9,545</b></div>
+        <div class="prow"><div class="n">3</div><div><b>Lion</b> <span>8 shares, 1,200 cash</span></div><b>5,240</b></div>
       </div>
     </div>
   </div>
 </section>
 
-<section>
+<section id="sec-11">
   <div class="eyebrow">The finish</div>
   <h2>Ending the game</h2>
   <div class="finish">
-    <div class="card"><b>1. Final round</b><p>The first pawn to reach space 100 starts the final round, announced by a pop-up.</p></div>
-    <div class="card"><b>2. One last turn</b><p>Every player who has not yet played in the current round gets one last turn, including the Bank.</p></div>
+    <div class="card"><b>1. Final round</b><p>The first Player Avatar to reach Tile 100 starts the final round, announced by a pop-up.</p></div>
+    <div class="card"><b>2. One last Turn</b><p>Every player who has not yet played in the current round gets one last Turn, including <span class="comp">The Bank</span>.</p></div>
     <div class="card"><b>3. Results</b><p>The results screen ranks everyone by total value.</p></div>
     <div class="card"><b>4. Winner</b><p>The highest total wins. If two players have exactly the same total, they share the win.</p></div>
   </div>
-  <p class="lead" style="margin-top:14px">Reaching 100 first does not win by itself; it only ends the game. A big portfolio beats a fast pawn.</p>
+  <p class="lead" style="margin-top:14px">Reaching Tile 100 first does not win by itself; it only ends the game. A big portfolio beats a fast Player Avatar.</p>
 </section>
 
-<section>
+<section id="sec-12">
   <div class="eyebrow">Good to know</div>
   <h2>Helpers</h2>
   <div class="grid g3 help">
-    <div class="card"><h3>Turn pop-up and glow</h3><p>When a turn starts, a pop-up shows whose turn it is on every screen. The control you must use glows: the dice, then Accept, then the Bank. End turn is locked for 5 seconds after your move; when it unlocks, End turn glows instead of the Bank.</p></div>
-    <div class="card"><h3>Magnifier</h3><p>The Magnifier button above the board gives you a round lens that follows your finger or mouse and makes the tiles readable. It is also used automatically while a pawn moves.</p></div>
-    <div class="card"><h3>Guided tour</h3><p>When you start a new room you can choose a guided tour. It points at each part of the screen with a short explanation and shows only the first time. In Beginner games it is always on.</p></div>
-    <div class="card"><h3>Save and resume</h3><p>The game is saved automatically and kept for 24 hours. If someone disconnects they can come back and keep playing, and a saved game can be resumed instead of starting over.</p></div>
-    <div class="card"><h3>Reset</h3><p>Only the host can reset, after a confirm dialog. The Market Tracker returns to its start value (500 by default), every pawn goes back to space 1, and everyone gets their starting money and shares back.</p></div>
-    <div class="card"><h3>Event cards</h3><p>The card slot next to the Bank is reserved for market events. It is marked "coming soon" for now.</p></div>
+    <div class="card"><h3>Turn pop-up and glow</h3><p>When a Turn starts, a pop-up shows whose Turn it is on every screen. The control you must use glows: the <span class="comp">Dice</span>, then Accept, then <span class="comp">The Bank</span>, then End turn.</p></div>
+    <div class="card"><h3>Magnifier</h3><p>The Magnifier button above the <span class="comp">Space Board</span> gives you a round lens that follows your finger or mouse and makes the Tiles readable.</p></div>
+    <div class="card"><h3>Tour Guide button</h3><p>The Tour Guide button at the top of the game screen opens a menu: How to play (this guide and the Summary), the Screen tour (step by step, with Back), and Report a bug.</p></div>
+    <div class="card"><h3>Game chat</h3><p>In a live room, the round chat button at the bottom right opens the chat. Write messages, add emoji and close it again any time. A red number shows new messages.</p></div>
+    <div class="card"><h3>Notify a player</h3><p>Waiting for someone? Press Notify in the chat: their screen plays a sound and shows a reminder that it is their Turn.</p></div>
+    <div class="card"><h3>Remove a player who does not play</h3><p>If one Turn takes longer than 3 minutes, the Vote to remove button in the chat opens. When all other players vote, that player is removed from the game and play goes on.</p></div>
+    <div class="card"><h3>Language and font</h3><p>Under the game name you choose the Font and the Language (English or Deutsch). Each player picks their own; it is remembered on that device.</p></div>
+    <div class="card"><h3>Report a bug</h3><p>Something went wrong? Open Tour Guide, then Report a bug, describe what happened and send it.</p></div>
+    <div class="card"><h3>Save and resume</h3><p>The game is saved automatically and kept for 24 hours. If someone disconnects they can come back and keep playing.</p></div>
+    <div class="card"><h3>Reset</h3><p>Only the host can reset, after a confirm dialog. The <span class="comp">Market Tracker</span> returns to its start value, every Player Avatar goes back to the start, and everyone gets their starting cash and shares back.</p></div>
+    <div class="card"><h3>Home</h3><p>The Home button takes you straight back to the start page, without an extra question.</p></div>
+    <div class="card"><h3>Game over</h3><p>The results window shows the winner, your learning outcomes and a short feedback form. At the end there are two buttons: Close and Start new game.</p></div>
   </div>
 </section>
 
-<section>
+<section id="sec-13">
   <div class="eyebrow">Keep this handy</div>
   <h2>Rules at a glance</h2>
   <div class="cheat"><table>
     <thead><tr><th>Topic</th><th>Rule</th></tr></thead>
     <tbody>
       <tr><td>Players</td><td>3 to 10 per room</td></tr>
-      <tr><td>Start values</td><td>Market 500, money 5,000, shares 9 (host can change)</td></tr>
-      <tr><td>Dice</td><td>Long 1 to 6, Standard 1 to 9, Short and Beginner 1 to 18. The roll is the move.</td></tr>
-      <tr><td>Tiles</td><td>Plus adds, minus subtracts, Skip does nothing. Average size: Long about 10, Standard about 12, Short about 18, Beginner at most 3. On every board the plus and minus numbers add up equal, so the market has no built-in drift. Tracker stays between 0 and 999.</td></tr>
-      <tr><td>Forecast</td><td>Bull or Bear adds up to 5% to 20% in small steps, one per finished turn. About 3 in 10 phases change course after the first step. Steps stay between 50 and 950.</td></tr><tr><td>Bull / Bear bonus</td><td>Bull: plus tiles count 1 extra. Bear: minus tiles count 1 extra.</td></tr>
-      <tr><td>Bank</td><td>Open after your move. Price = Market Tracker value.</td></tr>
-      <tr><td>End turn</td><td>Locked for 5 seconds after your move so you do not end by mistake; buying or selling unlocks it at once.</td></tr>
-      <tr><td>Total value</td><td>Money + shares &times; Market Tracker value</td></tr>
-      <tr><td>Final round</td><td>Starts when a pawn reaches space 100. Everyone else gets one last turn.</td></tr>
+      <tr><td>Start values</td><td>Share price 500, cash 5,000, shares 9 (host can change)</td></tr>
+      <tr><td>Dice</td><td>Long: die with value 1&ndash;6. Standard: 1&ndash;9. Short and Beginner: 1&ndash;18. The roll is the move.</td></tr>
+      <tr><td>Tiles</td><td>Plus adds, minus subtracts, Skip does nothing. All plus and minus Tiles add up equal, so there is no built-in drift. The <span class="comp">Market Tracker</span> stays between 0 and 999.</td></tr>
+      <tr><td>Event Cards</td><td>10 gold Event Card Tiles, at least 7 Tiles apart. Draw, read, Accept Event. Cannot fulfil it: skip your next turn.</td></tr>
+      <tr><td>Dynamic Tile Shuffling</td><td>After every Turn the Tiles no Player Avatar has reached yet are shuffled (Event Card Tiles stay at least 7 apart).</td></tr>
+      <tr><td>Forecast</td><td>Market mood, not a Tile. Bull or Bear moves the price 5% to 20% in small steps, one per finished Turn. Bull: plus Tiles count 1 extra. Bear: minus Tiles count 1 extra.</td></tr>
+      <tr><td><span class="comp">The Bank</span></td><td>Open after your move. Price = <span class="comp">Market Tracker</span> value.</td></tr>
+      <tr><td>End turn</td><td>5s safety wait after your move; buying or selling unlocks it at once.</td></tr>
+      <tr><td>Total value</td><td>Cash in hand + (Number of shares &times; <span class="comp">Market Tracker</span> price)</td></tr>
+      <tr><td>Final round</td><td>Starts when a Player Avatar reaches Tile 100. Everyone else gets one last Turn.</td></tr>
       <tr><td>Winner</td><td>Highest total value. Exact ties share the win.</td></tr>
-      <tr><td>Save</td><td>Kept for 24 hours</td></tr>
     </tbody>
   </table></div>
 </section>
 
 <footer>Capital Clash. Learn how investing works without risking a cent.</footer>
 </div>
+<script src="js/i18n-de.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/screen-tour.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => { highlightTerms(document.body); document.querySelectorAll(".screen-tour").forEach(ScreenTour.mount); });
+// Home: inside the game's How to play window it closes the window; opened on its own it goes to the game page.
+function goHome() {
+  try { if (window.parent !== window && window.parent.Howto) { window.parent.Howto.close(); return; } } catch (_) {}
+  location.href = 'index.html';
+}
+</script>
+<script>document.querySelectorAll('.toc a').forEach(function(a){a.addEventListener('click',function(e){var t=document.getElementById(a.getAttribute('href').slice(1));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}});});</script>

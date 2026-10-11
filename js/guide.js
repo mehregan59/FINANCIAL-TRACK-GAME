@@ -6,13 +6,19 @@
    so a step only appears again when it is NEW.  ==> To teach a new feature: add ONE entry to GUIDE_STEPS
    (a new id) and, if it needs the player's attention during a turn, its element ids to FOCUS in game.js. */
 
+const C = n => '<span class="comp">' + n + '</span>';
+const T = n => '<span class="term">' + n + '</span>';
 const GUIDE_STEPS = [
-    { id: 'dice', sel: '#diceScene', title: 'Roll the dice', text: 'On your turn, tap the dice. When it stops, press Accept to move your pawn. The roll is the number of spaces you move. In Short, Standard and Beginner games the die has bigger numbers so everyone can reach the end of the board.' },
-    { id: 'wallet', sel: '#playersCard', title: 'Players', text: 'Everyone’s space, shares, money and total. The glowing row is the player whose turn it is.' },
-    { id: 'board', sel: '#boardSvg', title: 'The board', text: 'Your pawn stands next to your space. Landing on a + space raises the Market Tracker, a − space lowers it.' },
-    { id: 'magnifier', sel: '#btnLens', title: 'Magnifier', text: 'Press Magnifier, then move your finger or mouse over the board to read any tile bigger. It also zooms by itself while a pawn moves. The How to play button at the top has the full guide.' },
-    { id: 'bank', sel: '#bankCard', title: 'The bank', text: 'After you move, the bank opens (it glows). Buy or sell shares at the Market Tracker price. End turn waits 5 seconds so you cannot end by mistake, then it glows.' },
-    { id: 'tracker', sel: '#trackerPanel', title: 'Market Tracker', text: 'The share price. Only the tiles change it during the game. The host can reset the game here.' }
+    { id: 'dice', sel: '#diceScene', title: 'Roll the Dice', text: 'On your turn, tap the ' + C('Dice') + '. When it stops, press Accept to move your Player Avatar. The number rolled is the number of Tiles you move (Long: a die with value 1–6; Standard: 1–9; Short and Beginner: 1–18).' },
+    { id: 'wallet', sel: '#playersCard', title: 'Player Portfolio', text: C('Player Portfolio') + ' show every investor’s Tile, shares, cash and total. Total = Cash + (Shares × share price). The glowing row is the player whose turn it is.' },
+    { id: 'board', sel: '#boardSvg', title: 'Space Board', text: 'The ' + C('Space Board') + ' has 100 ' + T('Tiles') + '. Your ' + T('Player Avatar') + ' stands next to its ' + T('Tile') + '. A plus ' + T('Tile') + ' (+1, +2, +3 and so on) raises the share price in the centre, a minus ' + T('Tile') + ' lowers it. Gold ' + T('Tiles') + ' draw a card from the ' + C('Event Card Deck') + '.' },
+    { id: 'magnifier', sel: '#btnLens', title: 'Magnifier', text: 'Press Magnifier, then move your finger or mouse over the ' + C('Space Board') + ' to read any Tile bigger. It also zooms by itself while a Player Avatar moves.' },
+    { id: 'bank2', sel: '#bankCard', title: 'The Bank: Share price', text: 'After you move, ' + C('The Bank') + ' opens (it glows). It shows the current <b>Share price</b> and the <b>Previous price</b>, so you see if the market went up or down. Press Enter The Bank, pick Buy or Sell, choose how many shares, then press the button to finalise. End turn waits 5s (a safety wait), then it glows.' },
+    { id: 'cards', sel: '#cardSlot', title: 'Event Card Deck', text: 'Land on a gold ' + T('Tile') + ' and the ' + C('Event Card Deck') + ' glows. Tap it, read the card and press Accept Event. Green cards give a bonus, red cards cost per share, blue cards force a hold, sale or purchase. If you cannot meet a card you skip your next turn.' },
+    { id: 'status', sel: '#statusCard', title: 'Whose turn', text: 'This box shows whose Turn it is and what to do now, plus the market Forecast (Bull, Bear or Neutral).' },
+    { id: 'fontlang', sel: '.font-box', title: 'Font and Language', text: 'Under the game name you pick your own Font and Language (English or Deutsch). Only your screen changes.' },
+    { id: 'chat', sel: '#chatFab', title: 'Game chat', text: 'In a live room, open the chat with this button. Send messages and emoji, press Notify to remind the player whose Turn it is, and vote to remove a player whose Turn takes longer than 3 minutes.' },
+    { id: 'tour', sel: '#tourBtn', title: 'Tour Guide', text: 'Open Tour Guide to see this tour again, read How to play, or report a bug. Use Back to read a previous step.' }
 ];
 
 const Guide = (() => {
@@ -33,7 +39,8 @@ const Guide = (() => {
         const r = el.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
         const spot = $('guideSpot'), pop = $('guidePop'), arrow = $('guideArrow');
         Object.assign(spot.style, { left: r.left - 6 + 'px', top: r.top - 6 + 'px', width: r.width + 12 + 'px', height: r.height + 12 + 'px' });
-        $('guideTitle').textContent = step.title; $('guideText').textContent = step.text;
+        $('guideTitle').textContent = step.title; $('guideText').innerHTML = highlightHtml(step.text); $('guideTitle').innerHTML = highlightHtml(step.title);
+        $('guidePrev').disabled = idx === 0;
         $('guideCount').textContent = (idx + 1) + ' / ' + queue.length;
         $('guideNext').textContent = idx === queue.length - 1 ? 'Got it' : 'Next';
         pop.style.visibility = 'hidden'; pop.style.left = '0px'; pop.style.top = '0px';
@@ -63,6 +70,8 @@ const Guide = (() => {
         place();
     }
 
+    function prev() { if (idx > 0) { idx--; place(); } }
+
     function stop() { queue = []; idx = 0; layer().classList.add('hidden'); window.removeEventListener('resize', place); }
 
     return {
@@ -86,7 +95,7 @@ const Guide = (() => {
             if (!queue.length) return;
             setTimeout(() => { if (!queue.length) return; layer().classList.remove('hidden'); window.addEventListener('resize', place); place(); }, 900);
         },
-        next, skip() { queue.forEach(s => remember(s.id)); stop(); },
+        next, prev, skip() { queue.forEach(s => remember(s.id)); stop(); },
         replay() { stop(); Guide.start(true); },
         get active() { return queue.length > 0; }
     };

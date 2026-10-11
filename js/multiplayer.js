@@ -12,6 +12,8 @@ function myMeta() { return { id: MP.id, name: MP.name, creator: MP.creatorJoin &
 
 function resetMP() {
     try { MP.t && MP.t.leave(); } catch (_) {}
+    try { sessionStorage.removeItem('ftg_room'); } catch (_) {}
+    if (typeof Conn !== 'undefined') Conn.stop();
     ['hostTimer', 'skipTimer', 'joinTimer', 'trackerTimer'].forEach(k => { clearTimeout(MP[k]); MP[k] = null; });
     Object.assign(MP, { on: false, t: null, phase: 'idle', hostId: '', avatar: '', members: [], arrival: [], bots: 0, resumeState: null, graceUntil: 0 });
 }
@@ -125,12 +127,13 @@ function snapshot() {
         marketTracker: [...APP_STATE.marketTracker], ringRotations: [...APP_STATE.ringRotations],
         eventPool: [...APP_STATE.eventPool], tiles: APP_STATE.tiles.map(t => t.text),
         settings: { ...APP_STATE.settings },
-        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar, money: p.money, shares: p.shares, bot: !!p.bot })),
+        players: APP_STATE.players.map(p => ({ id: p.id, name: p.name, position: p.position, avatar: p.avatar, money: p.money, shares: p.shares, bot: !!p.bot, skipNext: !!p.skipNext, st: p.st || null, kh: p.kh || '' })),
         currentPlayerIndex: APP_STATE.currentPlayerIndex,
         turnPhase: APP_STATE.turnPhase, pending: APP_STATE.pending, evtSeq: APP_STATE.evtSeq,
         lastRoll: APP_STATE.lastRoll, lastMove: APP_STATE.lastMove, lastEffect: APP_STATE.lastEffect, lastTrade: APP_STATE.lastTrade,
         marketPhase: APP_STATE.marketPhase, phaseLeft: APP_STATE.phaseLeft, phaseSeq: APP_STATE.phaseSeq, phaseTotal: APP_STATE.phaseTotal, phaseSteps: [...APP_STATE.phaseSteps], phaseFlipAt: APP_STATE.phaseFlipAt, phaseFlipTo: APP_STATE.phaseFlipTo, phaseNote: APP_STATE.phaseNote, rank: [...APP_STATE.rank],
-        finalBy: APP_STATE.finalBy, finalSeq: APP_STATE.finalSeq, gameOver: APP_STATE.gameOver
+        finalBy: APP_STATE.finalBy, finalSeq: APP_STATE.finalSeq, gameOver: APP_STATE.gameOver, prevMarket: APP_STATE.prevMarket,
+        cardDeck: [...(APP_STATE.cardDeck || [])], lastCard: APP_STATE.lastCard, holdBy: APP_STATE.holdBy || '', lastSkip: APP_STATE.lastSkip, history: APP_STATE.history || []
     };
 }
 
@@ -146,8 +149,8 @@ function cleanRoll(r) {
 }
 function cleanMove(m) {
     if (!m || typeof m !== 'object') return null;
-    const from = int(m.from, 1, 100), to = int(m.to, 1, 100), seq = int(m.seq, 1, 1e9);
-    return from && to && seq ? { by: String(m.by), from, to, n: int(m.n, 0, 20) || 0, seq } : null;
+    const from = int(m.from, 0, 100), to = int(m.to, 1, 100), seq = int(m.seq, 1, 1e9);
+    return from !== null && to && seq ? { by: String(m.by), from, to, n: int(m.n, 0, 20) || 0, seq } : null;
 }
 
 function cleanEffect(e) {
@@ -181,13 +184,13 @@ function applyState(s) {
         if (!APP_STATE.eventPool.length) APP_STATE.eventPool = ['Reserve Vault'];
         APP_STATE.tiles = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, text: String((s.tiles || [])[i] || '').slice(0, 80) }));
         APP_STATE.players = (s.players || []).slice(0, MAX_PLAYERS).map((p, i) => ({
-            id: String(p.id), name: cleanName(p.name) || 'Investor', position: int(p.position, 1, 100) || 1,
+            id: String(p.id), name: cleanName(p.name) || 'Investor', position: clampInt(p.position, 0, 100, 0),
             avatar: isAvatarId(p.avatar) ? p.avatar : AVATARS[i % AVATARS.length].id,
-            ...(p.bot ? { bot: true } : {}), money: clampInt(p.money, -1e9, 1e9, APP_STATE.settings.money), shares: clampInt(p.shares, 0, 1e6, APP_STATE.settings.shares)
+            ...(p.bot ? { bot: true } : {}), ...(p.skipNext ? { skipNext: true } : {}), ...(typeof p.kh === 'string' && /^[0-9a-f]{40}$/.test(p.kh) ? { kh: p.kh } : {}), ...(p.st && typeof p.st === 'object' && typeof Stats !== 'undefined' ? { st: Stats.clean(p.st) } : {}), money: clampInt(p.money, -1e9, 1e9, APP_STATE.settings.money), shares: clampInt(p.shares, 0, 1e6, APP_STATE.settings.shares)
         }));
         APP_STATE.activePlayersCount = APP_STATE.players.length;
         APP_STATE.currentPlayerIndex = Math.max(0, Math.min(APP_STATE.players.length - 1, parseInt(s.currentPlayerIndex, 10) || 0));
-        APP_STATE.turnPhase = ['roll', 'accept', 'moving', 'trade', 'over'].includes(s.turnPhase) ? s.turnPhase : 'roll';
+        APP_STATE.turnPhase = ['roll', 'accept', 'moving', 'card', 'cardShow', 'trade', 'over'].includes(s.turnPhase) ? s.turnPhase : 'roll';
         APP_STATE.pending = int(s.pending, 1, 20);
         APP_STATE.evtSeq = int(s.evtSeq, 0, 1e9) || 0;
         APP_STATE.lastRoll = cleanRoll(s.lastRoll);
@@ -204,17 +207,25 @@ function applyState(s) {
         APP_STATE.rank = Array.isArray(s.rank) ? s.rank.slice(0, MAX_PLAYERS).map(String) : [];
         APP_STATE.finalBy = String(s.finalBy || ''); APP_STATE.finalSeq = int(s.finalSeq, 0, 1e9) || 0;
         APP_STATE.gameOver = cleanOver(s.gameOver);
+        APP_STATE.cardDeck = cleanDeck(s.cardDeck); APP_STATE.lastCard = cleanCard(s.lastCard); APP_STATE.holdBy = String(s.holdBy || '');
+        APP_STATE.lastSkip = s.lastSkip && Array.isArray(s.lastSkip.ids) && parseInt(s.lastSkip.seq, 10) > 0 ? { ids: s.lastSkip.ids.slice(0, MAX_PLAYERS).map(String), seq: parseInt(s.lastSkip.seq, 10) } : null;
+        APP_STATE.history = typeof Stats !== 'undefined' ? Stats.cleanHistory(s.history) : [];
+        APP_STATE.prevMarket = s.prevMarket == null ? null : clampInt(s.prevMarket, 0, 999, null);
         paintModeButtons(APP_STATE.boardMode);
         const first = was !== 'playing';
         if (first) enterGameView();
         syncEffects(first);           // starts the dice / hop animation before the board is redrawn
         updateMarketTrackerUI(); renderEventsEditor(); drawBoard();
+        if (typeof Seat !== 'undefined') Seat.check();
     } else if (!$('lobby').classList.contains('hidden')) renderLobby();
     applyRoleUI();
 }
 
 function onMpMessage(e, d) {
     if (!MP.on || !d) return;
+    if (typeof Chat !== 'undefined' && Chat.handle(e, d)) return;
+    if (typeof Seat !== 'undefined' && Seat.handle(e, d)) return;
+    if (e === 'sync') { if (isHost() && MP.phase === 'playing') setTimeout(broadcastState, 150); return; }
     if (e === 'state') {
         const s = d.state;
         if (s && s.hostId === d.from && s.seq > MP.seq) { MP.seq = s.seq; applyState(s); }
@@ -224,6 +235,10 @@ function onMpMessage(e, d) {
         if (isHost() && MP.phase === 'playing') authAccept(String(d.from));
     } else if (e === 'trade') {
         if (isHost() && MP.phase === 'playing') authTrade(String(d.from), d.kind, d.qty);
+    } else if (e === 'draw') {
+        if (isHost() && MP.phase === 'playing') authDraw(String(d.from));
+    } else if (e === 'cardok') {
+        if (isHost() && MP.phase === 'playing') authResolveCard(String(d.from), String(d.choice || ''));
     } else if (e === 'endturn') {
         if (isHost() && MP.phase === 'playing') authEndTurn(String(d.from));
     }
